@@ -1,5 +1,7 @@
-package bptree;import org.junit.Ignore;
+package bptree;
+
 import org.junit.Test;
+import org.junit.Ignore;
 
 import java.io.FileNotFoundException;
 import java.util.Random;
