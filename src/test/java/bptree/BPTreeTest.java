@@ -11,7 +11,7 @@ public class BPTreeTest{
 
     BPTree db;
     Random rnd = new Random();
-    int numberOfKeys = 10;
+    int numberOfKeys = 15;
 
     @Test
     public void logicTest(){
