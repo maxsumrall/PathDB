@@ -1,16 +1,50 @@
-package bptree; /**
+package bptree;
+
+import org.neo4j.io.pagecache.PageCursor;
+
+import java.io.IOException;
+
+/**
  * Created by max on 2/13/15.
  */
-public class LBlock extends Block {
+public class LeafNode extends Node {
 
-    public LBlock(BlockManager blockManager, long ID){
+    public LeafNode(BlockManager blockManager, long ID){
         this(new Key[blockManager.KEYS_PER_LBLOCK], blockManager, ID); //Something about the nulls here worries me. Might be a future problem.
     }
-    public LBlock(Key[] k, BlockManager blockManager, long ID){
+    public LeafNode(Key[] k, BlockManager blockManager, long ID){
         this.keys = k;
         blockManagerInstance = blockManager;
         this.blockID = ID;
     }
+
+
+    public LeafNode(PageCursor cursor, BlockManager blockManager, long id) throws IOException {
+        this.keys = new Key[blockManager.KEYS_PER_LBLOCK];
+        this.blockManagerInstance = blockManager;
+        this.blockID = id;
+
+        cursor.setOffset(Node.HEADER_OFFSET); //set it to the beginning after header
+        int keyIndex = 0;
+        while(cursor.getLong() != -1l){ //check if we are at the final end of the block
+            cursor.setOffset(cursor.getOffset() - 8); //rewind since we are still reading valid data
+            int keyLength = 0;
+            while(cursor.getLong() != -1){ //while still within this key
+                keyLength++;
+            }
+            //Key Length determined, make key array to hold it all.
+            long[] keyVals = new long[keyLength];
+            cursor.setOffset(cursor.getOffset() - (8 * keyLength) - 8); //move cursor back to read those keys for real this time
+            int i = 0;
+            while(cursor.getLong() != -1l){
+                keyVals[i++] = cursor.getLong(cursor.getOffset() - 8); //get the long I just read in the previous line.
+            }
+            this.keys[keyIndex++] = new Key(keyVals);
+        }
+
+
+    }
+
 
     /**
      *
@@ -52,7 +86,7 @@ public class LBlock extends Block {
 
             int midPoint = (BlockManager.KEYS_PER_LBLOCK + 1) / 2;
             int sNum = num - midPoint;
-            LBlock sibling = blockManagerInstance.createLBlock();
+            LeafNode sibling = blockManagerInstance.createLBlock();
             sibling.num = sNum;
             System.arraycopy(this.keys, midPoint, sibling.keys, 0, sNum);
             Key[] empty = new Key[this.keys.length - midPoint];

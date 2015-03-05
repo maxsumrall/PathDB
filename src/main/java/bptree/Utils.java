@@ -30,11 +30,11 @@ public class Utils {
     }
 
 
-    public static void printTree(Block block){
-        System.out.println(block);
-        if(block instanceof IBlock)
-            for(long childID : ((IBlock)block).children)
-                printTree(block.blockManagerInstance.getBlock(childID));
+    public static void printTree(Node node){
+        System.out.println(node);
+        if(node instanceof InternalNode)
+            for(long childID : ((InternalNode) node).children)
+                printTree(node.blockManagerInstance.getBlock(childID));
     }
 
 

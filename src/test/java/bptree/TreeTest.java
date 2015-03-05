@@ -1,15 +1,15 @@
 package bptree;
 
-import org.junit.Test;
 import org.junit.Ignore;
+import org.junit.Test;
 
-import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.Random;
 
 
-public class BPTreeTest{
+public class TreeTest {
 
-    BPTree db;
+    Tree db;
     Random rnd = new Random();
     int numberOfKeys = 10;
 
@@ -26,13 +26,13 @@ public class BPTreeTest{
     }
 
     @Ignore
-    public void sequentialTest() throws FileNotFoundException {
+    public void sequentialTest() throws IOException {
         /*
         Insert a bunch of stuff,
         then ask for it back,
         and make sure it's what we put in originally.
          */
-        db = new BPTree();
+        db = new Tree();
         for (int i = 0; i < numberOfKeys; i++) {
             //System.out.println("Insert: " + i);
             db.insert(new Key(new long[]{i, i, i}));
@@ -50,14 +50,14 @@ public class BPTreeTest{
 
 
     @Test
-        public void randomTest() throws FileNotFoundException {
+        public void randomTest() throws IOException {
         /*
         Insert a bunch of random stuff,
         then ask for it back,
         and make sure it's what we put in originally.
          */
         long[][] testKeys = new long[numberOfKeys][3];
-            db = new BPTree();
+            db = new Tree();
             for (int i = 0; i < numberOfKeys; i++) {
                 testKeys[i][0] = rnd.nextInt(numberOfKeys);
                 testKeys[i][1] = rnd.nextInt(numberOfKeys);
@@ -96,13 +96,13 @@ public class BPTreeTest{
             */
 
     }
-    public void bruteForceSearch(BPTree db, Key key){
+    public void bruteForceSearch(Tree db, Key key){
         System.out.println("Couldn't find Key: " + key.vals[0] + " " + key.vals[1] + " " +key.vals[2]);
-        for (Block block : db.bm.blocks.values())
+        for (Node node : db.bm.blocks.values())
         {
-            if(block instanceof LBlock){
+            if(node instanceof LeafNode){
                 boolean notThisKey = false;
-                for(Key lk : block.keys){
+                for(Key lk : node.keys){
                     if(lk != null) {
                         if (lk.vals[0] != key.vals[0] || lk.vals[1] != key.vals[1] || lk.vals[2] != key.vals[2]) {
                             notThisKey = true;
