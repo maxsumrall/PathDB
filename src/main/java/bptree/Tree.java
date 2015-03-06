@@ -14,7 +14,7 @@ import java.io.IOException;
  */
 public class Tree {
 
-    public static String DEFAULT_FILE_NAME = "tree.bin";
+    public static String DEFAULT_TREE_FILE_NAME = "tree.bin";
     public static int PAGE_SIZE = bptree.Utils.getIdealBlockSize();
     protected long nextID = 0l;
 
@@ -97,7 +97,7 @@ public class Tree {
         return (InternalNode)blocks.get(newBlockID);
     }
 
-    public Key[] find(Key key){
+    public IndexCursor find(Long[] key){
 
     }
 
@@ -106,7 +106,7 @@ public class Tree {
      * If the root returns a split result, make a new block and set it as the root.
      * @param key
      */
-    public void insert(Key key){
+    public void insert(Long[] key){
         Node.SplitResult result = bm.rootNode.insert(key);
         if (result != null){ //Root block split.
             InternalNode newRoot = bm.createIBlock();
@@ -116,5 +116,9 @@ public class Tree {
             newRoot.children[1] = result.right;
             bm.rootNode = newRoot;
         }
+    }
+
+    private class IndexCursor extends Cursor {
+
     }
 }

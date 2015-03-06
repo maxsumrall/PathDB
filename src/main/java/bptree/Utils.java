@@ -1,4 +1,6 @@
-package bptree;import java.io.BufferedOutputStream;
+package bptree;
+
+import java.io.*;
 
 /**
  * Created by max on 2/10/15.
@@ -30,12 +32,51 @@ public class Utils {
     }
 
 
-    public static void printTree(Node node){
-        System.out.println(node);
-        if(node instanceof InternalNode)
-            for(long childID : ((InternalNode) node).children)
-                printTree(node.blockManagerInstance.getBlock(childID));
+    public byte[] serialize(PathIndex index) throws IOException {
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        ObjectOutput out = null;
+        byte[] byteRep;
+        try {
+            out = new ObjectOutputStream(bos);
+            out.writeObject(index);
+            byteRep = bos.toByteArray();
+        } finally {
+            try {
+                if (out != null) {
+                    out.close();
+                }
+            } catch (IOException ex) {
+                // ignore close exception
+            }
+            try {
+                bos.close();
+            } catch (IOException ex) {
+                // ignore close exception
+            }
+        }
+        return byteRep;
     }
-
-
+    public PathIndex deserialize(byte[] byteRep) throws IOException, ClassNotFoundException {
+        ByteArrayInputStream bis = new ByteArrayInputStream(byteRep);
+        ObjectInput in = null;
+    PathIndex index;
+        try {
+            in = new ObjectInputStream(bis);
+            index = (PathIndex) in.readObject();
+        } finally {
+            try {
+                bis.close();
+            } catch (IOException ex) {
+                // ignore close exception
+            }
+            try {
+                if (in != null) {
+                    in.close();
+                }
+            } catch (IOException ex) {
+                // ignore close exception
+            }
+        }
+        return index;
+    }
 }
