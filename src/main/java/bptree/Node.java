@@ -2,42 +2,91 @@ package bptree;
 
 import org.neo4j.io.pagecache.PageCursor;
 
+import java.util.LinkedList;
+
 /**
  * Created by max on 2/12/15.
  */
 public abstract class Node {
 
-     // Internal blocks have different structure than leaf blocks, therefore they will have different number of elements.
+    /*
+    The Header of the block when stored as bytes is:
+    (1) Byte - Is this a leaf block?
+    (4) int - The size of the keys, only relevant if keys are the same length.
+    (4) int - the number of values representing child node ids.
+     */
+    protected final int NODE_HEADER_LENGTH = 1 + 4 + 4 + 8;
+    private final int NODE_FOOTER_LENGTH = 1; //TODO determine if I need a footer.
+    private final int BYTE_POSITION_NODE_TYPE = 0;
+    private final int BYTE_POSITION_KEY_LENGTH = 1;
+    private final int BYTE_POSITION_KEY_COUNT = 5;
+    private final int BYTE_POSITION_SIBLING_ID = 9;
+
 
     //TODO Rewrite this size checking of the block to account for variable size keys
     protected int num = 0; // The current number of elements in the block
-    public Key[] keys;
-    public long blockID;
+    public LinkedList<Long[]> keys;
+    public long id;
+    public long siblingID = -1;
     public int sizeInBytes = 0;
-    public boolean sameLengthKeys = true;
-    public BlockManager blockManagerInstance;
+    public Tree tree;
 
     /**
-     * Reads the first byte of the page to determine the block type
+     * Reads the first byte at the cursor to determine the block type
      * @param cursor
      * @return
      */
-    public static boolean isLeafBlock(PageCursor cursor){
-        return cursor.getByte(0) == (byte) 1;
+    protected boolean parseHeaderForNodeTypeFlag(PageCursor cursor){
+        return cursor.getByte(BYTE_POSITION_NODE_TYPE) == (byte) 1;
     }
 
-    public boolean sameKeyLength(Key key){return (keys.length == 0) || keys[1].vals.length == key.vals.length;}
-
-    public static boolean identicalKeyLengthFromHeader(PageCursor cursor){
-        return cursor.getByte(1) == (byte) 1;
+    /**
+     * Read a byte from the header to determine if this block contains keys of the same length.
+     * If so, the keys can be written without a delimiter, which can increase the number of keys
+     * which can fit in a page quite a lot. (For a page holding keys with k = 2, an additional 50~ keys will fit in a page this way.)
+     * @param cursor
+     * @return true if the keys here are of the same length.
+     */
+    protected boolean sameLengthKeys(PageCursor cursor){
+        return parseHeaderForKeyLength(cursor) != -1;
     }
 
-    public static int readNumberOfChildPointers(PageCursor cursor){
-        return cursor.getInt(2);
+    /**
+     * Reads an int from the header to determine how many keys are here.
+     * @param cursor
+     * @return the number of child ids stored in this page
+     */
+    protected int parseHeaderForNumberOfKeys(PageCursor cursor){
+        return cursor.getInt(BYTE_POSITION_KEY_COUNT);
     }
-    public static int readKeyLength(PageCursor cursor){
-        return cursor.getInt(6);
+
+    /**
+     * Reads an int from the page header to determine the length of the keys stored in this block.
+     * If keys in this block are various lengths, then this value is -1.
+     * @param cursor
+     * @return The length of the keys in this block, or -1 if they are not the same length.
+     */
+    protected int parseHeaderForKeyLength(PageCursor cursor){
+        return cursor.getInt(BYTE_POSITION_KEY_LENGTH);
     }
+
+    /**
+     * Reads a long from the page header to determine the id of the next page id.
+     * THis is only something you would use on the leaf nodes to do a sequential scan of values across multiple blocks.
+     * This is basically a pointer to the next node.
+     * @param cursor
+     * @return the page id for the next node.
+     */
+    protected long parseHeaderForSiblingID(PageCursor cursor){return cursor.getLong(BYTE_POSITION_SIBLING_ID);}
+
+    /**
+     * Checks if this key has the same length at the first key in the list of keys.
+     * @param key
+     * @return
+     */
+    protected boolean sameKeyLength(Long[] key){return (keys.size() == 0) || keys.get(1).length == key.length;}
+
+
     /**
      * Given a key, return the index where it belongs in the bptree.Block
      * If this is an INode, it represents the child node to follow.
@@ -57,21 +106,9 @@ public abstract class Node {
     abstract public SplitResult insert(Key key);
 
 
-    public Object DSgetValue(){
-        String strRep = "[";
-        for (Key k : keys) {
-            if(k != null) {
-                strRep += k.toString();
-            }
-        }
-        strRep += "]";
-        return strRep;
-
-    }
-
     public String toString(){
         String strRep = this instanceof InternalNode ? "Internal bptree.Block" : "Leaf bptree.Block";
-        strRep += "\nbptree.Block ID: " + this.blockID + "\n Keys: ";
+        strRep += "\nbptree.Block ID: " + this.nodeID + "\n Keys: ";
         for (Key k : keys){strRep += k + ", ";}
         if(this instanceof InternalNode) {
             strRep += "\n Children: ";

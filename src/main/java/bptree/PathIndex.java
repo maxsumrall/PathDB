@@ -1,8 +1,6 @@
 package bptree;
 
-import java.io.Closeable;
-import java.io.File;
-import java.nio.file.FileAlreadyExistsException;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -10,27 +8,29 @@ import java.util.HashMap;
 /**
  * Use this class for all interaction with the index.
  */
-public class PathIndex implements Closeable {
+public class PathIndex implements Closeable, Serializable, ObjectInputValidation{
 
     public static String DEFAULT_INDEX_FILE_NAME = "path_index.bin";
     private boolean signatures_specified = false;
     private boolean paths_mapping_specified = false;
     private boolean k_values_specified = false;
-    private HashMap<Long[], Long> labelPathMapping = new HashMap();
+    private HashMap<Long[], Long> labelPathMapping = new HashMap<>();
     private ArrayList<Integer[]> signatures;
     private int minimum_k_value_indexed;
     private int maximum_k_value_indexed;
-    private Tree tree;
+    private String path_to_tree;
+    private transient Tree tree; //transient means 'do not serialize this'
 
-    private PathIndex(File file){
-
+    private PathIndex(File file) throws IOException {
+        path_to_tree = file.getName();
+        tree = new Tree(file);
     }
 
     /**
      * Initializes an index which will be deleted after the virtual machine terminates.
      * @return A Path Index
      */
-    public static PathIndex temporaryPathIndex(){
+    public static PathIndex temporaryPathIndex() throws IOException {
         File file = getUniqueFile();
         file.deleteOnExit();
         return new PathIndex(file);
@@ -40,36 +40,49 @@ public class PathIndex implements Closeable {
      * Initializes an index which will not be deleted after the virtual machine terminates.
      * @return A Path Index
      */
-    public static PathIndex savedPathIndex() {
+    public static PathIndex savedPathIndex() throws IOException {
         return new PathIndex(getUniqueFile());
     }
 
     /**
      * Loads an index from a specified path
-     * @param path_to_index
-     * @return
+     * @param filepath_to_index
+     * @return An instantiated PathIndex as found from this file location.
      */
-    public static PathIndex loadPathIndex(String path_to_index){
-        File file = new File(path_to_index);
+    public static PathIndex loadPathIndex(String filepath_to_index) throws IOException {
+        FileInputStream fis = new FileInputStream(filepath_to_index);
+        byte[] bytes = new byte[fis.available()];
+        fis.read(bytes);
+        PathIndex pathIndex;
+        try {
+            pathIndex = deserialize(bytes);
+        }
+        catch (InvalidClassException e){
+            throw new InvalidClassException("Invalid object found at file: " + filepath_to_index);
+        }
+        File file_on_tree = new File(pathIndex.path_to_tree);
+        pathIndex.tree = new Tree(file_on_tree); //TODO make sure this works
+        return pathIndex;
     }
 
+    /**
+     *Returns a File object on an unused path name for the Tree, as reported by the File.exists() method.
+     * @return
+     */
     private static File getUniqueFile(){
-        File file = new File(DEFAULT_INDEX_FILE_NAME);
+        File file = new File(Tree.DEFAULT_TREE_FILE_NAME);
         while(file.exists()){
-            //throw new FileAlreadyExistsException("This Index File Already Exists: " + file.getPath());
-            file = new File(System.currentTimeMillis() + "_" + DEFAULT_INDEX_FILE_NAME);
+            file = new File(System.currentTimeMillis() + "_" + Tree.DEFAULT_TREE_FILE_NAME);
         }
         return file;
     }
 
     /**
-     * Save the state of the index to the file to load later.
+     * Builds a mapping for each labeled path to an integer.
+     * A labeled path is a k-length list of relationship id's
+     * @param labelPaths A list of labeled paths
+     * @return This path index with the labeledPathMapping set.
      */
-    public void close(){
-
-
-    }
-
     public PathIndex buildLabelPathMapping(ArrayList<Long[]> labelPaths){
         labelPaths.sort(new Key());
         for(int i = 0; i < labelPaths.size(); i++){
@@ -79,6 +92,13 @@ public class PathIndex implements Closeable {
         return this;
     }
 
+    /**
+     * Sets the signatures for the keys for each k length.
+     * All keys of the same k-length share a signature.
+     * If unsure what to set it to, set it to the default signature.
+     * @param newSignatures
+     * @return This path index with the signatures set.
+     */
     public PathIndex setSignatures(ArrayList<Integer[]> newSignatures){
         if (!k_values_specified){
             throw new IllegalStateException("K values are not set first. Set the k value first when building the index");
@@ -97,12 +117,15 @@ public class PathIndex implements Closeable {
         return this;
     }
 
+    /**
+     * Sets the signatures for this path index to the default values.
+     */
     public void setDefaultSignatures(){
         signatures = defaultSignatures();
     }
 
     /**
-     * Helped method to make it more clear between which K value is which index.
+     * Helper method to make it more clear between which K value is which index.
      * @param k value to have the signature of
      * @return the signature to use when storing/sorting a key in the index.
      */
@@ -117,8 +140,8 @@ public class PathIndex implements Closeable {
      *
      * If you don't know what to make the signature, then you should be using this.
      *
-     * @param minK
-     * @param maxK
+     * @param minK The minimum k value in this path index
+     * @param maxK The maximum k value in this path index
      * @return the default signatures for specified k values.
      */
     public static ArrayList<Integer[]> defaultSignatures(int minK, int maxK){
@@ -131,6 +154,15 @@ public class PathIndex implements Closeable {
         }
         return defaultSigatures;
     }
+    /**
+     * This method returns the default signatures. Uses the k values already specified.
+     * For minK = 2 and maxK = 4, this data structure looks like:
+     * [[0, 1, 2] , [0, 1, 2, 3], [0, 1, 2, 3, 4]]
+     *
+     * If you don't know what to make the signature, then you should be using this.
+     *
+     * @return the default signatures for specified k values.
+     */
     public ArrayList<Integer[]> defaultSignatures(){
         ArrayList<Integer[]> defaultSigatures = new ArrayList<>(maximum_k_value_indexed - minimum_k_value_indexed);
         for (int k = minimum_k_value_indexed; k < maximum_k_value_indexed; k++){
@@ -142,6 +174,12 @@ public class PathIndex implements Closeable {
         return defaultSigatures;
     }
 
+    /**
+     * Sets the minimum and maximum k values that are indexed by this path index.
+     * @param minK The minimum k value to be indexed.
+     * @param maxK The maximum k value to be indexed.
+     * @return This path index with the k values set.
+     */
     public PathIndex setKValues(int minK, int maxK){
         minimum_k_value_indexed = minK;
         maximum_k_value_indexed = maxK;
@@ -149,6 +187,10 @@ public class PathIndex implements Closeable {
         return this;
     }
 
+    /**
+     * Checks if the necessary variables have been set.
+     * @return true if signatures, path mapping, and k values have been set.
+     */
     public boolean ready(){
         return signatures_specified && paths_mapping_specified && k_values_specified;
     }
@@ -169,12 +211,93 @@ public class PathIndex implements Closeable {
         return tree.find(search_key);
     }
 
+    /**
+     * Inserts a key into the index.
+     * @param labelPath The labeled path for this key.
+     * @param nodes The nodes along the labeled path.
+     */
     public void insert(Long[] labelPath, Long[] nodes){
 
     }
 
-    public void remove(Long[] key, Long[] nodes){
+    /**
+     * Searches for a key in the index and removes it.
+     * @param labelPath The labeled path for this key.
+     * @param nodes The nodes along this labeled path.
+     * @return false if this key is not found.
+     */
+    public boolean remove(Long[] labelPath, Long[] nodes){
+        return true;
+    }
+    /**
+     * Save the state of the index to the file to load later.
+     */
+    public void close() throws IOException {
+        FileOutputStream fos = new FileOutputStream(DEFAULT_INDEX_FILE_NAME);
+        fos.write(serialize(this));
+        fos.close();
+    }
+
+    /**
+     * Serialize this object
+     * @param o
+     * @return
+     * @throws IOException
+     */
+    private static byte[] serialize(Object o) throws IOException {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        ObjectOutputStream oos = new ObjectOutputStream(baos);
+        oos.writeObject(o);
+        oos.flush();
+        oos.close();
+        return baos.toByteArray();
+    }
+
+    /**
+     * Deserialize this object
+     * @param bytes
+     * @return
+     * @throws ClassNotFoundException
+     * @throws IOException
+     */
+    private static PathIndex deserialize(byte[] bytes) throws IOException {
+        ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
+        ObjectInputStream ois = new ObjectInputStream(bais);
+        PathIndex index = null;
+        try{
+            Object o = ois.readObject();
+            ois.close();
+            if (o instanceof PathIndex){
+                index = (PathIndex) o;
+            }
+        }
+        catch(ClassNotFoundException e){
+            throw new InvalidClassException("Attempted to read invalid Path Index object from byte array");
+        }
+        return index;
+    }
+    @Override
+    public void validateObject() throws InvalidObjectException {
 
     }
 
+    /**
+     * Methods implementing serialization
+     * @param out
+     * @throws IOException
+     */
+    private void writeObject(java.io.ObjectOutputStream out) throws IOException {
+        out.defaultWriteObject();
+    }
+
+    /**
+     * Method implementing serialization
+     * @param in
+     * @throws IOException
+     * @throws ClassNotFoundException
+     */
+    private void readObject(java.io.ObjectInputStream in) throws IOException, ClassNotFoundException {
+        in.registerValidation(this, 0);
+        in.defaultReadObject();
+    }
 }

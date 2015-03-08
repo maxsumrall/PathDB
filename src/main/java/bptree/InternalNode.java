@@ -4,31 +4,22 @@ import org.neo4j.io.pagecache.PageCursor;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.LinkedList;
 
 /**
  * Created by max on 2/13/15.
  */
 public class InternalNode extends Node {
-    /*
-    The Header of the block when stored as bytes is:
-    (1) Byte - Is this a leaf block?
-    (1) Byte - Is this a block where all keys are the same length?
-    (4) int - the number of values representing child blocks.
-    (4) int - The size of the keys, only relevant if keys are the same length.
-     */
-    public static int IBLOCK_HEADER_LENGTH = 1 + 1 + 4 + 4;
-    public static int IBLOCK_FOOTER_LENGTH = 1;
 
+    public LinkedList<Long> children = new LinkedList<Long>(); //Leaf blocks don't have children
 
-    protected long[] children = new long[BlockManager.CHILDREN_PER_IBLOCK]; //Leaf blocks don't have children
-
-    public InternalNode(BlockManager blockManager, long ID){
-        this(new Key[blockManager.KEYS_PER_IBLOCK], blockManager, ID); //Something about the nulls here worries me. Might be a future problem.
+    public InternalNode(Tree tree, long ID){
+        this(new LinkedList<Long[]>(), tree, ID); //Something about the nulls here worries me. Might be a future problem.
     }
-    public InternalNode(Key[] k, BlockManager blockManager, long ID){
+    public InternalNode(LinkedList<Long[]> k, Tree tree, long id){
         this.keys = k;
-        blockManagerInstance = blockManager;
-        this.blockID = ID;
+        this.tree = tree;
+        this.id = id;
     }
 
     /**
@@ -41,14 +32,14 @@ public class InternalNode extends Node {
     public InternalNode(PageCursor cursor, BlockManager blockManager, long id) throws IOException {
         this.keys = new Key[blockManager.KEYS_PER_LBLOCK]; //TODO change this to linkedlist
         this.blockManagerInstance = blockManager;
-        this.blockID = id;
+        this.id = id;
         int keyLength;
         int numOfChildPointers = Node.readNumberOfChildPointers(cursor);
-        sizeInBytes = IBLOCK_HEADER_LENGTH + IBLOCK_FOOTER_LENGTH + (numOfChildPointers * 8);
+        sizeInBytes = INTERNAL_NODE_HEADER_LENGTH + INTERNAL_NODE_FOOTER_LENGTH + (numOfChildPointers * 8);
         if(Node.identicalKeyLengthFromHeader(cursor)){
             keyLength = Node.readKeyLength(cursor);
             sizeInBytes += (keyLength * (numOfChildPointers - 1)) * 8;
-            cursor.setOffset(IBLOCK_HEADER_LENGTH);
+            cursor.setOffset(INTERNAL_NODE_HEADER_LENGTH);
             for(int i = 0; i < numOfChildPointers; i++){
                 children[i] = cursor.getLong();
             }
@@ -60,7 +51,7 @@ public class InternalNode extends Node {
             }
         }
         else{ //Keys are variable length within block, delimiter of (-1) is used.
-            cursor.setOffset(IBLOCK_HEADER_LENGTH);
+            cursor.setOffset(INTERNAL_NODE_HEADER_LENGTH);
             for(int i = 0; i < numOfChildPointers; i++){
                 children[i] = cursor.getLong();
             }
@@ -150,108 +141,49 @@ public class InternalNode extends Node {
      * @return The set of values matching this key. If only a small portion of the key is specific this could be a lot of stuff.
      */
     protected Key[] get(Key key){
-        return blockManagerInstance.getBlock(children[search(key)]).get(key);
+        return blockManagerInstance.getBlock(children.get(search(key))).get(key);
     }
 
+    /**
+     * returns the index of the correct pointer to the next block.
+     * @param key
+     * @return the index.
+     */
     protected int search(Key key){
-
-        for(int i = 0; i < num; i++){
-            if (keys[i].compareTo(key) >= 0) { return i; } //returns the index of the correct pointer to the next block.
+        for (Key mKey : keys){
+            if (mKey.compareTo(key) > 0) { return keys.indexOf(mKey); }
         }
-        return num; //The index into the list of child blocks to follow next.
+        return keys.size(); //Then the position is the last one.
     }
-
     /**
      *
      * @param key
      * @return SplitResult: Null if no split
      *  Otherwise: The left and right blocks which replace this block, and the new key for the right block.
      */
-    /*public SplitResult insert(Key key){
-        int index = search(key);
-        SplitResult result = blockManagerInstance.getBlock(children[index]).insert(key);
-
-        if(result != null){
-            if (num >= BlockManager.KEYS_PER_IBLOCK){
-                //Step 1. Create a new block and insert half of this blocks contents into the new block.
-                // Step 2. Insert the key into the correct block, adding the children nodes in the right place, and bubbling up a new key.
-                int midPoint = ((BlockManager.KEYS_PER_IBLOCK + 1) / 2) -1;
-                int sNum = num - midPoint;
-                IBlock sibling = blockManagerInstance.createIBlock();
-                sibling.num = sNum;
-                System.arraycopy(this.keys, midPoint, sibling.keys, 0, sNum);
-                System.arraycopy(this.children, midPoint, sibling.children, 0, sNum+1);
-                //clear this array after midpoint
-                Key[] empty = new Key[this.keys.length - midPoint];
-                long[] emptyC = new long[this.children.length - midPoint];
-                System.arraycopy(empty, 0, this.keys, midPoint, empty.length);
-                System.arraycopy(emptyC, 0, this.children, midPoint, emptyC.length);
-
-                this.num = midPoint;
-
-                //Which block does the new key belong?
-                //the new key is result.key
-                if(key.compareTo(sibling.keys[0]) >= 0){ //bptree.Key goes in new sibling block
-                    sibling.insertNotFull(result);
-                }
-                else{ //bptree.Key goes in this block
-                    this.insertNotFull(result);
-                }
-                System.out.println(sibling.keys[0]);
-                SplitResult splitResult = new SplitResult(sibling.keys[0], this.blockID, sibling.blockID); //changing which key bubbles up
-                //Shift sibling keys down. We don't want to keep around duplicate keys in internal nodes
-                sibling.keys = shiftLeft(sibling.keys);
-                System.out.println(sibling.keys[0]);
-                return splitResult;
-
-            }
-            else{  //There is room to insert the new key in this block without splitting.
-                this.insertNotFull(result);
-            }
-        }
-        return null; //No split result since we did not split. Calling function checks for nulls.
-    }
-    */
-
     public SplitResult insert(Key key){
         int index = search(key);
-        SplitResult result = blockManagerInstance.getBlock(children[index]).insert(key);
+        SplitResult result = blockManagerInstance.getBlock(children.get(index)).insert(key);
 
         if(result != null){
             /**
              * If this block is full, we must split it and insert the new key
              */
-            if (isSpaceAvailableFor(key)){ //A check if there is room in this block. Must account for the byte representaton size
+            if (keys.size() >= BlockManager.KEYS_PER_IBLOCK){
                 //Step 1. Create a new block and insert half of this blocks contents into the new block.
                 // Step 2. Insert the key into the correct block, adding the children nodes in the right place, and bubbling up a new key.
-                Key[] newKeys = new Key[BlockManager.KEYS_PER_IBLOCK + 1];
-                System.arraycopy(keys, 0, newKeys, 0, keys.length); //copy into new keys.
-                keys = newKeys;
-                long[] newChildren = new long[BlockManager.CHILDREN_PER_IBLOCK + 1];
-                System.arraycopy(children, 0, newChildren, 0, children.length); //copy into new keys.
-                children = newChildren;
-                insertNotFull(result);// the key is now in this oversized block.
 
-                int midPoint = ((BlockManager.KEYS_PER_IBLOCK + 1) / 2);
-                int sNum = num - midPoint;
-                InternalNode sibling = blockManagerInstance.createIBlock();
-                sibling.num = sNum;
-                System.arraycopy(this.keys, midPoint, sibling.keys, 0, sNum);
-                System.arraycopy(this.children, midPoint, sibling.children, 0, sNum+1);
-                //clear this array after midpoint
-                Key[] empty = new Key[this.keys.length - midPoint];
-                long[] emptyC = new long[this.children.length - midPoint];
-                this.num = midPoint;
-                //resize this back to normal size
-                System.arraycopy(keys, 0, empty, 0, num);
-                System.arraycopy(children, 0, emptyC, 0, num + 1);
-                keys = empty;
-                children = emptyC;
+                insertNotFull(result);
 
-                SplitResult splitResult = new SplitResult(sibling.keys[0], this.blockID, sibling.blockID); //changing which key bubbles up
-                //Shift sibling keys down. We don't want to keep around duplicate keys in internal nodes
-                sibling.keys = shiftLeft(sibling.keys);
-                return splitResult;
+                int midPoint = keys.size() / 2;
+                IBlock sibling = blockManagerInstance.createIBlock();
+                sibling.keys = new LinkedList<Key>(keys.subList(midPoint, keys.size()));
+                keys = new LinkedList<Key>(keys.subList(0, midPoint));
+
+                sibling.children = new LinkedList<Long>(children.subList(midPoint + 1, children.size()));
+                children = new LinkedList<Long>(children.subList(0, midPoint + 1));
+
+                return new SplitResult(sibling.keys.pop(), this.blockID, sibling.blockID);
 
             }
             else{  //There is room to insert the new key in this block without splitting.
@@ -263,26 +195,16 @@ public class InternalNode extends Node {
 
     protected void insertNotFull(SplitResult result){
         int index = search(result.key);
-
-        if(index == num){
+        if(index == keys.size()){
             //Insertion at the end of the array.
-            keys[index] = result.key;
-            children[index] = result.left;
-            children[index + 1] = result.right;
+            keys.add(result.key);
+            //children.add(result.left);
+            children.add(result.right);
         }
         else{ //Insertion somewhere within the array. Need to shift elements in array to make room.
-            System.out.print(keys.length + " " + index + " " + (num - index) + "\n");
-            System.arraycopy(keys, index, keys, index + 1, num - index);
-            System.arraycopy(children, index, children, index + 1, num - index + 1); //+ 1 becasue of two children
-            children[index]  = result.left;
-            children[index + 1] = result.right;
-            keys[index] = result.key;
+            //children.add(index, result.left);
+            children.add(index + 1, result.right);
+            keys.add(index, result.key);
         }
-        num++;
     }
-    static Key[] shiftLeft(Key[] arr) {
-        System.arraycopy(arr, 1, arr, 0, arr.length - 1);
-        return arr;
-    }
-
 }
