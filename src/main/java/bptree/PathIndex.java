@@ -10,20 +10,19 @@ import java.util.HashMap;
  */
 public class PathIndex implements Closeable, Serializable, ObjectInputValidation{
 
-    public static String DEFAULT_INDEX_FILE_NAME = "path_index.bin";
-    private boolean signatures_specified = false;
+    public static final String DEFAULT_INDEX_FILE_NAME = "path_index.bin";
+    private final boolean signatures_specified = false;
     private boolean paths_mapping_specified = false;
     private boolean k_values_specified = false;
     private HashMap<Long[], Long> labelPathMapping = new HashMap<>();
     private ArrayList<Integer[]> signatures;
     private int minimum_k_value_indexed;
     private int maximum_k_value_indexed;
-    private String path_to_tree;
+    private final String path_to_tree;
     private transient Tree tree; //transient means 'do not serialize this'
 
     private PathIndex(File file) throws IOException {
         path_to_tree = file.getName();
-        tree = new Tree(file);
     }
 
     /**
@@ -33,7 +32,9 @@ public class PathIndex implements Closeable, Serializable, ObjectInputValidation
     public static PathIndex temporaryPathIndex() throws IOException {
         File file = getUniqueFile();
         file.deleteOnExit();
-        return new PathIndex(file);
+        PathIndex index = new PathIndex(file);
+        index.tree = Tree.initializeNewTree();
+        return index;
     }
 
     /**
@@ -41,7 +42,9 @@ public class PathIndex implements Closeable, Serializable, ObjectInputValidation
      * @return A Path Index
      */
     public static PathIndex savedPathIndex() throws IOException {
-        return new PathIndex(getUniqueFile());
+        PathIndex index = new PathIndex(getUniqueFile());
+        index.tree = Tree.initializeNewTree(Tree.DEFAULT_CACHE_FILE_NAME, Tree.DEFAULT_TREE_FILE_NAME, false);
+        return index;
     }
 
     /**
@@ -60,8 +63,7 @@ public class PathIndex implements Closeable, Serializable, ObjectInputValidation
         catch (InvalidClassException e){
             throw new InvalidClassException("Invalid object found at file: " + filepath_to_index);
         }
-        File file_on_tree = new File(pathIndex.path_to_tree);
-        pathIndex.tree = new Tree(file_on_tree); //TODO make sure this works
+        pathIndex.tree = Tree.loadTreeFromFile(pathIndex.path_to_tree); //TODO make sure this works
         return pathIndex;
     }
 
@@ -145,14 +147,14 @@ public class PathIndex implements Closeable, Serializable, ObjectInputValidation
      * @return the default signatures for specified k values.
      */
     public static ArrayList<Integer[]> defaultSignatures(int minK, int maxK){
-        ArrayList<Integer[]> defaultSigatures = new ArrayList<>(maxK - minK);
+        ArrayList<Integer[]> defaultSignatures = new ArrayList<>(maxK - minK);
         for (int k = minK; k < maxK; k++){
-            defaultSigatures.set((k - minK), new Integer[k + 1]);
+            defaultSignatures.set((k - minK), new Integer[k + 1]);
             for (int i = 0; i < k + 1; i++) {
-                defaultSigatures.get(k - minK)[i] = i;
+                defaultSignatures.get(k - minK)[i] = i;
             }
         }
-        return defaultSigatures;
+        return defaultSignatures;
     }
     /**
      * This method returns the default signatures. Uses the k values already specified.
@@ -164,14 +166,14 @@ public class PathIndex implements Closeable, Serializable, ObjectInputValidation
      * @return the default signatures for specified k values.
      */
     public ArrayList<Integer[]> defaultSignatures(){
-        ArrayList<Integer[]> defaultSigatures = new ArrayList<>(maximum_k_value_indexed - minimum_k_value_indexed);
+        ArrayList<Integer[]> defaultSignatures = new ArrayList<>(maximum_k_value_indexed - minimum_k_value_indexed);
         for (int k = minimum_k_value_indexed; k < maximum_k_value_indexed; k++){
-            defaultSigatures.set((k - minimum_k_value_indexed), new Integer[k + 1]);
+            defaultSignatures.set((k - minimum_k_value_indexed), new Integer[k + 1]);
             for (int i = 0; i < k + 1; i++) {
-                defaultSigatures.get(k - minimum_k_value_indexed)[i] = i;
+                defaultSignatures.get(k - minimum_k_value_indexed)[i] = i;
             }
         }
-        return defaultSigatures;
+        return defaultSignatures;
     }
 
     /**
@@ -201,14 +203,16 @@ public class PathIndex implements Closeable, Serializable, ObjectInputValidation
      * @param nodes the nodes that may be specified in the search.
      * @return
      */
-    public Cursor find(Long[] labelPath, Long[] nodes){
+    public Long[] find(Long[] labelPath, Long[] nodes) throws IOException {
+        return tree.find(build_searchKey(labelPath, nodes));
+    }
+
+    public Long[] build_searchKey(Long[] labelPath, Long[] nodes){
         Long[] search_key = new Long[(labelPath.length * 2) + 1];
         Long pathID = labelPathMapping.get(labelPath);
         search_key[0] = pathID;
-        for (int i = 1; i < nodes.length; i++){
-            search_key[i] = nodes[i - 1];
-        }
-        return tree.find(search_key);
+        System.arraycopy(nodes, 0, search_key, 1, nodes.length - 1);
+        return search_key;
     }
 
     /**
@@ -216,8 +220,8 @@ public class PathIndex implements Closeable, Serializable, ObjectInputValidation
      * @param labelPath The labeled path for this key.
      * @param nodes The nodes along the labeled path.
      */
-    public void insert(Long[] labelPath, Long[] nodes){
-
+    public void insert(Long[] labelPath, Long[] nodes) throws IOException {
+        tree.insert(build_searchKey(labelPath, nodes));
     }
 
     /**

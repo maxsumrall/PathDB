@@ -2,6 +2,7 @@ package bptree;
 
 import org.neo4j.io.pagecache.PageCursor;
 
+import java.io.IOException;
 import java.util.LinkedList;
 
 /**
@@ -13,31 +14,33 @@ public abstract class Node {
     The Header of the block when stored as bytes is:
     (1) Byte - Is this a leaf block?
     (4) int - The size of the keys, only relevant if keys are the same length.
-    (4) int - the number of values representing child node ids.
+    (4) int - the number of keys in this node. A slightly delicate topic in the internal nodes, since they also contain child node ids and not just keys.
+    (8) long - the id to the next node, the sibling node.
      */
-    protected final int NODE_HEADER_LENGTH = 1 + 4 + 4 + 8;
-    private final int NODE_FOOTER_LENGTH = 1; //TODO determine if I need a footer.
-    private final int BYTE_POSITION_NODE_TYPE = 0;
-    private final int BYTE_POSITION_KEY_LENGTH = 1;
-    private final int BYTE_POSITION_KEY_COUNT = 5;
-    private final int BYTE_POSITION_SIBLING_ID = 9;
-
+    protected static final int NODE_HEADER_LENGTH = 1 + 4 + 4 + 8;
+    private static final int NODE_FOOTER_LENGTH = 1; //TODO determine if I need a footer. I don't think so.
+    private static final int BYTE_POSITION_NODE_TYPE = 0;
+    private static final int BYTE_POSITION_KEY_LENGTH = 1;
+    private static final int BYTE_POSITION_KEY_COUNT = 5;
+    private static final int BYTE_POSITION_SIBLING_ID = 9;
+    protected static final long DELIMITER_VALUE = -1; //The value between keys when variable length keys are written to a page.
+    protected static final Key keyComparator = new Key(); //Used for doing comparison between keys.
+    public static final int LEAF_FLAG = 1;
 
     //TODO Rewrite this size checking of the block to account for variable size keys
-    protected int num = 0; // The current number of elements in the block
-    public LinkedList<Long[]> keys;
-    public long id;
-    public long siblingID = -1;
-    public int sizeInBytes = 0;
-    public Tree tree;
+    protected LinkedList<Long[]> keys;
+    protected long id;
+    protected long siblingID = -1;
+    protected Tree tree;
+    protected boolean sameLengthKeys = true;
 
     /**
      * Reads the first byte at the cursor to determine the block type
      * @param cursor
      * @return
      */
-    protected boolean parseHeaderForNodeTypeFlag(PageCursor cursor){
-        return cursor.getByte(BYTE_POSITION_NODE_TYPE) == (byte) 1;
+    protected static int parseHeaderForNodeTypeFlag(PageCursor cursor){
+        return cursor.getByte(BYTE_POSITION_NODE_TYPE);
     }
 
     /**
@@ -47,7 +50,7 @@ public abstract class Node {
      * @param cursor
      * @return true if the keys here are of the same length.
      */
-    protected boolean sameLengthKeys(PageCursor cursor){
+    protected boolean parseHeaderForSameLengthKeys(PageCursor cursor){
         return parseHeaderForKeyLength(cursor) != -1;
     }
 
@@ -86,30 +89,70 @@ public abstract class Node {
      */
     protected boolean sameKeyLength(Long[] key){return (keys.size() == 0) || keys.get(1).length == key.length;}
 
+    protected void determineAndSetSameLengthKeysFlag(){
+        sameLengthKeys = true;
+        for(Long[] key : keys){
+            if (key.length != keys.getFirst().length){ sameLengthKeys = false; }
+        }
+    }
 
     /**
-     * Given a key, return the index where it belongs in the bptree.Block
-     * If this is an INode, it represents the child node to follow.
-     * This happens until the final leaf block is found.
-     * @param key
-     * @return
+     * Write the header of this block to the cursor given.
+     * @param cursor
      */
-    abstract protected int search(Key key);
+    protected void serializeHeader(PageCursor cursor){
+        cursor.putByte(BYTE_POSITION_NODE_TYPE, (byte) (this instanceof LeafNode ? 1 : -1));
+        cursor.putInt(BYTE_POSITION_KEY_LENGTH, sameLengthKeys ? keys.get(0).length : -1);
+        cursor.putInt(BYTE_POSITION_KEY_COUNT, keys.size());
+        cursor.putLong(BYTE_POSITION_SIBLING_ID, siblingID);
+    }
 
     /**
-     * Search for a key in the tree and return the full keys which match it.
-     * @param key The search key
+     * Reads from the header of this cursor for node variables.
+     * @param cursor
+     */
+    protected void parseHeader(PageCursor cursor){
+        this.sameLengthKeys = parseHeaderForSameLengthKeys(cursor);
+        this.siblingID = parseHeaderForSiblingID(cursor);
+    }
+
+
+    /**
+     * Writes the keys to the page cache
+     * @param cursor to write with
+     */
+    public void serialize(PageCursor cursor){
+        serializeHeader(cursor);
+        if(sameLengthKeys){
+            sameLengthKeySerialization(cursor);
+        }
+        else{
+            variableLengthKeySerialization(cursor);
+        }
+    }
+    /**
+     * Parses a node from the specified cursor, initializing this nodes variables.
+     * @param cursor
+     */
+    protected void deserialize(PageCursor cursor){
+        parseHeader(cursor);
+        if(parseHeaderForSameLengthKeys(cursor)){
+            sameLengthKeyDeserialization(cursor);
+        }
+        else{
+            variableLengthKeyDeserialization(cursor);
+        }
+    }
+
+
+    /**
+     * Returns a string representation of this node.
      * @return
      */
-    abstract protected Key[] get(Key key);
-
-    abstract public SplitResult insert(Key key);
-
-
     public String toString(){
         String strRep = this instanceof InternalNode ? "Internal bptree.Block" : "Leaf bptree.Block";
-        strRep += "\nbptree.Block ID: " + this.nodeID + "\n Keys: ";
-        for (Key k : keys){strRep += k + ", ";}
+        strRep += "\nbptree.Block ID: " + this.id + "\n Keys: ";
+        for (Long[] k : keys){strRep += k + ", ";}
         if(this instanceof InternalNode) {
             strRep += "\n Children: ";
             for (long ch : ((InternalNode) this).children)
@@ -119,12 +162,27 @@ public abstract class Node {
     }
 
 
+    abstract protected void sameLengthKeyDeserialization(PageCursor cursor);
 
-    class SplitResult {
-        public final Key key;
+    abstract protected void variableLengthKeyDeserialization(PageCursor cursor);
+
+    abstract protected void sameLengthKeySerialization(PageCursor cursor);
+
+    abstract protected void variableLengthKeySerialization(PageCursor cursor);
+
+    abstract protected boolean notFull(Long[] newKey);
+
+    abstract protected int search(Long[] key);
+
+    abstract public Long[] find(Long[] key) throws IOException;
+
+    abstract public SplitResult insert(Long[] key) throws IOException;
+
+    public class SplitResult {
+        public final Long[] key;
         public final long left;
         public final long right;
-        public SplitResult(Key k, long l, long r){key = k; left = l; right = r;}
+        public SplitResult(Long[] k, long l, long r){key = k; left = l; right = r;}
     }
 
 

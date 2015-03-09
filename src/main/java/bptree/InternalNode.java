@@ -3,7 +3,6 @@ package bptree;
 import org.neo4j.io.pagecache.PageCursor;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.LinkedList;
 
 /**
@@ -11,10 +10,10 @@ import java.util.LinkedList;
  */
 public class InternalNode extends Node {
 
-    public LinkedList<Long> children = new LinkedList<Long>(); //Leaf blocks don't have children
+    public LinkedList<Long> children = new LinkedList<>();
 
     public InternalNode(Tree tree, long ID){
-        this(new LinkedList<Long[]>(), tree, ID); //Something about the nulls here worries me. Might be a future problem.
+        this(new LinkedList<Long[]>(), tree, ID);
     }
     public InternalNode(LinkedList<Long[]> k, Tree tree, long id){
         this.keys = k;
@@ -22,96 +21,98 @@ public class InternalNode extends Node {
         this.id = id;
     }
 
-    /**
-     * Construct an IBlock from a page
-     * @param cursor
-     * @param blockManager
-     * @param id
-     * @throws IOException
-     */
-    public InternalNode(PageCursor cursor, BlockManager blockManager, long id) throws IOException {
-        this.keys = new Key[blockManager.KEYS_PER_LBLOCK]; //TODO change this to linkedlist
-        this.blockManagerInstance = blockManager;
+    public InternalNode(PageCursor cursor, Tree tree, Long id) throws IOException{
+        this.tree = tree;
         this.id = id;
-        int keyLength;
-        int numOfChildPointers = Node.readNumberOfChildPointers(cursor);
-        sizeInBytes = INTERNAL_NODE_HEADER_LENGTH + INTERNAL_NODE_FOOTER_LENGTH + (numOfChildPointers * 8);
-        if(Node.identicalKeyLengthFromHeader(cursor)){
-            keyLength = Node.readKeyLength(cursor);
-            sizeInBytes += (keyLength * (numOfChildPointers - 1)) * 8;
-            cursor.setOffset(INTERNAL_NODE_HEADER_LENGTH);
-            for(int i = 0; i < numOfChildPointers; i++){
-                children[i] = cursor.getLong();
-            }
-            for(int i = 0; i < numOfChildPointers - 1; i++) {
-                this.keys[i] = new Key(new long[keyLength]);
-                for (int j = 0; j < keyLength; j++) {
-                    this.keys[i].vals[j] = cursor.getLong();
-                }
-            }
+        deserialize(cursor);
+
+    }
+
+    /**
+     * Parses a page of an Internal Node under the assumption that keys are the same length without any delimiter between keys.
+     * @param cursor
+     */
+    @Override
+    protected void sameLengthKeyDeserialization(PageCursor cursor){
+        int keyLength = parseHeaderForKeyLength(cursor);
+        int numberOfKeys = parseHeaderForNumberOfKeys(cursor);
+        LinkedList<Long[]> deserialized_keys = new LinkedList<>();
+        LinkedList<Long> deserialized_children = new LinkedList<>();
+        LinkedList<Long> newKey = new LinkedList<>();
+        cursor.setOffset(NODE_HEADER_LENGTH);
+        //Read all of the children id values
+        for(int i = 0; i < numberOfKeys + 1; i++){ //There is +1 children ids more than the number of keys
+            deserialized_children.add(cursor.getLong());
         }
-        else{ //Keys are variable length within block, delimiter of (-1) is used.
-            cursor.setOffset(INTERNAL_NODE_HEADER_LENGTH);
-            for(int i = 0; i < numOfChildPointers; i++){
-                children[i] = cursor.getLong();
+        cursor.setOffset(NODE_HEADER_LENGTH);
+        for(int i = 0; i < numberOfKeys; i++){
+            for(int j = 0; j < keyLength; j++){
+                newKey.add(cursor.getLong());
             }
-            cursor.setOffset(cursor.getOffset() - 8);//necessary precondition since in following loop will move it 8 bytes down.
-            for(int i = 0; i < numOfChildPointers - 1; i++) {
-                keyLength = 0; //reset this
-                cursor.setOffset(cursor.getOffset() + 8);
-                while(cursor.getLong() != -1l){ //while still within this key
-                    keyLength++;
-                }
-                sizeInBytes += (keyLength + 1) * 8;// this key, plus a delimiter
-                this.keys[i] = new Key(new long[keyLength]);
-                cursor.setOffset(cursor.getOffset() - (8 * keyLength) - 8); //move cursor back to read those keys for real this time
-                for(int j = 0; j < keyLength; j++) {
-                    this.keys[i].vals[j] = cursor.getLong();
-                }
+            //Now the variable newKey contains all the items in this key.
+            deserialized_keys.add((Long[]) newKey.toArray());
+            newKey.clear(); //clear if for the next round.
+        }
+        this.keys = deserialized_keys;
+        this.children = deserialized_children;
+    }
+
+
+    /**
+     * Parses a page under the assumption that each key length is unknown and the keys are -1 delimited.
+     * @param cursor
+     */
+    @Override
+    protected void variableLengthKeyDeserialization(PageCursor cursor){
+        int numberOfKeys = parseHeaderForNumberOfKeys(cursor);
+        LinkedList<Long[]> deserialize_keys = new LinkedList<>();
+        LinkedList<Long> deserialized_children = new LinkedList<>();
+        LinkedList<Long> newKey = new LinkedList<>();
+        cursor.setOffset(NODE_HEADER_LENGTH);
+        //Read all of the children id values
+        for(int i = 0; i < numberOfKeys + 1; i++){ //There is +1 children ids more than the number of keys
+            deserialized_children.add(cursor.getLong());
+        }
+        Long nextValue = cursor.getLong();
+        for(int i = 0; i < numberOfKeys; i++){ //check if we are at the final end of the block
+            while(nextValue != DELIMITER_VALUE) { //while still within this key
+                newKey.add(nextValue);
+                nextValue = cursor.getLong();
+            }
+            deserialize_keys.add((Long[]) newKey.toArray());
+            newKey.clear();
+            nextValue = cursor.getLong();
+        }
+        this.children = deserialized_children;
+        this.keys = deserialize_keys;
+    }
+
+    @Override
+    protected void sameLengthKeySerialization(PageCursor cursor) {
+        cursor.setOffset(NODE_HEADER_LENGTH);
+        for(Long child : children){
+            cursor.putLong(child);
+        }
+        for(Long[] key : keys){
+            for(Long item : key){
+                cursor.putLong(item);
             }
         }
     }
 
-    public byte[] asByteArray(){
-        int numChildren = numberOfChildren();
-        ByteBuffer byteRep = ByteBuffer.allocate(BlockManager.PAGE_SIZE);
-        byteRep.put((byte) 0); //Not a leaf block
-        if(sameLengthKeys){
-            byteRep.put((byte) 1); //keys are same length
-            byteRep.putInt(numChildren);
-            byteRep.putInt(keys[0].vals.length);//since all are same length this is fine
-            for(int i = 0; i < numChildren; i++){
-                byteRep.putLong(children[i]);
-            }
-            for(int i = 0; i < numChildren -1; i++){
-                for(int j = 0; j < keys[0].vals.length; j++)
-                byteRep.putLong(keys[i].vals[j]);
-            }
+    @Override
+    protected void variableLengthKeySerialization(PageCursor cursor) {
+        cursor.setOffset(NODE_HEADER_LENGTH);
+        for(Long child : children){
+            cursor.putLong(child);
         }
-        else{
-            byteRep.put((byte) 0); //keys are NOT same length
-            byteRep.putInt(numChildren);
-            byteRep.putInt(9); //variable key length, doesn't mean anything. useful number for debugging
-            for(int i = 0; i < numChildren; i++){
-                byteRep.putLong(children[i]);
+        for (Long[] key : keys){
+            for (Long item : key){
+                cursor.putLong(item);
             }
-            for(int i = 0; i < numChildren -1; i++){
-                for(int j = 0; j < keys[i].vals.length; j++) {
-                    byteRep.putLong(keys[i].vals[j]);
-                }
-                byteRep.putLong(-1l); //Delimiter between variable length keys
-            }
+            cursor.putLong(DELIMITER_VALUE);
+        }
 
-        }
-        return byteRep.array();
-    }
-
-    public int numberOfChildren(){
-        int numChildren = 0;
-        for(int i = 0; children[i] != 0; i++){
-            numChildren++;
-        }
-        return numChildren;
     }
 
     /**
@@ -123,77 +124,95 @@ public class InternalNode extends Node {
      * @param newKey The new key to be added to the block.
      * @return True if this key can be added will still allowing for this block to fit in a page.
      */
-    private boolean isSpaceAvailableFor(Key newKey) {
-        int futureSize = sizeInBytes //The current size
-                + ((newKey.vals.length + 2) * 8) //an extra +2 to account for possible delimiters
-                + 8; //The additional child pointer
+    @Override
+    protected boolean notFull(Long[] newKey) {
+        int byte_representation_size = NODE_HEADER_LENGTH;
 
-        if(BlockManager.PAGE_SIZE < futureSize) {
-            return false;
+        byte_representation_size += children.size() * 8; //Each child * 8bytes
+
+        //If the keys are the same length, there is no delimiter value. Need to check if this new key is of the same length.
+        if(sameLengthKeys && sameKeyLength(newKey)){ //the keys here are the same length already AND the new key is of the same length
+            byte_representation_size += (keys.size() + 1) * newKey.length * 8; //(Number of keys including the new one) * the number of longs in these keys * 8 bytes for each long.
         }
-        return true;
-    }
-
-
-    /**
-     *
-     * @param key The key to use as a search parameter.
-     * @return The set of values matching this key. If only a small portion of the key is specific this could be a lot of stuff.
-     */
-    protected Key[] get(Key key){
-        return blockManagerInstance.getBlock(children.get(search(key))).get(key);
+        else{ //Else, calculate the size including delimiters.
+            for(Long[] key : keys){
+                byte_representation_size += (key.length + 1) * 8; //The number of longs in this key plus a delimiter * 8 bytes for each long = the byte size of this key.
+            }
+        }
+        return byte_representation_size <= Tree.PAGE_SIZE;
     }
 
     /**
      * returns the index of the correct pointer to the next block.
-     * @param key
+     * @param search_key The key to search the position for.
      * @return the index.
      */
-    protected int search(Key key){
-        for (Key mKey : keys){
-            if (mKey.compareTo(key) > 0) { return keys.indexOf(mKey); }
+    @Override
+    protected int search(Long[] search_key){
+        for (Long[] key : keys){
+            if (keyComparator.compare(key, search_key) > 0) { return keys.indexOf(key); }
         }
         return keys.size(); //Then the position is the last one.
     }
+
+    /**
+     * Determines which child node leads to the specified key, and calls find on that node.
+     * @param key
+     * @return A single key matching the search key.
+     * @throws IOException
+     */
+    @Override
+    public Long[] find(Long[] key) throws IOException {
+        return tree.getNode(search(key)).find(key);
+    }
+
     /**
      *
      * @param key
      * @return SplitResult: Null if no split
      *  Otherwise: The left and right blocks which replace this block, and the new key for the right block.
      */
-    public SplitResult insert(Key key){
+    @Override
+    public SplitResult insert(Long[] key) throws IOException {
         int index = search(key);
-        SplitResult result = blockManagerInstance.getBlock(children.get(index)).insert(key);
+        SplitResult result = tree.getNode(children.get(index)).insert(key);
 
-        if(result != null){
+        if(result != null){ //Only insert into this block if there is a split result from the child.
             /**
              * If this block is full, we must split it and insert the new key
              */
-            if (keys.size() >= BlockManager.KEYS_PER_IBLOCK){
-                //Step 1. Create a new block and insert half of this blocks contents into the new block.
-                // Step 2. Insert the key into the correct block, adding the children nodes in the right place, and bubbling up a new key.
-
-                insertNotFull(result);
+            if (notFull(key)){
+                //There is room to insert the new key in this block without splitting.
+                this.insertNotFull(result);
+                tree.writeNodeToPage(this);
+            }
+            else{
+                insertNotFull(result); //insert into this node anyways, to prepare for the splitting below.
 
                 int midPoint = keys.size() / 2;
-                IBlock sibling = blockManagerInstance.createIBlock();
-                sibling.keys = new LinkedList<Key>(keys.subList(midPoint, keys.size()));
-                keys = new LinkedList<Key>(keys.subList(0, midPoint));
+                InternalNode sibling = tree.createInternalNode();
+                sibling.keys = new LinkedList<>(keys.subList(midPoint, keys.size()));
+                keys = new LinkedList<>(keys.subList(0, midPoint));
 
-                sibling.children = new LinkedList<Long>(children.subList(midPoint + 1, children.size()));
-                children = new LinkedList<Long>(children.subList(0, midPoint + 1));
+                sibling.children = new LinkedList<>(children.subList(midPoint + 1, children.size()));
+                children = new LinkedList<>(children.subList(0, midPoint + 1));
 
-                return new SplitResult(sibling.keys.pop(), this.blockID, sibling.blockID);
+                this.determineAndSetSameLengthKeysFlag();
+                sibling.determineAndSetSameLengthKeysFlag();
 
-            }
-            else{  //There is room to insert the new key in this block without splitting.
-                this.insertNotFull(result);
+                tree.writeNodeToPage(this);
+                tree.writeNodeToPage(sibling);
+                return new SplitResult(sibling.keys.pop(), this.id, sibling.id);
             }
         }
         return null; //No split result since we did not split. Calling function checks for nulls.
     }
 
-    protected void insertNotFull(SplitResult result){
+    /**
+     * Inserts a key and child into this node when there is sufficient space for it.
+     * @param result
+     */
+    protected void insertNotFull(SplitResult result) throws IOException {
         int index = search(result.key);
         if(index == keys.size()){
             //Insertion at the end of the array.

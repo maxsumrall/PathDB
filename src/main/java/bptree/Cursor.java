@@ -3,21 +3,13 @@ package bptree;
 /**
  * A cursor for iterating over a result set
  */
-protected abstract class Cursor {
+abstract class Cursor {
 
-    public Long[] next(){
+    abstract public Long[] next();
 
-    }
+    abstract public boolean hasNext();
 
-    public boolean hasNext(){
+    abstract public int size();
 
-    }
-
-    public int size(){
-
-    }
-
-    public void first(){
-
-    }
+    abstract public void first();
 }

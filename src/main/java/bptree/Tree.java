@@ -44,18 +44,18 @@ public class Tree implements Closeable, Serializable, ObjectInputValidation {
         }
         initializePageCache(page_cache_file);
         Node rootNode = createLeafNode(); // Initialize the tree with only one block for now, a leaf block.
-        rootNodePageID = rootNode.nodeID;
+        rootNodePageID = rootNode.id;
     }
 
-    protected Tree initalizeNewTree() throws IOException {
+    public static Tree initializeNewTree() throws IOException {
         return initializeNewTree(DEFAULT_CACHE_FILE_NAME, DEFAULT_TREE_FILE_NAME, true); //Delete on exit
     }
 
-    protected Tree initializeNewTree(String cache_file_location, String tree_file_location, boolean deleteOnExit) throws IOException {
+    public static Tree initializeNewTree(String cache_file_location, String tree_file_location, boolean deleteOnExit) throws IOException {
         return new Tree(cache_file_location, tree_file_location, deleteOnExit);
     }
 
-    protected Tree loadTreeFromFile(String tree_location) throws IOException {
+    public static Tree loadTreeFromFile(String tree_location) throws IOException {
         FileInputStream fis = new FileInputStream(tree_location);
         byte[] bytes = new byte[fis.available()];
         fis.read(bytes);
@@ -77,47 +77,27 @@ public class Tree implements Closeable, Serializable, ObjectInputValidation {
     }
 
     /**
-     * Gets a block. If the block is already loaded into memory, then we can imemdately return it.
-     * If the block is not found, then we need to load it from disk.
-     * @param id
-     * @return
+     * Gets a node.
+     * @param id of the node, also representing it's page id.
+     * @return a reference to this node.
      */
     public Node getNode(long id) throws IOException {
-        return loadNodeFromDisk(id);
-    }
-
-    /**
-     * Returns a cursor on the page specified by id
-     * @param id specific page to set the cursor to initially.
-     * @return a cursor on that page.
-     */
-
-
-    /**
-     * Finds the block on the disk, loads it and stores it into the memory.
-     * TODO should remove a block from memory or overwrite a block in memory.
-     * @param id of the block to load and return
-     * @return The block reterived from disk
-     */
-    private Node loadNodeFromDisk(Long id) throws IOException {
+        Node node = null;
         try (PageCursor cursor = pagedFile.io(id, PagedFile.PF_EXCLUSIVE_LOCK)) {
             if (cursor.next()) {
                 do {
                     // perform read or write operations on the page
-                    Node node;
-                    if(Node.isLeafBlock(cursor)){
+                    if(Node.parseHeaderForNodeTypeFlag(cursor) == Node.LEAF_FLAG){
                         node = new LeafNode(cursor, this, id);
                     }
                     else{
-                        //block = new IBlock(cursor);
-                        node = null;
+                        node = new InternalNode(cursor, this, id);
                     }
-                    return node;
                 }
                 while (cursor.shouldRetry());
             }
         }
-        return null;
+        return node;
     }
 
     public long getNewID(){
@@ -125,39 +105,60 @@ public class Tree implements Closeable, Serializable, ObjectInputValidation {
     }
 
     public LeafNode createLeafNode(){
-        long newBlockID = getNewID();
-        //blocks.put(newBlockID, new LeafNode(this, newBlockID));
-        return (LeafNode)blocks.get(newBlockID);
+        return new LeafNode(this, getNewID());
     }
     public InternalNode createInternalNode(){
-        long newBlockID = getNewID();
-        //blocks.put(newBlockID, new InternalNode(this, newBlockID));
-        return (InternalNode)blocks.get(newBlockID);
-    }
-
-    public IndexCursor find(Long[] key){
-
+        return new InternalNode(this, getNewID());
     }
 
     /**
-     * Get the root block and call insert on it.
-     * If the root returns a split result, make a new block and set it as the root.
-     * @param key
+     * When a node is changed, it will call this function to have itself written to the disk.
+     * This better controls the instantiation of PageCursors,
+     * limiting it to only being instantiated in the Tree.
+     * @param node the Node which would like to be serialized.
      */
-    public void insert(Long[] key){
-        Node.SplitResult result = bm.rootNode.insert(key);
-        if (result != null){ //Root block split.
-            InternalNode newRoot = bm.createIBlock();
-            newRoot.num = 1;
-            newRoot.keys[0] = result.key;
-            newRoot.children[0] = result.left;
-            newRoot.children[1] = result.right;
-            bm.rootNode = newRoot;
+    public void writeNodeToPage(Node node) throws IOException {
+        try (PageCursor cursor = pagedFile.io(node.id, PagedFile.PF_EXCLUSIVE_LOCK)) {
+            if (cursor.next()) {
+                do {
+                    // perform read or write operations on the page
+                    node.serialize(cursor);
+                }
+                while (cursor.shouldRetry());
+            }
         }
     }
 
     /**
-     * Save the state of the index to the file to load later.
+     * Returns a single result given a key.
+     * @param key
+     * @return
+     * @throws IOException
+     */
+    public Long[] find(Long[] key) throws IOException {
+        return getNode(rootNodePageID).find(key);
+
+    }
+
+    /**
+     * TODO return a cursor where this was inserted to do bulk insertion later, maybe.
+     * Get the root block and call insert on it.
+     * If the root returns a split result, make a new block and set it as the root.
+     * @param key
+     */
+    public void insert(Long[] key) throws IOException {
+        Node.SplitResult result = getNode(rootNodePageID).insert(key);
+        if (result != null){ //Root block split.
+            InternalNode newRoot = createInternalNode();
+            newRoot.keys.add(result.key);
+            newRoot.children.add(result.left);
+            newRoot.children.add(result.right);
+            rootNodePageID = newRoot.id;
+        }
+    }
+
+    /**
+     * Save the state of this tree to the file to load later.
      */
     public void close() throws IOException {
         FileOutputStream fos = new FileOutputStream(tree_filename);
@@ -166,7 +167,7 @@ public class Tree implements Closeable, Serializable, ObjectInputValidation {
     }
 
     /**
-     * Serialize this object
+     * Serialize this Tree object
      * @param o
      * @return
      * @throws IOException
@@ -181,7 +182,7 @@ public class Tree implements Closeable, Serializable, ObjectInputValidation {
     }
 
     /**
-     * Deserialize this object
+     * Deserialize this Tree object
      * @param bytes
      * @return
      * @throws ClassNotFoundException
@@ -204,7 +205,7 @@ public class Tree implements Closeable, Serializable, ObjectInputValidation {
         return tree;
     }
     /**
-     * Methods implementing serialization
+     * Methods implementing serialization of Tree
      * @throws InvalidObjectException
      */
     @Override
@@ -213,7 +214,7 @@ public class Tree implements Closeable, Serializable, ObjectInputValidation {
     }
 
     /**
-     * Methods implementing serialization
+     * Methods implementing serialization of Tree
      * @param out
      * @throws IOException
      */
@@ -222,7 +223,7 @@ public class Tree implements Closeable, Serializable, ObjectInputValidation {
     }
 
     /**
-     * Method implementing serialization
+     * Method implementing serialization of Tree
      * @param in
      * @throws IOException
      * @throws ClassNotFoundException
@@ -232,7 +233,7 @@ public class Tree implements Closeable, Serializable, ObjectInputValidation {
         in.defaultReadObject();
     }
 
-    private class IndexCursor extends Cursor {
+    /*private class IndexCursor extends Cursor {
 
-    }
+    }*/
 }

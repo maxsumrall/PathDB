@@ -5,7 +5,7 @@ import org.junit.Test;
 import java.util.Random;
 
 public class KeyTest {
-    private static Random random = new Random();
+    private static final Random random = new Random();
     private static long sequentialNumber = 0l;
 
     public static Long[] generateRandomKey(int length){
@@ -20,7 +20,7 @@ public class KeyTest {
     }
 
     @Test
-    public void testKeyComparision(){
+    public void testKeyComparison(){
         Long[] keyA = new Long[]{1l,1l,1l};
         Long[] keyB = new Long[]{1l,1l,1l,1l};
         Long[] keyC = new Long[]{2l,2l,2l,2l};
