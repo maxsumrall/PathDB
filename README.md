@@ -1,6 +1,6 @@
 Path Index
 =====
 
-[![Build Status](https://magnum.travis-ci.com/jsumrall/Path-Index.svg?token=XyC9kYxq3jT6qitsapzM&branch=master)](https://magnum.travis-ci.com/jsumrall/Path-Index)
+[![Build Status](https://travis-ci.org/jsumrall/Path-Index.svg)](https://travis-ci.org/jsumrall/Path-Index)
 
 A path index for indexing in Neo4j
