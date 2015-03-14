@@ -23,10 +23,11 @@ public class PathIndexTest {
      */
     public ArrayList<Long[]> exampleLabelPaths(int number_of_paths, int k){
         Random random = new Random();
-        ArrayList<Long[]> labelPaths = new ArrayList<>(number_of_paths);
-        for(Long[] path:labelPaths){
-            for(int i = 0; i < k; i++){
-                path[i] = random.nextLong();
+        ArrayList<Long[]> labelPaths = new ArrayList<>();
+        for(int i = 0; i < number_of_paths; i++){
+            labelPaths.add(new Long[k]);
+            for(int j = 0; j < k; j++){
+                labelPaths.get(i)[j] = Math.abs(random.nextLong());
             }
         }
         return labelPaths;
@@ -43,7 +44,7 @@ public class PathIndexTest {
         Random random = new Random();
         ArrayList<Long[]> labelPaths = new ArrayList<>();
         for(int i = 0; i < number_of_paths; i++){
-            labelPaths.set(i, new Long[random.nextInt(maxK - minK + 1) + minK]);
+            labelPaths.add(new Long[random.nextInt(maxK - minK + 1) + minK]);
             for(int j = 0; j < labelPaths.get(i).length; j++){
                 labelPaths.get(i)[j] = random.nextLong();
             }
@@ -73,16 +74,41 @@ public class PathIndexTest {
 
     private ArrayList<Long[][]> exampleKeys(ArrayList<Long[]> labelPaths, int number_of_keys, boolean randomNodeIds) {
         Random random = new Random();
-        ArrayList<Long[][]> keys = new ArrayList<>(number_of_keys);
-        for (int i = 0; i < keys.size(); i++) {
+        ArrayList<Long[][]> keys = new ArrayList<>();
+        for (int i = 0; i < number_of_keys; i++) {
             Long[] randomPath = labelPaths.get(random.nextInt(labelPaths.size()));
             Long[] nodes = new Long[randomPath.length + 1];
             for (int j = 0; j < nodes.length; j++) {
-                nodes[i] = randomNodeIds ? random.nextLong() : i;
-                keys.set(i, new Long[][]{randomPath, nodes});
+                nodes[j] = randomNodeIds ? random.nextLong() : i;
             }
+            keys.add(new Long[][]{randomPath, nodes});
         }
         return keys;
+    }
+
+    public static void printTree(Node node, Tree tree) throws IOException {
+        printNode(node);
+        if(node instanceof InternalNode){
+            for(Long child : ((InternalNode)node).children){
+                printTree(tree.getNode(child), tree);
+            }
+        }
+
+    }
+    public static void printNode(Node node){
+        System.out.println((node instanceof LeafNode ? "Leaf Node, " : "Internal Node, ") + "Node ID: " + node.id);
+        System.out.print("Keys: ");
+        for(Long[] key : node.keys){
+            System.out.print(Arrays.toString(key) + ", ");
+        }
+        System.out.print("\n");
+        if(node instanceof InternalNode){
+            System.out.print("Children: ");
+            for(Long child : ((InternalNode)node).children){
+                System.out.print(child + ", ");
+            }
+            System.out.print("\n");
+        }
     }
 
     @Before
@@ -109,35 +135,44 @@ public class PathIndexTest {
         }
     }
 
-    /*
     @Test
-    public void testInsertRandomKeysIntoIndex(){
+    public void testInsertRandomKeysIntoIndex() throws IOException {
         int number_of_keys_to_insert = 1000;
         ArrayList<Long[][]> keys = exampleRandomKeys(labelPaths, number_of_keys_to_insert);
         for(Long[][] key: keys){
             index.insert(key[0], key[1]);
         }
-        Cursor cursor;
+        Long[] result;
         for(Long[][] key : keys){
-            cursor = index.find(key[0], key[1]);
-            assert(cursor.hasNext());
-            assert(cursor.next().equals(new Long[][]{new Long[]{}})); //the empty set
+            result = index.find(key[0], key[1]);
+            assert(Arrays.equals(result, index.build_searchKey(key[0], key[1]))); //the empty set
         }
     }
     @Test
-    public void testInsertRandomKeysWithRandomLengthIntoIndex(){
+    public void testInsertRandomKeysWithRandomLengthIntoIndex() throws IOException {
         int number_of_keys_to_insert = 1000;
         ArrayList<Long[]> different_length_paths  = exampleVariableLengthLabelPaths(number_of_keys_to_insert, 2, 4);
         ArrayList<Long[][]> keys = exampleRandomKeys(different_length_paths, number_of_keys_to_insert);
+        index = PathIndex.temporaryPathIndex()
+                .setKValues(2, 4)
+                .buildLabelPathMapping(different_length_paths)
+                .setSignatures(PathIndex.defaultSignatures(2,4));
         for(Long[][] key: keys){
             index.insert(key[0], key[1]);
         }
-        Cursor cursor;
+        Long[] result;
         for(Long[][] key : keys){
-            cursor = index.find(key[0], key[1]);
-            assert(cursor.hasNext());
-            assert(cursor.next().equals(new Long[][]{new Long[]{}})); //the empty set
+            result = index.find(key[0], key[1]);
+            if(!Arrays.equals(result, index.build_searchKey(key[0], key[1]))){
+                Tree tree  = index.tree;
+                System.out.println("Search Key: " + Arrays.toString(index.build_searchKey(key[0], key[1])));
+                System.out.println(tree.logger);
+                printTree(tree.getNode(tree.rootNodePageID), tree);
+                result = index.find(key[0], key[1]);
+
+            }
+            assert(Arrays.equals(result, index.build_searchKey(key[0], key[1])));
         }
     }
-    */
+
 }

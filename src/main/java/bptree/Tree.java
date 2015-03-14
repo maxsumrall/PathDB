@@ -7,6 +7,7 @@ import org.neo4j.io.pagecache.impl.muninn.MuninnPageCache;
 import org.neo4j.io.pagecache.monitoring.PageCacheMonitor;
 
 import java.io.*;
+import java.util.LinkedList;
 
 /**
  * Created by max on 2/10/15.
@@ -18,17 +19,18 @@ public class Tree implements Closeable, Serializable, ObjectInputValidation {
     protected static int PAGE_SIZE = bptree.Utils.getIdealBlockSize();
     protected String tree_filename;
     protected String cache_filename;
-    private long nextAvailablePageID = 1l;
+    private long nextAvailablePageID = 0l;
     protected long rootNodePageID;
     protected int recordSize = 9; //TODO What is this?
-    protected int maxPages = 20; //TODO How big should this be?
-    protected int pageCachePageSize = 32;
+    protected int maxPages = 200; //TODO How big should this be?
+    protected int pageCachePageSize = PAGE_SIZE;
     protected int recordsPerFilePage = pageCachePageSize / recordSize;
     protected int recordCount = 25 * maxPages * recordsPerFilePage;
     protected int filePageSize = recordsPerFilePage * recordSize;
     protected transient DefaultFileSystemAbstraction fs;
     protected transient MuninnPageCache pageCache;
     protected transient PagedFile pagedFile;
+    public LinkedList<Long> logger = new LinkedList<>();
 
     /**
      * Constructs a new Tree object
@@ -82,6 +84,10 @@ public class Tree implements Closeable, Serializable, ObjectInputValidation {
      * @return a reference to this node.
      */
     public Node getNode(long id) throws IOException {
+        if(id == rootNodePageID){
+            logger.clear();
+        }
+        logger.add(id);
         Node node = null;
         try (PageCursor cursor = pagedFile.io(id, PagedFile.PF_EXCLUSIVE_LOCK)) {
             if (cursor.next()) {
@@ -104,11 +110,14 @@ public class Tree implements Closeable, Serializable, ObjectInputValidation {
         return nextAvailablePageID++;
     }
 
-    public LeafNode createLeafNode(){
+    public LeafNode createLeafNode() throws IOException {
         return new LeafNode(this, getNewID());
     }
-    public InternalNode createInternalNode(){
+    public InternalNode createInternalNode() throws IOException {
         return new InternalNode(this, getNewID());
+    }
+    public InternalNode createInternalNode(LinkedList<Long[]> keys, LinkedList<Long> children) throws IOException {
+        return new InternalNode(keys, children, this, getNewID());
     }
 
     /**
@@ -149,10 +158,12 @@ public class Tree implements Closeable, Serializable, ObjectInputValidation {
     public void insert(Long[] key) throws IOException {
         Node.SplitResult result = getNode(rootNodePageID).insert(key);
         if (result != null){ //Root block split.
-            InternalNode newRoot = createInternalNode();
-            newRoot.keys.add(result.key);
-            newRoot.children.add(result.left);
-            newRoot.children.add(result.right);
+            LinkedList<Long[]> keys = new LinkedList<>();
+            LinkedList<Long> children = new LinkedList<>();
+            keys.add(result.key);
+            children.add(result.left);
+            children.add(result.right);
+            InternalNode newRoot = createInternalNode(keys, children);
             rootNodePageID = newRoot.id;
         }
     }

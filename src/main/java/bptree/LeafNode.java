@@ -11,13 +11,14 @@ import java.util.LinkedList;
  */
 public class LeafNode extends Node {
 
-    public LeafNode(Tree tree, long id){
+    public LeafNode(Tree tree, long id) throws IOException {
         this(new LinkedList<Long[]>(), tree, id);
     }
-    public LeafNode(LinkedList<Long[]> k, Tree tree, Long id){
+    public LeafNode(LinkedList<Long[]> k, Tree tree, Long id) throws IOException {
         this.keys = k;
         this.tree = tree;
         this.id = id;
+        tree.writeNodeToPage(this);
     }
 
     public LeafNode(PageCursor cursor, Tree tree, Long id) throws IOException {
@@ -42,7 +43,7 @@ public class LeafNode extends Node {
                 newKey.add(cursor.getLong());
             }
             //Now the variable newKey contains all the items in this key.
-            deserialize_keys.add((Long[]) newKey.toArray());
+            deserialize_keys.add(newKey.toArray(new Long[newKey.size()]));
             newKey.clear(); //clear if for the next round.
         }
         this.keys = deserialize_keys;
@@ -57,16 +58,18 @@ public class LeafNode extends Node {
         int numberOfKeys = parseHeaderForNumberOfKeys(cursor);
         LinkedList<Long[]> deserialize_keys = new LinkedList<>();
         LinkedList<Long> newKey = new LinkedList<>();
-        Long nextValue = cursor.getLong();
         cursor.setOffset(NODE_HEADER_LENGTH);
+        Long nextValue = cursor.getLong();
         for(int i = 0; i < numberOfKeys; i++){ //check if we are at the final end of the block
             while(nextValue != DELIMITER_VALUE) { //while still within this key
                 newKey.add(nextValue);
                 nextValue = cursor.getLong();
             }
-            deserialize_keys.add((Long[]) newKey.toArray());
+            deserialize_keys.add(newKey.toArray(new Long[newKey.size()]));
             newKey.clear();
-            nextValue = cursor.getLong();
+            if(i + 1 < numberOfKeys) {
+                nextValue = cursor.getLong();//Without this check, there are problems for the last value being at the very end of the block.
+            }
         }
         this.keys = deserialize_keys;
     }
@@ -119,8 +122,9 @@ public class LeafNode extends Node {
                 for(Long[] key : keys){
                     byte_representation_size += (key.length + 1) * 8; //The number of longs in this key plus a delimiter * 8 bytes for each long = the byte size of this key.
                 }
+            byte_representation_size += (newKey.length + 1) * 8;
         }
-        return byte_representation_size <= Tree.PAGE_SIZE;
+        return byte_representation_size < Tree.PAGE_SIZE;
     }
 
     /**
@@ -145,7 +149,7 @@ public class LeafNode extends Node {
         for(Long[] key : keys){
             if (keyComparator.compare(key,search_key) >= 0) { return keys.indexOf(key); }
         }
-        return -1;
+        return 0;
     }
 
     /**
@@ -156,7 +160,7 @@ public class LeafNode extends Node {
      */
     @Override
     public SplitResult insert(Long[] key) throws IOException {
-
+        updateSameLengthKeyFlag(key);
         /**
          * If this block is full, we must split it and insert the new key
          */
@@ -168,17 +172,20 @@ public class LeafNode extends Node {
         else{
             insertNotFull(key);//put the key in here for the split operation about to happen.
             int midPoint = keys.size() / 2;
-            LeafNode sibling = tree.createLeafNode();
+            LeafNode sibling = tree.createLeafNode(); //TODO can do this with the keys already and save a disk write
 
-            sibling.keys.addAll(keys.subList(midPoint,keys.size()));
-            keys.subList(midPoint, keys.size()).clear();
+            sibling.keys = new LinkedList<>(keys.subList(midPoint,keys.size()));
+            keys = new LinkedList<>(keys.subList(0, midPoint));
+
+            determineAndSetSameLengthKeysFlag();
+            sibling.determineAndSetSameLengthKeysFlag();
 
             //Rearrange sibling id's.
             sibling.siblingID = this.siblingID;
             this.siblingID = sibling.id;
             tree.writeNodeToPage(this);
             tree.writeNodeToPage(sibling);
-            return new SplitResult(sibling.keys.get(0), this.id, sibling.id);
+            return new SplitResult(sibling.keys.getFirst(), this.id, sibling.id);
         }
 
         return null; //No split result since we did not split. Calling function checks for nulls.

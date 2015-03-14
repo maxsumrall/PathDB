@@ -87,12 +87,27 @@ public abstract class Node {
      * @param key
      * @return
      */
-    protected boolean sameKeyLength(Long[] key){return (keys.size() == 0) || keys.get(1).length == key.length;}
+    protected boolean sameKeyLength(Long[] key) {
+        if (keys.size() == 0) {
+            return true;
+        } else if (keys.getFirst().length == key.length) {
+            return true;
+        }
+        return false;
+    }
+    protected boolean updateSameLengthKeyFlag(Long[] key){
+        if(sameLengthKeys){
+            if(keys.size() > 0 && key.length != keys.getFirst().length){
+                sameLengthKeys = false;
+            }
+        }
+        return sameLengthKeys;
+    }
 
     protected void determineAndSetSameLengthKeysFlag(){
         sameLengthKeys = true;
-        for(Long[] key : keys){
-            if (key.length != keys.getFirst().length){ sameLengthKeys = false; }
+        for(int i = 0 ; i < keys.size(); i++){
+            if (keys.getFirst().length != keys.get(i).length){ sameLengthKeys = false; }
         }
     }
 
@@ -101,8 +116,8 @@ public abstract class Node {
      * @param cursor
      */
     protected void serializeHeader(PageCursor cursor){
-        cursor.putByte(BYTE_POSITION_NODE_TYPE, (byte) (this instanceof LeafNode ? 1 : -1));
-        cursor.putInt(BYTE_POSITION_KEY_LENGTH, sameLengthKeys ? keys.get(0).length : -1);
+        cursor.putByte(BYTE_POSITION_NODE_TYPE, (byte) (this instanceof LeafNode ? 1 : 2));
+        cursor.putInt(BYTE_POSITION_KEY_LENGTH, sameLengthKeys ? (keys.size() > 0 ? keys.getFirst().length : 0) : -1);
         cursor.putInt(BYTE_POSITION_KEY_COUNT, keys.size());
         cursor.putLong(BYTE_POSITION_SIBLING_ID, siblingID);
     }
@@ -144,6 +159,10 @@ public abstract class Node {
         }
     }
 
+    public SplitResult getSplitResult(Long[] k, Long left, Long right){
+        return new SplitResult(k, left, right);
+    }
+
 
     /**
      * Returns a string representation of this node.
@@ -177,6 +196,7 @@ public abstract class Node {
     abstract public Long[] find(Long[] key) throws IOException;
 
     abstract public SplitResult insert(Long[] key) throws IOException;
+
 
     public class SplitResult {
         public final Long[] key;
