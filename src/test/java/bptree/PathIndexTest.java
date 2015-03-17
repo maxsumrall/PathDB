@@ -37,13 +37,24 @@ public class PathIndexTest {
      * @param maxK The maximum length of paths to generate.
      * @return An ArrayList containing labeled paths each between minK and maxK length.
      */
-    public ArrayList<Long[]> exampleVariableLengthLabelPaths(int number_of_paths, int minK, int maxK){
+    public ArrayList<Long[]> exampleVariableLengthRandomLabelPaths(int number_of_paths, int minK, int maxK){
         Random random = new Random();
         ArrayList<Long[]> labelPaths = new ArrayList<>();
         for(int i = 0; i < number_of_paths; i++){
             labelPaths.add(new Long[random.nextInt(maxK - minK + 1) + minK]);
             for(int j = 0; j < labelPaths.get(i).length; j++){
                 labelPaths.get(i)[j] = random.nextLong();
+            }
+        }
+        return labelPaths;
+    }
+
+    public ArrayList<Long[]> exampleVariableLengthLabelPaths(int number_of_paths, int minK, int maxK){
+        ArrayList<Long[]> labelPaths = new ArrayList<>();
+        for(int i = 0; i < number_of_paths; i++){
+            labelPaths.add(new Long[(i%5) + minK]);
+            for(int j = 0; j < labelPaths.get(i).length; j++){
+                labelPaths.get(i)[j] = (long)i;
             }
         }
         return labelPaths;
@@ -73,7 +84,7 @@ public class PathIndexTest {
         Random random = new Random();
         ArrayList<Long[][]> keys = new ArrayList<>();
         for (int i = 0; i < number_of_keys; i++) {
-            Long[] randomPath = labelPaths.get(random.nextInt(labelPaths.size()));
+            Long[] randomPath = labelPaths.get(i%labelPaths.size());
             Long[] nodes = new Long[randomPath.length + 1];
             for (int j = 0; j < nodes.length; j++) {
                 nodes[j] = randomNodeIds ? random.nextLong() : i;
@@ -162,14 +173,13 @@ public class PathIndexTest {
         Cursor cursor;
         for(Long[][] key : keys){
             cursor = index.find(key[0], key[1]);
-           /* if(!Arrays.equals(cursor.next(), index.build_searchKey(key[0], key[1]))){
-                Tree tree  = index.tree;
-                System.out.println("Search Key: " + Arrays.toString(index.build_searchKey(key[0], key[1])));
-                System.out.println(tree.logger);
-                printTree(tree.getNode(tree.rootNodePageID), tree);
-                cursor = index.find(key[0], key[1]);
-
-            }*/
+           // if(!Arrays.equals(cursor.next(), index.build_searchKey(key[0], key[1]))){
+            //    Tree tree  = index.tree;
+            //    System.out.println("Search Key: " + Arrays.toString(index.build_searchKey(key[0], key[1])));
+            //    System.out.println(tree.logger);
+            //    printTree(tree.getNode(tree.rootNodePageID), tree);
+            //    cursor = index.find(key[0], key[1]);
+           // }
             assert(cursor.hasNext());
             assert(Arrays.equals(cursor.next(), index.build_searchKey(key[0], key[1])));
         }
@@ -178,8 +188,8 @@ public class PathIndexTest {
 
     @Test
     public void testPrefixCheckingMultipleResults() throws IOException {
-        int number_of_keys_to_insert = 1000;
-        ArrayList<Long[]> different_length_paths = exampleVariableLengthLabelPaths(number_of_keys_to_insert, 2, 4);
+        int number_of_keys_to_insert = 2000;
+        ArrayList<Long[]> different_length_paths = exampleVariableLengthRandomLabelPaths(50, 2, 4);
         ArrayList<Long[][]> keys = exampleRandomKeys(different_length_paths, number_of_keys_to_insert);
         index = PathIndex.temporaryPathIndex()
                 .setKValues(2, 4)
@@ -193,16 +203,35 @@ public class PathIndexTest {
             index.insert(key[0], key[1]);
         }
         Cursor cursor;
-        LinkedList<Long[]> results = new LinkedList<>();
-        for (Long[][] key : keys) {
-            cursor = index.find(key[0], new Long[]{});
+        HashMap<Long[], Integer> results = new HashMap<>();
+        for (Long[] path: different_length_paths) {
+            cursor = index.find(path, new Long[]{});
             while (cursor.hasNext()) {
                 Long[] result = cursor.next();
-                results.add(result);
+                assert(Node.keyComparator.validPrefix(index.build_searchKey(path, new Long[]{}), result));
+                results.put(result, 1);
             }
         }
         System.out.println(keys_built.size() + " " + results.size());
-        //assert (keys_built.size() == results.size());
+
+        for(Long[] result : results.keySet()){
+            ArrayList<Long[]> intermediate = new ArrayList<>();
+            for(Long[] saved : keys_built){
+                if(Arrays.equals(saved, result)){
+                    intermediate.add(saved);
+                }
+            }
+            for(Long[] each : intermediate) {
+                keys_built.remove(each);
+            }
+            intermediate.clear();
+
+        }
+        for(Long[] lost : keys_built){
+            System.out.println(Arrays.toString(lost));
+        }
+
+        //printTree(index.tree.getNode(index.tree.rootNodePageID), index.tree);
 
 
 
