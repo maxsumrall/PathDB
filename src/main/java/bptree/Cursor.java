@@ -32,6 +32,9 @@ public class Cursor {
                 break;
             }
         }
+        if(remaining == 0){ //In some cases the valid key values being at the exact beginning of a block. We don't know if there are valid keys in previous block, so we check.
+            loadNextNode();
+        }
     }
 
     /**
@@ -61,7 +64,7 @@ public class Cursor {
         if(remaining == 0){
             if(position == currentLeaf.keys.size()){ //No more remaining, but there are no more keys in this node...
                 loadNextNode();
-                return next(); //
+                return next();
             }
             else{//no more remaining, and yet there are still more keys in this node. We are truly finished.
                 return new Long[]{};

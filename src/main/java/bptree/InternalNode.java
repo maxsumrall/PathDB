@@ -156,7 +156,7 @@ public class InternalNode extends Node {
     @Override
     protected int search(Long[] search_key){
             for (int i = 0; i < keys.size(); i++){
-            if (keyComparator.prefixCompare(search_key, keys.get(i)) < 0) { return i; }
+            if (keyComparator.prefixCompare(search_key, keys.get(i)) <= 0) { return i; }
         }
         return keys.size(); //Then the position is the last one.
     }
