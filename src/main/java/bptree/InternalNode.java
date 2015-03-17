@@ -3,6 +3,7 @@ package bptree;
 import org.neo4j.io.pagecache.PageCursor;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.LinkedList;
 
 /**
@@ -26,10 +27,10 @@ public class InternalNode extends Node {
         tree.writeNodeToPage(this);
     }
 
-    public InternalNode(PageCursor cursor, Tree tree, Long id) throws IOException{
+    public InternalNode(ByteBuffer buffer, Tree tree, Long id) throws IOException{
         this.tree = tree;
         this.id = id;
-        deserialize(cursor);
+        deserialize(buffer);
 
     }
 
@@ -38,20 +39,20 @@ public class InternalNode extends Node {
      * @param cursor
      */
     @Override
-    protected void sameLengthKeyDeserialization(PageCursor cursor){
-        int keyLength = parseHeaderForKeyLength(cursor);
-        int numberOfKeys = parseHeaderForNumberOfKeys(cursor);
+    protected void sameLengthKeyDeserialization(ByteBuffer buffer){
+        int keyLength = parseHeaderForKeyLength(buffer);
+        int numberOfKeys = parseHeaderForNumberOfKeys(buffer);
         LinkedList<Long[]> deserialized_keys = new LinkedList<>();
         LinkedList<Long> deserialized_children = new LinkedList<>();
         LinkedList<Long> newKey = new LinkedList<>();
-        cursor.setOffset(NODE_HEADER_LENGTH);
+        buffer.position(NODE_HEADER_LENGTH);
         //Read all of the children id values
         for(int i = 0; (numberOfKeys > 0) && i < (numberOfKeys + 1); i++){ //There is +1 children ids more than the number of keys
-            deserialized_children.add(cursor.getLong());
+            deserialized_children.add(buffer.getLong());
         }
         for(int i = 0; i < numberOfKeys; i++){
             for(int j = 0; j < keyLength; j++){
-                newKey.add(cursor.getLong());
+                newKey.add(buffer.getLong());
             }
             //Now the variable newKey contains all the items in this key.
             deserialized_keys.add(newKey.toArray(new Long[newKey.size()]));
@@ -64,57 +65,53 @@ public class InternalNode extends Node {
 
     /**
      * Parses a page under the assumption that each key length is unknown and the keys are -1 delimited.
-     * @param cursor
+     * @param buffer
      */
     @Override
-    protected void variableLengthKeyDeserialization(PageCursor cursor){
-        int numberOfKeys = parseHeaderForNumberOfKeys(cursor);
+    protected void variableLengthKeyDeserialization(ByteBuffer buffer){
+        int numberOfKeys = parseHeaderForNumberOfKeys(buffer);
         LinkedList<Long[]> deserialize_keys = new LinkedList<>();
         LinkedList<Long> deserialized_children = new LinkedList<>();
         LinkedList<Long> newKey = new LinkedList<>();
-        cursor.setOffset(NODE_HEADER_LENGTH);
+        buffer.position(NODE_HEADER_LENGTH);
         //Read all of the children id values
         for(int i = 0; i < numberOfKeys + 1; i++){ //There is +1 children ids more than the number of keys
-            deserialized_children.add(cursor.getLong());
+            deserialized_children.add(buffer.getLong());
         }
-        Long nextValue = cursor.getLong();
+        Long nextValue = buffer.getLong();
         for(int i = 0; (numberOfKeys > 0) && (i < numberOfKeys); i++){ //check if we are at the final end of the block
             while(nextValue != DELIMITER_VALUE) { //while still within this key
                 newKey.add(nextValue);
-                nextValue = cursor.getLong();
+                nextValue = buffer.getLong();
             }
             deserialize_keys.add(newKey.toArray(new Long[newKey.size()]));
             newKey.clear();
-            nextValue = cursor.getLong();
+            nextValue = buffer.getLong();
         }
         this.children = deserialized_children;
         this.keys = deserialize_keys;
     }
 
     @Override
-    protected void sameLengthKeySerialization(PageCursor cursor) {
-        cursor.setOffset(NODE_HEADER_LENGTH);
-        for(Long child : children){
-            cursor.putLong(child);
-        }
+    protected void sameLengthKeySerialization(ByteBuffer buffer) {
+        buffer.position(NODE_HEADER_LENGTH);
+        children.forEach(buffer::putLong);
         for(Long[] key : keys){
             for(Long item : key){
-                cursor.putLong(item);
+                buffer.putLong(item);
             }
         }
     }
 
     @Override
-    protected void variableLengthKeySerialization(PageCursor cursor) {
-        cursor.setOffset(NODE_HEADER_LENGTH);
-        for(Long child : children){
-            cursor.putLong(child);
-        }
+    protected void variableLengthKeySerialization(ByteBuffer buffer) {
+        buffer.position(NODE_HEADER_LENGTH);
+        children.forEach(buffer::putLong);
         for (Long[] key : keys){
             for (Long item : key){
-                cursor.putLong(item);
+                buffer.putLong(item);
             }
-            cursor.putLong(DELIMITER_VALUE);
+            buffer.putLong(DELIMITER_VALUE);
         }
 
     }
@@ -159,7 +156,7 @@ public class InternalNode extends Node {
     @Override
     protected int search(Long[] search_key){
             for (int i = 0; i < keys.size(); i++){
-            if (keyComparator.compare(keys.get(i), search_key) > 0) { return i; }
+            if (keyComparator.prefixCompare(search_key, keys.get(i)) < 0) { return i; }
         }
         return keys.size(); //Then the position is the last one.
     }
@@ -171,7 +168,7 @@ public class InternalNode extends Node {
      * @throws IOException
      */
     @Override
-    public Long[] find(Long[] search_key) throws IOException {
+    public Cursor find(Long[] search_key) throws IOException {
         return tree.getNode(children.get(search(search_key))).find(search_key);
     }
 

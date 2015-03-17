@@ -1,8 +1,7 @@
 package bptree;
 
-import org.neo4j.io.pagecache.PageCursor;
-
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.LinkedList;
 
@@ -21,26 +20,26 @@ public class LeafNode extends Node {
         tree.writeNodeToPage(this);
     }
 
-    public LeafNode(PageCursor cursor, Tree tree, Long id) throws IOException {
+    public LeafNode(ByteBuffer buffer, Tree tree, Long id) throws IOException {
         this.tree = tree;
         this.id = id;
-        deserialize(cursor); //set the keys and the siblingID, as read from the page cache
+        deserialize(buffer); //set the keys and the siblingID, as read from the page cache
     }
 
     /**
      * Parses a page of a Leaf Node under the assumption that keys are the same length without any delimiter between keys.
-     * @param cursor
+     * @param buffer
      */
     @Override
-    protected void sameLengthKeyDeserialization(PageCursor cursor){
-        int keyLength = parseHeaderForKeyLength(cursor);
-        int numberOfKeys = parseHeaderForNumberOfKeys(cursor);
+    protected void sameLengthKeyDeserialization(ByteBuffer buffer){
+        int keyLength = parseHeaderForKeyLength(buffer);
+        int numberOfKeys = parseHeaderForNumberOfKeys(buffer);
         LinkedList<Long[]> deserialize_keys = new LinkedList<>();
         LinkedList<Long> newKey = new LinkedList<>();
-        cursor.setOffset(NODE_HEADER_LENGTH);
+        buffer.position(NODE_HEADER_LENGTH);
         for(int i = 0; i < numberOfKeys; i++){
             for(int j = 0; j < keyLength; j++){
-                newKey.add(cursor.getLong());
+                newKey.add(buffer.getLong());
             }
             //Now the variable newKey contains all the items in this key.
             deserialize_keys.add(newKey.toArray(new Long[newKey.size()]));
@@ -51,24 +50,24 @@ public class LeafNode extends Node {
 
     /**
      * Parses a page under the assumption that each key length is unknown and the keys are -1 delimited.
-     * @param cursor
+     * @param buffer
      */
     @Override
-    protected void variableLengthKeyDeserialization(PageCursor cursor){
-        int numberOfKeys = parseHeaderForNumberOfKeys(cursor);
+    protected void variableLengthKeyDeserialization(ByteBuffer buffer){
+        int numberOfKeys = parseHeaderForNumberOfKeys(buffer);
         LinkedList<Long[]> deserialize_keys = new LinkedList<>();
         LinkedList<Long> newKey = new LinkedList<>();
-        cursor.setOffset(NODE_HEADER_LENGTH);
-        Long nextValue = cursor.getLong();
+        buffer.position(NODE_HEADER_LENGTH);
+        Long nextValue = buffer.getLong();
         for(int i = 0; i < numberOfKeys; i++){ //check if we are at the final end of the block
             while(nextValue != DELIMITER_VALUE) { //while still within this key
                 newKey.add(nextValue);
-                nextValue = cursor.getLong();
+                nextValue = buffer.getLong();
             }
             deserialize_keys.add(newKey.toArray(new Long[newKey.size()]));
             newKey.clear();
             if(i + 1 < numberOfKeys) {
-                nextValue = cursor.getLong();//Without this check, there are problems for the last value being at the very end of the block.
+                nextValue = buffer.getLong();//Without this check, there are problems for the last value being at the very end of the block.
             }
         }
         this.keys = deserialize_keys;
@@ -78,14 +77,14 @@ public class LeafNode extends Node {
     /**
      * Serializes this nodes keys under the assumption that the keys are the same length.
      * Write the keys to the page without a delimiter.
-     * @param cursor
+     * @param buffer
      */
     @Override
-    protected void sameLengthKeySerialization(PageCursor cursor){
-        cursor.setOffset(NODE_HEADER_LENGTH);
+    protected void sameLengthKeySerialization(ByteBuffer buffer){
+        buffer.position(NODE_HEADER_LENGTH);
         for(Long[] key : keys){
             for(Long item : key){
-                cursor.putLong(item);
+                buffer.putLong(item);
             }
         }
     }
@@ -93,16 +92,16 @@ public class LeafNode extends Node {
     /**
      * Serializes this nodes keys under the assumption that the keys can be any length.
      * Writes the keys to the page with a delimiter between keys.
-     * @param cursor
+     * @param buffer
      */
     @Override
-    protected void variableLengthKeySerialization(PageCursor cursor) {
-        cursor.setOffset(NODE_HEADER_LENGTH);
+    protected void variableLengthKeySerialization(ByteBuffer buffer) {
+        buffer.position(NODE_HEADER_LENGTH);
         for (Long[] key : keys) {
             for (Long item : key) {
-                cursor.putLong(item);
+                buffer.putLong(item);
             }
-            cursor.putLong(DELIMITER_VALUE);
+            buffer.putLong(DELIMITER_VALUE);
         }
     }
 
@@ -132,11 +131,11 @@ public class LeafNode extends Node {
      * @param search_key The key to use as a search parameter.
      * @return The first key matching this search parameter.
      */
-    public Long[] find(Long[] search_key){
+    public Cursor find(Long[] search_key){
         for(Long[] key : keys){
-            if (keyComparator.compare(key, search_key) == 0) { return keys.get(keys.indexOf(key)); } //returns the index of the correct pointer to the next block.
+            if (keyComparator.prefixCompare(search_key, key) == 0) { return new Cursor(tree, this, search_key, keys.indexOf(key));} //returns the index of the correct pointer to the next block.
         }
-        return new Long[]{}; //Did not find anything
+        return new Cursor(tree, this, search_key, 0); //Did not find anything
     }
 
     /**
@@ -147,7 +146,7 @@ public class LeafNode extends Node {
     @Override
     protected int search(Long[] search_key){
         for(Long[] key : keys){
-            if (keyComparator.compare(key,search_key) >= 0) { return keys.indexOf(key); }
+            if (keyComparator.prefixCompare(search_key, key) >= 0) { return keys.indexOf(key); }
         }
         return 0;
     }

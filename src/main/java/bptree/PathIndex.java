@@ -204,8 +204,13 @@ public class PathIndex implements Closeable, Serializable, ObjectInputValidation
      * @param nodes the nodes that may be specified in the search.
      * @return
      */
-    public Long[] find(Long[] labelPath, Long[] nodes) throws IOException {
-        return tree.find(build_searchKey(labelPath, nodes));
+    public Cursor find(Long[] labelPath, Long[] nodes) {
+        try {
+            return tree.find(build_searchKey(labelPath, nodes));
+        }
+        catch (IOException e){
+            return null; //TODO something better here
+        }
     }
 
     public Long[] build_searchKey(Long[] labelPath, Long[] nodes){

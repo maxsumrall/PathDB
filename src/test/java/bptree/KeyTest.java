@@ -25,6 +25,8 @@ public class KeyTest {
         Long[] keyB = new Long[]{1l,1l,1l,1l};
         Long[] keyC = new Long[]{2l,2l,2l,2l};
         Long[] keyD = new Long[]{2l,3l,4l,5l};
+        Long[] keyD1 = new Long[]{2l,3l,4l,5l, 6l, 7l};
+        Long[] keyD2 = new Long[]{2l,3l,4l,5l, 6l, 7l, 8l};
         Key comparator = new Key();
         assert((comparator.compare(keyA, keyB)) < 0);
         assert((comparator.compare(keyB, keyC)) < 0);
@@ -34,7 +36,10 @@ public class KeyTest {
         assert((comparator.compare(keyC, keyB)) > 0);
         assert((comparator.compare(keyD, keyC)) > 0);
         assert((comparator.compare(keyD, keyA)) > 0);
-
+        assert(comparator.validPrefix(keyD, keyD1));
+        assert(comparator.validPrefix(keyD1, keyD2));
+        assert(comparator.validPrefix(keyD, keyD2));
+        assert(!comparator.validPrefix(keyD2, keyD1));
     }
 
 }

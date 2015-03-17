@@ -1,8 +1,7 @@
 package bptree;
 
-import org.neo4j.io.pagecache.PageCursor;
-
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.LinkedList;
 
 /**
@@ -36,51 +35,51 @@ public abstract class Node {
 
     /**
      * Reads the first byte at the cursor to determine the block type
-     * @param cursor
+     * @param buffer
      * @return
      */
-    protected static int parseHeaderForNodeTypeFlag(PageCursor cursor){
-        return cursor.getByte(BYTE_POSITION_NODE_TYPE);
+    protected static int parseHeaderForNodeTypeFlag(ByteBuffer buffer){
+        return buffer.get(BYTE_POSITION_NODE_TYPE);
     }
 
     /**
      * Read a byte from the header to determine if this block contains keys of the same length.
      * If so, the keys can be written without a delimiter, which can increase the number of keys
      * which can fit in a page quite a lot. (For a page holding keys with k = 2, an additional 50~ keys will fit in a page this way.)
-     * @param cursor
+     * @param buffer
      * @return true if the keys here are of the same length.
      */
-    protected boolean parseHeaderForSameLengthKeys(PageCursor cursor){
-        return parseHeaderForKeyLength(cursor) != -1;
+    protected boolean parseHeaderForSameLengthKeys(ByteBuffer buffer){
+        return parseHeaderForKeyLength(buffer) != -1;
     }
 
     /**
      * Reads an int from the header to determine how many keys are here.
-     * @param cursor
+     * @param buffer
      * @return the number of child ids stored in this page
      */
-    protected int parseHeaderForNumberOfKeys(PageCursor cursor){
-        return cursor.getInt(BYTE_POSITION_KEY_COUNT);
+    protected int parseHeaderForNumberOfKeys(ByteBuffer buffer){
+        return buffer.getInt(BYTE_POSITION_KEY_COUNT);
     }
 
     /**
      * Reads an int from the page header to determine the length of the keys stored in this block.
      * If keys in this block are various lengths, then this value is -1.
-     * @param cursor
+     * @param buffer
      * @return The length of the keys in this block, or -1 if they are not the same length.
      */
-    protected int parseHeaderForKeyLength(PageCursor cursor){
-        return cursor.getInt(BYTE_POSITION_KEY_LENGTH);
+    protected int parseHeaderForKeyLength(ByteBuffer buffer){
+        return buffer.getInt(BYTE_POSITION_KEY_LENGTH);
     }
 
     /**
      * Reads a long from the page header to determine the id of the next page id.
      * THis is only something you would use on the leaf nodes to do a sequential scan of values across multiple blocks.
      * This is basically a pointer to the next node.
-     * @param cursor
+     * @param buffer
      * @return the page id for the next node.
      */
-    protected long parseHeaderForSiblingID(PageCursor cursor){return cursor.getLong(BYTE_POSITION_SIBLING_ID);}
+    protected long parseHeaderForSiblingID(ByteBuffer buffer){return buffer.getLong(BYTE_POSITION_SIBLING_ID);}
 
     /**
      * Checks if this key has the same length at the first key in the list of keys.
@@ -113,49 +112,57 @@ public abstract class Node {
 
     /**
      * Write the header of this block to the cursor given.
-     * @param cursor
+     * @param buffer
      */
-    protected void serializeHeader(PageCursor cursor){
-        cursor.putByte(BYTE_POSITION_NODE_TYPE, (byte) (this instanceof LeafNode ? 1 : 2));
-        cursor.putInt(BYTE_POSITION_KEY_LENGTH, sameLengthKeys ? (keys.size() > 0 ? keys.getFirst().length : 0) : -1);
-        cursor.putInt(BYTE_POSITION_KEY_COUNT, keys.size());
-        cursor.putLong(BYTE_POSITION_SIBLING_ID, siblingID);
+    protected void serializeHeader(ByteBuffer buffer){
+        buffer.put(BYTE_POSITION_NODE_TYPE, (byte) (this instanceof LeafNode ? 1 : 2));
+        buffer.putInt(BYTE_POSITION_KEY_LENGTH, sameLengthKeys ? (keys.size() > 0 ? keys.getFirst().length : 0) : -1);
+        buffer.putInt(BYTE_POSITION_KEY_COUNT, keys.size());
+        buffer.putLong(BYTE_POSITION_SIBLING_ID, siblingID);
     }
 
     /**
      * Reads from the header of this cursor for node variables.
-     * @param cursor
+     * @param buffer
      */
-    protected void parseHeader(PageCursor cursor){
-        this.sameLengthKeys = parseHeaderForSameLengthKeys(cursor);
-        this.siblingID = parseHeaderForSiblingID(cursor);
+    protected void parseHeader(ByteBuffer buffer){
+        this.sameLengthKeys = parseHeaderForSameLengthKeys(buffer);
+        this.siblingID = parseHeaderForSiblingID(buffer);
     }
 
+    /**
+     * Serializes this node to the specified ByteBuffer
+     */
+    public ByteBuffer serialize(ByteBuffer buffer){
+    serializeHeader(buffer);
+    if(sameLengthKeys){
+        sameLengthKeySerialization(buffer);
+    }
+    else{
+        variableLengthKeySerialization(buffer);
+    }
+
+    return buffer;
+}
 
     /**
-     * Writes the keys to the page cache
-     * @param cursor to write with
+     * Writes the keys to the a byte[] array.
      */
-    public void serialize(PageCursor cursor){
-        serializeHeader(cursor);
-        if(sameLengthKeys){
-            sameLengthKeySerialization(cursor);
-        }
-        else{
-            variableLengthKeySerialization(cursor);
-        }
+    public ByteBuffer serialize(){
+        return serialize(ByteBuffer.allocate(Tree.PAGE_SIZE));
+
     }
     /**
      * Parses a node from the specified cursor, initializing this nodes variables.
-     * @param cursor
+     * @param buffer
      */
-    protected void deserialize(PageCursor cursor){
-        parseHeader(cursor);
-        if(parseHeaderForSameLengthKeys(cursor)){
-            sameLengthKeyDeserialization(cursor);
+    protected void deserialize(ByteBuffer buffer){
+        parseHeader(buffer);
+        if(parseHeaderForSameLengthKeys(buffer)){
+            sameLengthKeyDeserialization(buffer);
         }
         else{
-            variableLengthKeyDeserialization(cursor);
+            variableLengthKeyDeserialization(buffer);
         }
     }
 
@@ -181,19 +188,19 @@ public abstract class Node {
     }
 
 
-    abstract protected void sameLengthKeyDeserialization(PageCursor cursor);
+    abstract protected void sameLengthKeyDeserialization(ByteBuffer buffer);
 
-    abstract protected void variableLengthKeyDeserialization(PageCursor cursor);
+    abstract protected void variableLengthKeyDeserialization(ByteBuffer buffer);
 
-    abstract protected void sameLengthKeySerialization(PageCursor cursor);
+    abstract protected void sameLengthKeySerialization(ByteBuffer buffer);
 
-    abstract protected void variableLengthKeySerialization(PageCursor cursor);
+    abstract protected void variableLengthKeySerialization(ByteBuffer buffer);
 
     abstract protected boolean notFull(Long[] newKey);
 
     abstract protected int search(Long[] key);
 
-    abstract public Long[] find(Long[] key) throws IOException;
+    abstract public Cursor find(Long[] key) throws IOException;
 
     abstract public SplitResult insert(Long[] key) throws IOException;
 

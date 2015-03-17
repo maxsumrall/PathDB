@@ -1,14 +1,11 @@
 package bptree;
 
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Random;
+import java.util.*;
 
 public class PathIndexTest {
     private PathIndex index;
@@ -118,7 +115,7 @@ public class PathIndexTest {
                         .setKValues(2, 2)
                         .buildLabelPathMapping(labelPaths)
                         .setSignatures(PathIndex.defaultSignatures(2,2));
-        Assert.assertTrue(index.ready());
+        assert(index.ready());
     }
 
     @Test
@@ -128,10 +125,11 @@ public class PathIndexTest {
         for(Long[][] key: keys){
             index.insert(key[0], key[1]);
         }
-        Long[] result;
+        Cursor cursor;
         for(Long[][] key : keys){
-            result = index.find(key[0], key[1]);
-            assert(Arrays.equals(result, index.build_searchKey(key[0], key[1]))); //the empty set
+            cursor = index.find(key[0], key[1]);
+            assert(cursor.hasNext());
+            assert(Arrays.equals(cursor.next(), index.build_searchKey(key[0], key[1]))); //the empty set
         }
     }
 
@@ -142,10 +140,11 @@ public class PathIndexTest {
         for(Long[][] key: keys){
             index.insert(key[0], key[1]);
         }
-        Long[] result;
+        Cursor cursor;
         for(Long[][] key : keys){
-            result = index.find(key[0], key[1]);
-            assert(Arrays.equals(result, index.build_searchKey(key[0], key[1]))); //the empty set
+            cursor = index.find(key[0], key[1]);
+            assert(cursor.hasNext());
+            assert(Arrays.equals(cursor.next(), index.build_searchKey(key[0], key[1]))); //the empty set
         }
     }
     @Test
@@ -160,19 +159,55 @@ public class PathIndexTest {
         for(Long[][] key: keys){
             index.insert(key[0], key[1]);
         }
-        Long[] result;
+        Cursor cursor;
         for(Long[][] key : keys){
-            result = index.find(key[0], key[1]);
-            if(!Arrays.equals(result, index.build_searchKey(key[0], key[1]))){
+            cursor = index.find(key[0], key[1]);
+           /* if(!Arrays.equals(cursor.next(), index.build_searchKey(key[0], key[1]))){
                 Tree tree  = index.tree;
                 System.out.println("Search Key: " + Arrays.toString(index.build_searchKey(key[0], key[1])));
                 System.out.println(tree.logger);
                 printTree(tree.getNode(tree.rootNodePageID), tree);
-                result = index.find(key[0], key[1]);
+                cursor = index.find(key[0], key[1]);
 
-            }
-            assert(Arrays.equals(result, index.build_searchKey(key[0], key[1])));
+            }*/
+            assert(cursor.hasNext());
+            assert(Arrays.equals(cursor.next(), index.build_searchKey(key[0], key[1])));
         }
     }
+
+
+    @Test
+    public void testPrefixCheckingMultipleResults() throws IOException {
+        int number_of_keys_to_insert = 1000;
+        ArrayList<Long[]> different_length_paths = exampleVariableLengthLabelPaths(number_of_keys_to_insert, 2, 4);
+        ArrayList<Long[][]> keys = exampleRandomKeys(different_length_paths, number_of_keys_to_insert);
+        index = PathIndex.temporaryPathIndex()
+                .setKValues(2, 4)
+                .buildLabelPathMapping(different_length_paths)
+                .setSignatures(PathIndex.defaultSignatures(2, 4));
+        LinkedList<Long[]> keys_built = new LinkedList<>();
+        for (Long[][] key : keys) {
+            keys_built.add(index.build_searchKey(key[0], key[1]));
+        }
+        for (Long[][] key : keys) {
+            index.insert(key[0], key[1]);
+        }
+        Cursor cursor;
+        LinkedList<Long[]> results = new LinkedList<>();
+        for (Long[][] key : keys) {
+            cursor = index.find(key[0], new Long[]{});
+            while (cursor.hasNext()) {
+                Long[] result = cursor.next();
+                results.add(result);
+            }
+        }
+        System.out.println(keys_built.size() + " " + results.size());
+        //assert (keys_built.size() == results.size());
+
+
+
+    }
+
+
 
 }

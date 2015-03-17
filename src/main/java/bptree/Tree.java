@@ -7,6 +7,7 @@ import org.neo4j.io.pagecache.impl.muninn.MuninnPageCache;
 import org.neo4j.io.pagecache.monitoring.PageCacheMonitor;
 
 import java.io.*;
+import java.nio.ByteBuffer;
 import java.util.LinkedList;
 
 /**
@@ -84,24 +85,34 @@ public class Tree implements Closeable, Serializable, ObjectInputValidation {
      * @return a reference to this node.
      */
     public Node getNode(long id) throws IOException {
+        if(id < 0){throw new IOException("Invalid Node ID");}
         if(id == rootNodePageID){
             logger.clear();
         }
         logger.add(id);
-        Node node = null;
+        Node node;
+        ByteBuffer buffer = null;
         try (PageCursor cursor = pagedFile.io(id, PagedFile.PF_EXCLUSIVE_LOCK)) {
             if (cursor.next()) {
                 do {
-                    // perform read or write operations on the page
-                    if(Node.parseHeaderForNodeTypeFlag(cursor) == Node.LEAF_FLAG){
-                        node = new LeafNode(cursor, this, id);
-                    }
-                    else{
-                        node = new InternalNode(cursor, this, id);
-                    }
+                        byte[] byteArray = new byte[PAGE_SIZE];
+                        cursor.getBytes(byteArray);
+                        buffer = ByteBuffer.wrap(byteArray);
                 }
                 while (cursor.shouldRetry());
             }
+        }
+
+        if(buffer == null){
+            throw new IOException("Unable to read page from cache. Page: " + id);
+        }
+
+        // perform read or write operations on the page
+        if(Node.parseHeaderForNodeTypeFlag(buffer) == Node.LEAF_FLAG){
+            node = new LeafNode(buffer, this, id);
+        }
+        else{
+            node = new InternalNode(buffer, this, id);
         }
         return node;
     }
@@ -131,7 +142,8 @@ public class Tree implements Closeable, Serializable, ObjectInputValidation {
             if (cursor.next()) {
                 do {
                     // perform read or write operations on the page
-                    node.serialize(cursor);
+                    cursor.putBytes(node.serialize().array());
+                    //node.serialize();
                 }
                 while (cursor.shouldRetry());
             }
@@ -139,12 +151,12 @@ public class Tree implements Closeable, Serializable, ObjectInputValidation {
     }
 
     /**
-     * Returns a single result given a key.
+     * Returns a Cursor at the first relevant result given a key.
      * @param key
      * @return
      * @throws IOException
      */
-    public Long[] find(Long[] key) throws IOException {
+    public Cursor find(Long[] key) throws IOException {
         return getNode(rootNodePageID).find(key);
 
     }
@@ -243,8 +255,4 @@ public class Tree implements Closeable, Serializable, ObjectInputValidation {
         in.registerValidation(this, 0);
         in.defaultReadObject();
     }
-
-    /*private class IndexCursor extends Cursor {
-
-    }*/
 }
