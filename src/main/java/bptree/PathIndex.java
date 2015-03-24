@@ -4,6 +4,7 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 
 /**
  * Use this class for all interaction with the index.
@@ -15,7 +16,7 @@ public class PathIndex implements Closeable, Serializable, ObjectInputValidation
     private boolean paths_mapping_specified = false;
     private boolean k_values_specified = false;
     private HashMap<Long[], Long> labelPathMapping = new HashMap<>();
-    private ArrayList<Integer[]> signatures;
+    private List<Integer[]> signatures;
     private int minimum_k_value_indexed;
     private int maximum_k_value_indexed;
     private final String path_to_tree;
@@ -43,7 +44,8 @@ public class PathIndex implements Closeable, Serializable, ObjectInputValidation
      */
     public static PathIndex savedPathIndex() throws IOException {
         PathIndex index = new PathIndex(getUniqueFile());
-        index.tree = Tree.initializeNewTree(Tree.DEFAULT_CACHE_FILE_NAME, Tree.DEFAULT_TREE_FILE_NAME, false);
+        DiskCache diskCache = DiskCache.defaultDiskCache();
+        index.tree = Tree.initializeNewTree(Tree.DEFAULT_TREE_FILE_NAME, diskCache);
         return index;
     }
 
@@ -85,7 +87,7 @@ public class PathIndex implements Closeable, Serializable, ObjectInputValidation
      * @param labelPaths A list of labeled paths
      * @return This path index with the labeledPathMapping set.
      */
-    public PathIndex buildLabelPathMapping(ArrayList<Long[]> labelPaths){
+    public PathIndex buildLabelPathMapping(List<Long[]> labelPaths){
         labelPaths.sort(Node.keyComparator);
         for(int i = 0; i < labelPaths.size(); i++){
             labelPathMapping.put(labelPaths.get(i), (long) i);
@@ -101,7 +103,7 @@ public class PathIndex implements Closeable, Serializable, ObjectInputValidation
      * @param newSignatures
      * @return This path index with the signatures set.
      */
-    public PathIndex setSignatures(ArrayList<Integer[]> newSignatures){
+    public PathIndex setSignatures(List<Integer[]> newSignatures){
         if (!k_values_specified){
             throw new IllegalStateException("K values are not set first. Set the k value first when building the index");
         }
@@ -147,7 +149,7 @@ public class PathIndex implements Closeable, Serializable, ObjectInputValidation
      * @param maxK The maximum k value in this path index
      * @return the default signatures for specified k values.
      */
-    public static ArrayList<Integer[]> defaultSignatures(int minK, int maxK){
+    public static List<Integer[]> defaultSignatures(int minK, int maxK){
         ArrayList<Integer[]> defaultSignatures = new ArrayList<>();
         for (int k = 0; k < maxK + 1; k++){ //maxK + 1 so that the index for k = 2 is still .get(2)
             defaultSignatures.add(new Integer[k + 1]);
@@ -166,7 +168,7 @@ public class PathIndex implements Closeable, Serializable, ObjectInputValidation
      *
      * @return the default signatures for specified k values.
      */
-    public ArrayList<Integer[]> defaultSignatures(){
+    public List<Integer[]> defaultSignatures(){
         ArrayList<Integer[]> defaultSignatures = new ArrayList<>(maximum_k_value_indexed - minimum_k_value_indexed);
         for (int k = minimum_k_value_indexed; k < maximum_k_value_indexed; k++){
             defaultSignatures.set((k - minimum_k_value_indexed), new Integer[k + 1]);

@@ -1,11 +1,5 @@
 package bptree;
 
-import org.neo4j.io.fs.DefaultFileSystemAbstraction;
-import org.neo4j.io.pagecache.PageCursor;
-import org.neo4j.io.pagecache.PagedFile;
-import org.neo4j.io.pagecache.impl.muninn.MuninnPageCache;
-import org.neo4j.io.pagecache.monitoring.PageCacheMonitor;
-
 import java.io.*;
 import java.nio.ByteBuffer;
 import java.util.LinkedList;
@@ -16,46 +10,28 @@ import java.util.LinkedList;
 public class Tree implements Closeable, Serializable, ObjectInputValidation {
 
     protected static String DEFAULT_TREE_FILE_NAME = "tree.bin";
-    protected static String DEFAULT_CACHE_FILE_NAME = "cache.bin";
-    protected static int PAGE_SIZE = bptree.Utils.getIdealBlockSize();
     protected String tree_filename;
-    protected String cache_filename;
     private long nextAvailablePageID = 0l;
     protected long rootNodePageID;
-    protected int recordSize = 9; //TODO What is this?
-    protected int maxPages = 200; //TODO How big should this be?
-    protected int pageCachePageSize = PAGE_SIZE;
-    protected int recordsPerFilePage = pageCachePageSize / recordSize;
-    protected int recordCount = 25 * maxPages * recordsPerFilePage;
-    protected int filePageSize = recordsPerFilePage * recordSize;
-    protected transient DefaultFileSystemAbstraction fs;
-    protected transient MuninnPageCache pageCache;
-    protected transient PagedFile pagedFile;
-    public LinkedList<Long> logger = new LinkedList<>();
-
+    private DiskCache diskCache;
     /**
      * Constructs a new Tree object
      * @param file The file where the tree should be based.
      * @throws IOException
      */
-    private Tree(String cache_filename, String tree_filename, boolean delete_on_exit) throws IOException {
-        File page_cache_file = new File(cache_filename);
-        File tree_file = new File(tree_filename);
-        if(delete_on_exit){
-            page_cache_file.deleteOnExit();
-            tree_file.deleteOnExit();
-        }
-        initializePageCache(page_cache_file);
-        Node rootNode = createLeafNode(); // Initialize the tree with only one block for now, a leaf block.
+    private Tree(String tree_filename, DiskCache diskCache) throws IOException {
+        this.diskCache =  diskCache;
+        this.tree_filename = tree_filename;
+        Node rootNode = createLeafNode();
         rootNodePageID = rootNode.id;
     }
 
     public static Tree initializeNewTree() throws IOException {
-        return initializeNewTree(DEFAULT_CACHE_FILE_NAME, DEFAULT_TREE_FILE_NAME, true); //Delete on exit
+        return initializeNewTree(DEFAULT_TREE_FILE_NAME, DiskCache.defaultDiskCache()); //Delete on exit
     }
 
-    public static Tree initializeNewTree(String cache_file_location, String tree_file_location, boolean deleteOnExit) throws IOException {
-        return new Tree(cache_file_location, tree_file_location, deleteOnExit);
+    public static Tree initializeNewTree(String tree_filename, DiskCache diskCache) throws IOException {
+        return new Tree(tree_filename, diskCache);
     }
 
     public static Tree loadTreeFromFile(String tree_location) throws IOException {
@@ -69,15 +45,9 @@ public class Tree implements Closeable, Serializable, ObjectInputValidation {
         catch (InvalidClassException e){
             throw new InvalidClassException("Invalid object found at file: " + tree_location);
         }
-        tree.initializePageCache(new File(tree.cache_filename));
         return tree;
     }
 
-    private void initializePageCache(File page_cache_file) throws IOException {
-        fs = new DefaultFileSystemAbstraction();
-        pageCache = new MuninnPageCache(fs, maxPages, pageCachePageSize, PageCacheMonitor.NULL);
-        pagedFile = pageCache.map(page_cache_file, filePageSize);
-    }
 
     /**
      * Gets a node.
@@ -86,29 +56,12 @@ public class Tree implements Closeable, Serializable, ObjectInputValidation {
      */
     public Node getNode(long id) throws IOException {
         if(id < 0){throw new IOException("Invalid Node ID");}
-        if(id == rootNodePageID){
-            logger.clear();
-        }
-        logger.add(id);
         Node node;
-        ByteBuffer buffer = null;
-        try (PageCursor cursor = pagedFile.io(id, PagedFile.PF_EXCLUSIVE_LOCK)) {
-            if (cursor.next()) {
-                do {
-                        byte[] byteArray = new byte[PAGE_SIZE];
-                        cursor.getBytes(byteArray);
-                        buffer = ByteBuffer.wrap(byteArray);
-                }
-                while (cursor.shouldRetry());
-            }
-        }
-
-        if(buffer == null){
+        ByteBuffer buffer = this.diskCache.readPage(id);
+        if(buffer.capacity() == 0){
             throw new IOException("Unable to read page from cache. Page: " + id);
         }
-
-        // perform read or write operations on the page
-        if(Node.parseHeaderForNodeTypeFlag(buffer) == Node.LEAF_FLAG){
+        if(NodeHeader.isLeafNode(buffer)){
             node = new LeafNode(buffer, this, id);
         }
         else{
@@ -124,11 +77,17 @@ public class Tree implements Closeable, Serializable, ObjectInputValidation {
     public LeafNode createLeafNode() throws IOException {
         return new LeafNode(this, getNewID());
     }
+
+    public LeafNode createLeafNode(LinkedList<Long[]> keys, Long followingNodeID) throws IOException {
+        return new LeafNode(this, getNewID(), keys, followingNodeID);
+    }
+
+
     public InternalNode createInternalNode() throws IOException {
         return new InternalNode(this, getNewID());
     }
     public InternalNode createInternalNode(LinkedList<Long[]> keys, LinkedList<Long> children) throws IOException {
-        return new InternalNode(keys, children, this, getNewID());
+        return new InternalNode(this, getNewID(), keys, children);
     }
 
     /**
@@ -137,17 +96,8 @@ public class Tree implements Closeable, Serializable, ObjectInputValidation {
      * limiting it to only being instantiated in the Tree.
      * @param node the Node which would like to be serialized.
      */
-    public void writeNodeToPage(Node node) throws IOException {
-        try (PageCursor cursor = pagedFile.io(node.id, PagedFile.PF_EXCLUSIVE_LOCK)) {
-            if (cursor.next()) {
-                do {
-                    // perform read or write operations on the page
-                    cursor.putBytes(node.serialize().array());
-                    //node.serialize();
-                }
-                while (cursor.shouldRetry());
-            }
-        }
+    public void writeNodeToPage(Node node){
+        this.diskCache.writePage(node.id, node.serialize().array());
     }
 
     /**
@@ -158,7 +108,6 @@ public class Tree implements Closeable, Serializable, ObjectInputValidation {
      */
     public Cursor find(Long[] key) throws IOException {
         return getNode(rootNodePageID).find(key);
-
     }
 
     /**
@@ -168,7 +117,7 @@ public class Tree implements Closeable, Serializable, ObjectInputValidation {
      * @param key
      */
     public void insert(Long[] key) throws IOException {
-        Node.SplitResult result = getNode(rootNodePageID).insert(key);
+        SplitResult result = getNode(rootNodePageID).insert(key);
         if (result != null){ //Root block split.
             LinkedList<Long[]> keys = new LinkedList<>();
             LinkedList<Long> children = new LinkedList<>();

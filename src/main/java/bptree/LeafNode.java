@@ -2,7 +2,6 @@ package bptree;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.Collections;
 import java.util.LinkedList;
 
 /**
@@ -11,19 +10,25 @@ import java.util.LinkedList;
 public class LeafNode extends Node {
 
     public LeafNode(Tree tree, long id) throws IOException {
-        this(new LinkedList<Long[]>(), tree, id);
+        this(tree, id, new LinkedList<>());
     }
-    public LeafNode(LinkedList<Long[]> k, Tree tree, Long id) throws IOException {
-        this.keys = k;
+    public LeafNode(Tree tree, Long id, LinkedList<Long[]> k) throws IOException {
+        this(tree, id, k, -1l);
+    }
+
+    public LeafNode(Tree tree, Long id, LinkedList<Long[]> keys, Long followingNodeID) throws IOException {
         this.tree = tree;
         this.id = id;
+        this.keys = keys;
+        this.followingNodeID = followingNodeID;
+        determineIfKeysAreSameLength();
         tree.writeNodeToPage(this);
     }
 
     public LeafNode(ByteBuffer buffer, Tree tree, Long id) throws IOException {
         this.tree = tree;
         this.id = id;
-        deserialize(buffer); //set the keys and the siblingID, as read from the page cache
+        deserialize(buffer); //set the keys and the followingNodeID, as read from the page cache
     }
 
     /**
@@ -32,11 +37,11 @@ public class LeafNode extends Node {
      */
     @Override
     protected void sameLengthKeyDeserialization(ByteBuffer buffer){
-        int keyLength = parseHeaderForKeyLength(buffer);
-        int numberOfKeys = parseHeaderForNumberOfKeys(buffer);
+        int keyLength = NodeHeader.getKeyLength(buffer);
+        int numberOfKeys = NodeHeader.getNumberOfKeys(buffer);
         LinkedList<Long[]> deserialize_keys = new LinkedList<>();
         LinkedList<Long> newKey = new LinkedList<>();
-        buffer.position(NODE_HEADER_LENGTH);
+        buffer.position(NodeHeader.NODE_HEADER_LENGTH);
         for(int i = 0; i < numberOfKeys; i++){
             for(int j = 0; j < keyLength; j++){
                 newKey.add(buffer.getLong());
@@ -54,13 +59,13 @@ public class LeafNode extends Node {
      */
     @Override
     protected void variableLengthKeyDeserialization(ByteBuffer buffer){
-        int numberOfKeys = parseHeaderForNumberOfKeys(buffer);
+        int numberOfKeys = NodeHeader.getNumberOfKeys(buffer);
         LinkedList<Long[]> deserialize_keys = new LinkedList<>();
         LinkedList<Long> newKey = new LinkedList<>();
-        buffer.position(NODE_HEADER_LENGTH);
+        buffer.position(NodeHeader.NODE_HEADER_LENGTH);
         Long nextValue = buffer.getLong();
         for(int i = 0; i < numberOfKeys; i++){ //check if we are at the final end of the block
-            while(nextValue != DELIMITER_VALUE) { //while still within this key
+            while(nextValue != KEY_DELIMITER) { //while still within this key
                 newKey.add(nextValue);
                 nextValue = buffer.getLong();
             }
@@ -81,7 +86,7 @@ public class LeafNode extends Node {
      */
     @Override
     protected void sameLengthKeySerialization(ByteBuffer buffer){
-        buffer.position(NODE_HEADER_LENGTH);
+        buffer.position(NodeHeader.NODE_HEADER_LENGTH);
         for(Long[] key : keys){
             for(Long item : key){
                 buffer.putLong(item);
@@ -96,12 +101,12 @@ public class LeafNode extends Node {
      */
     @Override
     protected void variableLengthKeySerialization(ByteBuffer buffer) {
-        buffer.position(NODE_HEADER_LENGTH);
+        buffer.position(NodeHeader.NODE_HEADER_LENGTH);
         for (Long[] key : keys) {
             for (Long item : key) {
                 buffer.putLong(item);
             }
-            buffer.putLong(DELIMITER_VALUE);
+            buffer.putLong(KEY_DELIMITER);
         }
     }
 
@@ -112,9 +117,9 @@ public class LeafNode extends Node {
      */
     @Override
     protected boolean notFull(Long[] newKey){
-        int byte_representation_size = NODE_HEADER_LENGTH;
+        int byte_representation_size = NodeHeader.NODE_HEADER_LENGTH;
         //If the keys are the same length, there is no delimiter value. Need to check if this new key is of the same length.
-        if(sameLengthKeys && sameKeyLength(newKey)){ //the keys here are the same length already AND the new key is of the same length
+        if(hasSameKeyLength(newKey)){ //the keys here are the same length already AND the new key is of the same length
             byte_representation_size += (keys.size() + 1) * newKey.length * 8; //(Number of keys including the new one) * the number of longs in these keys * 8 bytes for each long.
         }
         else{ //Else, calculate the size including delimiters.
@@ -123,7 +128,7 @@ public class LeafNode extends Node {
                 }
             byte_representation_size += (newKey.length + 1) * 8;
         }
-        return byte_representation_size < Tree.PAGE_SIZE;
+        return byte_representation_size < DiskCache.PAGE_SIZE;
     }
 
     /**
@@ -159,38 +164,31 @@ public class LeafNode extends Node {
      */
     @Override
     public SplitResult insert(Long[] key) throws IOException {
+        SplitResult splitResult = null;
         updateSameLengthKeyFlag(key);
-        /**
-         * If this block is full, we must split it and insert the new key
-         */
+
         if (notFull(key)){
-            //There is room to insert the new key in this block without splitting.
-            this.insertNotFull(key);
-            tree.writeNodeToPage(this);
+            addKeyAndSort(key);
         }
         else{
-            insertNotFull(key);//put the key in here for the split operation about to happen.
+            addKeyAndSortWithoutPageWrite(key);
             int midPoint = keys.size() / 2;
-            LeafNode sibling = tree.createLeafNode(); //TODO can do this with the keys already and save a disk write
 
-            sibling.keys = new LinkedList<>(keys.subList(midPoint,keys.size()));
-            keys = new LinkedList<>(keys.subList(0, midPoint));
+            LinkedList<Long[]> siblingKeys = new LinkedList<>(keys.subList(midPoint,keys.size()));
+            LeafNode sibling = tree.createLeafNode(siblingKeys, this.followingNodeID);
 
-            determineAndSetSameLengthKeysFlag();
-            sibling.determineAndSetSameLengthKeysFlag();
+            LinkedList<Long[]> newKeys = new LinkedList<>(keys.subList(0, midPoint));
+            updateAfterSplit(newKeys, sibling.id);
 
-            //Rearrange sibling id's.
-            sibling.siblingID = this.siblingID;
-            this.siblingID = sibling.id;
-            tree.writeNodeToPage(this);
-            tree.writeNodeToPage(sibling);
-            return new SplitResult(sibling.keys.getFirst(), this.id, sibling.id);
+            splitResult = new SplitResult(sibling.keys.getFirst(), this.id, sibling.id);
         }
-
-        return null; //No split result since we did not split. Calling function checks for nulls.
+        return splitResult;
     }
-    protected void insertNotFull(Long[] key){
-        keys.add(key);
-        Collections.sort(keys, keyComparator);
+
+    private void updateAfterSplit(LinkedList<Long[]> updatedKeyList, Long newSiblingID){
+        keys = updatedKeyList;
+        determineIfKeysAreSameLength();
+        this.followingNodeID = newSiblingID;
+        tree.writeNodeToPage(this);
     }
 }

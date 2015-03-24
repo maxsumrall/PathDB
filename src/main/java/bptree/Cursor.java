@@ -1,88 +1,98 @@
 package bptree;
 
 import java.io.IOException;
+import java.util.Iterator;
 
 /**
  * A cursor for iterating over a result set
  */
-public class Cursor {
-
-    protected Tree tree;
-
-    public Long[] search_key;
-
-    protected LeafNode currentLeaf;
-
-    private int remaining = 0; //The remaining number of valid keys in this node.
-
-    private int position; //The index into the currentLeaf.keys where the next element is.
-
+public class Cursor implements Iterator<Long[]>{
+    public Tree tree;
+    public Long[] searchKey;
+    private LeafNode currentLeaf;
+    private int remainingElements = 0;
+    private int cursorPosition;
     private int size = -1;
 
-    public Cursor(Tree tree, LeafNode currentLeaf, Long[] search_key, int position){
+    public Cursor(Tree tree, LeafNode currentLeaf, Long[] searchKey, int cursorPosition){
         this.tree = tree;
         this.currentLeaf = currentLeaf;
-        this.search_key = search_key;
-        this.position = position;
-        for(int i = position; i < currentLeaf.keys.size(); i++){
-            if(Node.keyComparator.validPrefix(search_key, currentLeaf.keys.get(i))){
-                remaining++;
+        this.searchKey = searchKey;
+        this.cursorPosition = cursorPosition;
+
+        initializeAndCountValidKeysInThisNode();
+
+    }
+
+    private void initializeAndCountValidKeysInThisNode(){
+        countValidKeysInThisNode();
+        //In some cases the valid key values being at the exact beginning of a block. We don't know if there are valid keys in previous block, so we check.
+        boolean noValidElementsWhileInitializing = remainingElements == 0;
+        if(noValidElementsWhileInitializing){
+            loadNextNode();
+        }
+    }
+
+    private void countValidKeysInThisNode(){
+        for(int i = cursorPosition; i < currentLeaf.keys.size(); i++){
+            if(Node.keyComparator.validPrefix(searchKey, currentLeaf.keys.get(i))){
+                remainingElements++;
             }
             else{
                 break;
             }
         }
-        if(remaining == 0){ //In some cases the valid key values being at the exact beginning of a block. We don't know if there are valid keys in previous block, so we check.
-            loadNextNode();
-        }
     }
 
     /**
      * Asks the Tree for the next sibling node,
-     * Determines the number of remaining keys.
+     * Determines the number of remainingElements keys.
      * Returns true if the next node was loaded and has available keys.
      * Returns false if there was no next node or the next node contained no valid keys.
      */
     private boolean loadNextNode(){
-        position = 0;
-        assert(remaining == 0);
+        this.cursorPosition = 0;
         try {
-            this.currentLeaf = (LeafNode)tree.getNode(currentLeaf.siblingID);
-            for(Long[] key: this.currentLeaf.keys){
-                if(Node.keyComparator.validPrefix(search_key, key)){
-                    remaining++;
-                }
-            }
+            loadSiblingNodeAndSetRemainingElements();
         }
         catch(IOException e){
             return false;
         }
-        return (remaining > 0);
+        return (this.remainingElements > 0);
     }
 
+    private void loadSiblingNodeAndSetRemainingElements() throws IOException{
+        this.currentLeaf = (LeafNode)tree.getNode(currentLeaf.followingNodeID);
+        for(Long[] key: this.currentLeaf.keys){
+            if(Node.keyComparator.validPrefix(searchKey, key)){
+                this.remainingElements++;
+            }
+        }
+    }
+    @Override
     public Long[] next(){
-        if(remaining == 0){
-            if(position == currentLeaf.keys.size()){ //No more remaining, but there are no more keys in this node...
+        if(remainingElements == 0){
+            if(cursorPosition == currentLeaf.keys.size()){
                 loadNextNode();
                 return next();
             }
-            else{//no more remaining, and yet there are still more keys in this node. We are truly finished.
+            else{//no more remainingElements, and yet there are still more keys in this node. We are truly finished.
                 return new Long[]{};
             }
         }
-            remaining--;
-            return currentLeaf.keys.get(position++);
+            remainingElements--;
+            return currentLeaf.keys.get(cursorPosition++);
     }
 
 
-
+    @Override
     public boolean hasNext(){
-        if(remaining == 0){
-            if(position == currentLeaf.keys.size()){ //No more remaining, but there are no more keys in this node...
+        if(remainingElements == 0){
+            if(cursorPosition == currentLeaf.keys.size()){ //No more remainingElements, but there are no more keys in this node...
                 loadNextNode();
-                return hasNext(); //
+                return hasNext();
             }
-            else{//no more remaining, and yet there are still more keys in this node. We are truly finished.
+            else{//no more remainingElements, and yet there are still more keys in this node. We are truly finished.
                 return false;
             }
         }
@@ -91,34 +101,34 @@ public class Cursor {
 
     public int size(){
         if(size == -1) {
-            size = sumValid(currentLeaf);
+            size = validKeysInNode(currentLeaf);
             LeafNode node = currentLeaf;
-            while (Node.keyComparator.validPrefix(search_key, node.keys.getLast())) {
+            while (Node.keyComparator.validPrefix(searchKey, node.keys.getLast())) {
                 try {
-                    node = (LeafNode) tree.getNode(node.siblingID);
+                    node = (LeafNode) tree.getNode(node.followingNodeID);
+                    size += validKeysInNode(node);
                 } catch (IOException e) {
                     break;
                 }
-            size = sumValid(node);
             }
 
         }
         return size;
-
     }
 
     /**
-     * Counts the valid keys in the given node
+     * Counts the valid keys in a given node
      * @param node
      * @return
      */
-    private int sumValid(LeafNode node){
+    private int validKeysInNode(LeafNode node){
         int sum = 0;
         for(Long[] key : node.keys){
-            if(Node.keyComparator.validPrefix(search_key, key)){
+            if(Node.keyComparator.validPrefix(searchKey, key)){
                 sum++;
             }
         }
         return sum;
     }
+
 }

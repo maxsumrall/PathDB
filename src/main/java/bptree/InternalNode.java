@@ -1,7 +1,5 @@
 package bptree;
 
-import org.neo4j.io.pagecache.PageCursor;
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.LinkedList;
@@ -14,52 +12,50 @@ public class InternalNode extends Node {
     public LinkedList<Long> children = new LinkedList<>();
 
     public InternalNode(Tree tree, long id) throws IOException {
-        this(new LinkedList<Long[]>(), new LinkedList<Long>(), tree, id);
+        this(tree, id, new LinkedList<>(), new LinkedList<>());
     }
-    public InternalNode(LinkedList<Long[]> k, Tree tree, long id) throws IOException {
-        this(k, new LinkedList<Long>(), tree, id);
+    public InternalNode(Tree tree, long id, LinkedList<Long[]> keys) throws IOException {
+        this(tree, id, keys, new LinkedList<>());
     }
-    public InternalNode(LinkedList<Long[]> keys, LinkedList<Long> children, Tree tree, long id) throws IOException {
-        this.keys = keys;
-        this.children = children;
+    public InternalNode(Tree tree, long id, LinkedList<Long[]> keys, LinkedList<Long> children) throws IOException {
         this.tree = tree;
         this.id = id;
+        this.keys = keys;
+        this.children = children;
         tree.writeNodeToPage(this);
     }
 
     public InternalNode(ByteBuffer buffer, Tree tree, Long id) throws IOException{
         this.tree = tree;
         this.id = id;
+        keys = new LinkedList<>();
+        children = new LinkedList<>();
         deserialize(buffer);
 
     }
 
     /**
      * Parses a page of an Internal Node under the assumption that keys are the same length without any delimiter between keys.
-     * @param cursor
+     * @param buffer
      */
     @Override
     protected void sameLengthKeyDeserialization(ByteBuffer buffer){
-        int keyLength = parseHeaderForKeyLength(buffer);
-        int numberOfKeys = parseHeaderForNumberOfKeys(buffer);
-        LinkedList<Long[]> deserialized_keys = new LinkedList<>();
-        LinkedList<Long> deserialized_children = new LinkedList<>();
+        int keyLength = NodeHeader.getKeyLength(buffer);
+        int numberOfKeys = NodeHeader.getNumberOfKeys(buffer);
         LinkedList<Long> newKey = new LinkedList<>();
-        buffer.position(NODE_HEADER_LENGTH);
+        buffer.position(NodeHeader.NODE_HEADER_LENGTH);
         //Read all of the children id values
         for(int i = 0; (numberOfKeys > 0) && i < (numberOfKeys + 1); i++){ //There is +1 children ids more than the number of keys
-            deserialized_children.add(buffer.getLong());
+            children.add(buffer.getLong());
         }
         for(int i = 0; i < numberOfKeys; i++){
             for(int j = 0; j < keyLength; j++){
                 newKey.add(buffer.getLong());
             }
             //Now the variable newKey contains all the items in this key.
-            deserialized_keys.add(newKey.toArray(new Long[newKey.size()]));
+            keys.add(newKey.toArray(new Long[newKey.size()]));
             newKey.clear(); //clear if for the next round.
         }
-        this.keys = deserialized_keys;
-        this.children = deserialized_children;
     }
 
 
@@ -69,32 +65,30 @@ public class InternalNode extends Node {
      */
     @Override
     protected void variableLengthKeyDeserialization(ByteBuffer buffer){
-        int numberOfKeys = parseHeaderForNumberOfKeys(buffer);
-        LinkedList<Long[]> deserialize_keys = new LinkedList<>();
-        LinkedList<Long> deserialized_children = new LinkedList<>();
+        int numberOfKeys = NodeHeader.getNumberOfKeys(buffer);
         LinkedList<Long> newKey = new LinkedList<>();
-        buffer.position(NODE_HEADER_LENGTH);
+        buffer.position(NodeHeader.NODE_HEADER_LENGTH);
         //Read all of the children id values
         for(int i = 0; i < numberOfKeys + 1; i++){ //There is +1 children ids more than the number of keys
-            deserialized_children.add(buffer.getLong());
+            children.add(buffer.getLong());
         }
         Long nextValue = buffer.getLong();
         for(int i = 0; (numberOfKeys > 0) && (i < numberOfKeys); i++){ //check if we are at the final end of the block
-            while(nextValue != DELIMITER_VALUE) { //while still within this key
+            while(nextValue != KEY_DELIMITER) { //while still within this key
                 newKey.add(nextValue);
                 nextValue = buffer.getLong();
             }
-            deserialize_keys.add(newKey.toArray(new Long[newKey.size()]));
+            keys.add(newKey.toArray(new Long[newKey.size()]));
             newKey.clear();
-            nextValue = buffer.getLong();
+            if(i + 1 < numberOfKeys) {
+                nextValue = buffer.getLong();//Without this check, there are problems for the last value being at the very end of the block.
+            }
         }
-        this.children = deserialized_children;
-        this.keys = deserialize_keys;
     }
 
     @Override
     protected void sameLengthKeySerialization(ByteBuffer buffer) {
-        buffer.position(NODE_HEADER_LENGTH);
+        buffer.position(NodeHeader.NODE_HEADER_LENGTH);
         children.forEach(buffer::putLong);
         for(Long[] key : keys){
             for(Long item : key){
@@ -105,13 +99,13 @@ public class InternalNode extends Node {
 
     @Override
     protected void variableLengthKeySerialization(ByteBuffer buffer) {
-        buffer.position(NODE_HEADER_LENGTH);
+        buffer.position(NodeHeader.NODE_HEADER_LENGTH);
         children.forEach(buffer::putLong);
         for (Long[] key : keys){
             for (Long item : key){
                 buffer.putLong(item);
             }
-            buffer.putLong(DELIMITER_VALUE);
+            buffer.putLong(KEY_DELIMITER);
         }
 
     }
@@ -127,16 +121,16 @@ public class InternalNode extends Node {
      */
     @Override
     protected boolean notFull(Long[] newKey) {
-        return byte_representation_size(newKey) <= Tree.PAGE_SIZE;
+        return byte_representation_size(newKey) <= DiskCache.PAGE_SIZE;
     }
 
     public int byte_representation_size(Long[] newKey){
-        int byte_representation_size = NODE_HEADER_LENGTH;
+        int byte_representation_size = NodeHeader.NODE_HEADER_LENGTH;
 
         byte_representation_size += (children.size() + 1) * 8; //Each child * 8bytes, +1 for the new child
 
         //If the keys are the same length, there is no delimiter value. Need to check if this new key is of the same length.
-        if(sameLengthKeys && sameKeyLength(newKey)){ //the keys here are the same length already AND the new key is of the same length
+        if(hasSameKeyLength(newKey)){ //the keys here are the same length already AND the new key is of the same length
             byte_representation_size += (keys.size() + 1) * newKey.length * 8; //(Number of keys including the new one) * the number of longs in these keys * 8 bytes for each long.
         }
         else{ //Else, calculate the size including delimiters.
@@ -210,8 +204,8 @@ public class InternalNode extends Node {
             sibling.children = new LinkedList<>(children.subList(midPoint + 1, children.size()));
             children = new LinkedList<>(children.subList(0, midPoint + 1));
 
-            this.determineAndSetSameLengthKeysFlag();
-            sibling.determineAndSetSameLengthKeysFlag();
+            this.determineIfKeysAreSameLength();
+            sibling.determineIfKeysAreSameLength();
 
             SplitResult newResult = new SplitResult(sibling.keys.pop(), this.id, sibling.id);
 

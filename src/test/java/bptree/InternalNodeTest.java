@@ -43,7 +43,7 @@ public class InternalNodeTest {
         for (int i = 220; i > 0; i--){
             node = (InternalNode)tree.getNode(node.id);
             Long[] key = new Long[]{(long) i,(long) i, (long) i, (long) i};
-            Node.SplitResult result = node.insertFromResult(node.getSplitResult(key, (long) i, (long) i+1));
+            SplitResult result = node.insertFromResult(new SplitResult(key, (long) i, (long) i+1));
             if (result != null){
                 //PathIndexTest.printNode(tree.getNode(result.left));
                 //PathIndexTest.printNode(tree.getNode(result.right));
@@ -71,10 +71,10 @@ public class InternalNodeTest {
             System.out.println("Keys sum: " + total_longs_key);
             System.out.println("Byte rep size: " + node.byte_representation_size(key));
 
-            Node.SplitResult result = node.insertFromResult(node.getSplitResult(key, (long) i, (long) i+1));
+            SplitResult result = node.insertFromResult(new SplitResult(key, (long) i, (long) i+1));
             if (result != null){
-                PathIndexTest.printNode(tree.getNode(result.left));
-                PathIndexTest.printNode(tree.getNode(result.right));
+                //printNode(tree.getNode(result.left));
+                //printNode(tree.getNode(result.right));
             }
         }
 
