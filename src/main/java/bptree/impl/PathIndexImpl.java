@@ -1,4 +1,8 @@
-package bptree;
+package bptree.impl;
+
+import bptree.Cursor;
+import bptree.Index;
+import bptree.Key;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -9,7 +13,7 @@ import java.util.List;
 /**
  * Use this class for all interaction with the index.
  */
-public class PathIndex implements Closeable, Serializable, ObjectInputValidation{
+public class PathIndexImpl implements Index, Closeable, Serializable, ObjectInputValidation{
 
     public static final String DEFAULT_INDEX_FILE_NAME = "path_index.bin";
     private boolean signatures_specified = false;
@@ -20,9 +24,9 @@ public class PathIndex implements Closeable, Serializable, ObjectInputValidation
     private int minimum_k_value_indexed;
     private int maximum_k_value_indexed;
     private final String path_to_tree;
-    public transient Tree tree; //transient means 'do not serialize this'
+    public transient TreeImpl tree; //transient means 'do not serialize this'
 
-    private PathIndex(File file) throws IOException {
+    private PathIndexImpl(File file) throws IOException {
         path_to_tree = file.getName();
     }
 
@@ -30,11 +34,11 @@ public class PathIndex implements Closeable, Serializable, ObjectInputValidation
      * Initializes an index which will be deleted after the virtual machine terminates.
      * @return A Path Index
      */
-    public static PathIndex temporaryPathIndex() throws IOException {
+    public static Index getTemporaryPathIndex() throws IOException {
         File file = getUniqueFile();
         file.deleteOnExit();
-        PathIndex index = new PathIndex(file);
-        index.tree = Tree.initializeNewTree();
+        PathIndexImpl index = new PathIndexImpl(file);
+        index.tree = TreeImpl.initializeNewTree();
         return index;
     }
 
@@ -42,41 +46,39 @@ public class PathIndex implements Closeable, Serializable, ObjectInputValidation
      * Initializes an index which will not be deleted after the virtual machine terminates.
      * @return A Path Index
      */
-    public static PathIndex savedPathIndex() throws IOException {
-        PathIndex index = new PathIndex(getUniqueFile());
-        DiskCache diskCache = DiskCache.defaultDiskCache();
-        index.tree = Tree.initializeNewTree(Tree.DEFAULT_TREE_FILE_NAME, diskCache);
+    public static Index getPersistentPathIndex() throws IOException {
+        PathIndexImpl index = new PathIndexImpl(getUniqueFile());
+        DiskCacheImpl diskCache = DiskCacheImpl.defaultDiskCache();
+        index.tree = TreeImpl.initializeNewTree(TreeImpl.DEFAULT_TREE_FILE_NAME, diskCache);
         return index;
     }
 
     /**
      * Loads an index from a specified path
-     * @param filepath_to_index
      * @return An instantiated PathIndex as found from this file location.
      */
-    public static PathIndex loadPathIndex(String filepath_to_index) throws IOException {
+    public static Index loadPathIndex(String filepath_to_index) throws IOException {
         FileInputStream fis = new FileInputStream(filepath_to_index);
         byte[] bytes = new byte[fis.available()];
         fis.read(bytes);
-        PathIndex pathIndex;
+        PathIndexImpl pathIndex;
         try {
             pathIndex = deserialize(bytes);
         }
         catch (InvalidClassException e){
             throw new InvalidClassException("Invalid object found at file: " + filepath_to_index);
         }
-        pathIndex.tree = Tree.loadTreeFromFile(pathIndex.path_to_tree); //TODO make sure this works
+        pathIndex.tree = TreeImpl.loadTreeFromFile(pathIndex.path_to_tree); //TODO make sure this works
         return pathIndex;
     }
 
     /**
      *Returns a File object on an unused path name for the Tree, as reported by the File.exists() method.
-     * @return
      */
     private static File getUniqueFile(){
-        File file = new File(Tree.DEFAULT_TREE_FILE_NAME);
+        File file = new File(TreeImpl.DEFAULT_TREE_FILE_NAME);
         while(file.exists()){
-            file = new File(System.currentTimeMillis() + "_" + Tree.DEFAULT_TREE_FILE_NAME);
+            file = new File(System.currentTimeMillis() + "_" + TreeImpl.DEFAULT_TREE_FILE_NAME);
         }
         return file;
     }
@@ -87,8 +89,8 @@ public class PathIndex implements Closeable, Serializable, ObjectInputValidation
      * @param labelPaths A list of labeled paths
      * @return This path index with the labeledPathMapping set.
      */
-    public PathIndex buildLabelPathMapping(List<Long[]> labelPaths){
-        labelPaths.sort(Node.keyComparator);
+    public Index setLabelPaths(List<Long[]> labelPaths){
+        labelPaths.sort(AbstractNode.keyComparator);
         for(int i = 0; i < labelPaths.size(); i++){
             labelPathMapping.put(labelPaths.get(i), (long) i);
         }
@@ -103,11 +105,18 @@ public class PathIndex implements Closeable, Serializable, ObjectInputValidation
      * @param newSignatures
      * @return This path index with the signatures set.
      */
-    public PathIndex setSignatures(List<Integer[]> newSignatures){
+    public Index setSignatures(List<Integer[]> newSignatures){
+        verifySignatureIsValidForCurrentPaths(newSignatures);
+        signatures = newSignatures;
+        signatures_specified = true;
+        return this;
+    }
+
+    private boolean verifySignatureIsValidForCurrentPaths(List<Integer[]> newSignatures){
         if (!k_values_specified){
             throw new IllegalStateException("K values are not set first. Set the k value first when building the index");
         }
-        if ( newSignatures.size() != maximum_k_value_indexed + 1){
+        if (newSignatures.size() != maximum_k_value_indexed + 1){
             throw new IllegalStateException("Length of signatures incorrect. Length: "
                     + newSignatures.size()
                     + " Expected: " + (maximum_k_value_indexed + 1));
@@ -117,16 +126,15 @@ public class PathIndex implements Closeable, Serializable, ObjectInputValidation
                 throw new IllegalArgumentException("Signatures not correctly specified on signature: " + Arrays.toString(getSignature(k)));
             }
         }
-        signatures = newSignatures;
-        signatures_specified = true;
-        return this;
+        return true;
     }
 
     /**
      * Sets the signatures for this path index to the default values.
      */
-    public void setDefaultSignatures(){
-        signatures = defaultSignatures();
+    public Index setSignaturesToDefault(){
+        signatures = getDefaultSignatures();
+        return this;
     }
 
     /**
@@ -149,7 +157,7 @@ public class PathIndex implements Closeable, Serializable, ObjectInputValidation
      * @param maxK The maximum k value in this path index
      * @return the default signatures for specified k values.
      */
-    public static List<Integer[]> defaultSignatures(int minK, int maxK){
+    private List<Integer[]> getDefaultSignatures(int minK, int maxK){
         ArrayList<Integer[]> defaultSignatures = new ArrayList<>();
         for (int k = 0; k < maxK + 1; k++){ //maxK + 1 so that the index for k = 2 is still .get(2)
             defaultSignatures.add(new Integer[k + 1]);
@@ -168,7 +176,7 @@ public class PathIndex implements Closeable, Serializable, ObjectInputValidation
      *
      * @return the default signatures for specified k values.
      */
-    public List<Integer[]> defaultSignatures(){
+    public List<Integer[]> getDefaultSignatures(){
         ArrayList<Integer[]> defaultSignatures = new ArrayList<>(maximum_k_value_indexed - minimum_k_value_indexed);
         for (int k = minimum_k_value_indexed; k < maximum_k_value_indexed; k++){
             defaultSignatures.set((k - minimum_k_value_indexed), new Integer[k + 1]);
@@ -185,7 +193,7 @@ public class PathIndex implements Closeable, Serializable, ObjectInputValidation
      * @param maxK The maximum k value to be indexed.
      * @return This path index with the k values set.
      */
-    public PathIndex setKValues(int minK, int maxK){
+    public Index setRangeOfPathLengths(int minK, int maxK){
         minimum_k_value_indexed = minK;
         maximum_k_value_indexed = maxK;
         k_values_specified = true;
@@ -202,45 +210,39 @@ public class PathIndex implements Closeable, Serializable, ObjectInputValidation
 
     /**
      * Returns an iterable cursor object
-     * @param labelPath the path to search for
-     * @param nodes the nodes that may be specified in the search.
-     * @return
      */
-    public Cursor find(Long[] labelPath, Long[] nodes) {
+    public Cursor find(Key key) {
         try {
-            return tree.find(build_searchKey(labelPath, nodes));
+            Long[] search_key = buildComposedKey(key);
+            return tree.find(search_key);
         }
         catch (IOException e){
             return null; //TODO something better here
         }
     }
 
-    public Long[] build_searchKey(Long[] labelPath, Long[] nodes){
-        Long[] search_key = new Long[nodes.length + 1];
-        Long pathID = labelPathMapping.get(labelPath);
-        search_key[0] = pathID;
-        System.arraycopy(nodes, 0, search_key, 1, nodes.length);
-        return search_key;
-    }
-
     /**
      * Inserts a key into the index.
-     * @param labelPath The labeled path for this key.
-     * @param nodes The nodes along the labeled path.
      */
-    public void insert(Long[] labelPath, Long[] nodes) throws IOException {
-        tree.insert(build_searchKey(labelPath, nodes));
+    public void insert(Key key) throws IOException {
+        Long[] search_key = buildComposedKey(key);
+        tree.insert(search_key);
     }
 
     /**
      * Searches for a key in the index and removes it.
-     * @param labelPath The labeled path for this key.
-     * @param nodes The nodes along this labeled path.
      * @return false if this key is not found.
      */
-    public boolean remove(Long[] labelPath, Long[] nodes){
+    public boolean remove(Key key){
         return true;
     }
+
+    public Long[] buildComposedKey(Key key){
+        Long pathIdForKey = labelPathMapping.get(key.getLabelPath());
+        return key.getComposedKey(pathIdForKey);
+    }
+
+
     /**
      * Save the state of the index to the file to load later.
      */
@@ -252,8 +254,6 @@ public class PathIndex implements Closeable, Serializable, ObjectInputValidation
 
     /**
      * Serialize this object
-     * @param o
-     * @return
      * @throws IOException
      */
     private static byte[] serialize(Object o) throws IOException {
@@ -267,20 +267,17 @@ public class PathIndex implements Closeable, Serializable, ObjectInputValidation
 
     /**
      * Deserialize this object
-     * @param bytes
-     * @return
-     * @throws ClassNotFoundException
      * @throws IOException
      */
-    private static PathIndex deserialize(byte[] bytes) throws IOException {
+    private static PathIndexImpl deserialize(byte[] bytes) throws IOException {
         ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
         ObjectInputStream ois = new ObjectInputStream(bais);
-        PathIndex index = null;
+        PathIndexImpl index = null;
         try{
             Object o = ois.readObject();
             ois.close();
-            if (o instanceof PathIndex){
-                index = (PathIndex) o;
+            if (o instanceof PathIndexImpl){
+                index = (PathIndexImpl) o;
             }
         }
         catch(ClassNotFoundException e){
@@ -295,7 +292,6 @@ public class PathIndex implements Closeable, Serializable, ObjectInputValidation
 
     /**
      * Methods implementing serialization
-     * @param out
      * @throws IOException
      */
     private void writeObject(java.io.ObjectOutputStream out) throws IOException {
@@ -304,7 +300,6 @@ public class PathIndex implements Closeable, Serializable, ObjectInputValidation
 
     /**
      * Method implementing serialization
-     * @param in
      * @throws IOException
      * @throws ClassNotFoundException
      */
