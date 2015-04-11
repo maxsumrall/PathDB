@@ -1,6 +1,9 @@
 package bptree;
 
-import org.junit.Assert;
+import bptree.impl.InternalNode;
+import bptree.impl.PathIndexImpl;
+import bptree.impl.SplitResult;
+import bptree.impl.Tree;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -10,7 +13,7 @@ import java.util.ArrayList;
 import java.util.Random;
 
 public class InternalNodeTest {
-    private PathIndex index;
+    private Index index;
     private File indexFile;
     private ArrayList<Long[]> labelPaths;
 
@@ -28,17 +31,16 @@ public class InternalNodeTest {
 
     @Before
     public void initializeIndex() throws IOException {
-        labelPaths = exampleLabelPaths(20,2);
-        index = PathIndex.temporaryPathIndex()
-                .setKValues(2, 2)
-                .buildLabelPathMapping(labelPaths)
-                .setSignatures(PathIndex.defaultSignatures(2,2));
-        Assert.assertTrue(index.ready());
+        labelPaths = exampleLabelPaths(20, 2);
+        index = PathIndexImpl.getTemporaryPathIndex()
+                .setRangeOfPathLengths(2, 2)
+                .setLabelPaths(labelPaths)
+                .setSignaturesToDefault();
     }
 
     @Test
     public void insertSplitTest() throws IOException {
-        Tree tree = index.tree;
+        Tree tree = ((PathIndexImpl)index).tree;
         InternalNode node = tree.createInternalNode();
         for (int i = 220; i > 0; i--){
             node = (InternalNode)tree.getNode(node.id);
@@ -53,7 +55,7 @@ public class InternalNodeTest {
     }
     @Test
     public void insertSplitVariousLengthTest() throws IOException {
-        Tree tree = index.tree;
+        Tree tree = ((PathIndexImpl)index).tree;
         Random random = new Random();
         InternalNode node = tree.createInternalNode();
         for (int i = 220; i > 0; i--){

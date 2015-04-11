@@ -8,14 +8,14 @@ import java.io.IOException;
  * A cursor for iterating over a result set
  */
 public class CursorImpl implements Cursor{
-    public TreeImpl tree;
+    public Tree tree;
     public Long[] searchKey;
-    private LeafNodeImpl currentLeaf;
+    private LeafNode currentLeaf;
     private int remainingElements = 0;
     private int cursorPosition;
     private int size = -1;
 
-    public CursorImpl(TreeImpl tree, LeafNodeImpl currentLeaf, Long[] searchKey, int cursorPosition){
+    public CursorImpl(Tree tree, LeafNode currentLeaf, Long[] searchKey, int cursorPosition){
         this.tree = tree;
         this.currentLeaf = currentLeaf;
         this.searchKey = searchKey;
@@ -35,7 +35,7 @@ public class CursorImpl implements Cursor{
 
     private void countValidKeysInThisNode(){
         for(int i = cursorPosition; i < currentLeaf.keys.size(); i++){
-            if(AbstractNode.keyComparator.validPrefix(searchKey, currentLeaf.keys.get(i))){
+            if(Node.keyComparator.validPrefix(searchKey, currentLeaf.keys.get(i))){
                 remainingElements++;
             }
             else{
@@ -62,9 +62,9 @@ public class CursorImpl implements Cursor{
     }
 
     private void loadSiblingNodeAndSetRemainingElements() throws IOException{
-        this.currentLeaf = (LeafNodeImpl)tree.getNode(currentLeaf.followingNodeID);
+        this.currentLeaf = (LeafNode)tree.getNode(currentLeaf.followingNodeID);
         for(Long[] key: this.currentLeaf.keys){
-            if(AbstractNode.keyComparator.validPrefix(searchKey, key)){
+            if(Node.keyComparator.validPrefix(searchKey, key)){
                 this.remainingElements++;
             }
         }
@@ -102,10 +102,10 @@ public class CursorImpl implements Cursor{
     public int size(){
         if(size == -1) {
             size = validKeysInNode(currentLeaf);
-            LeafNodeImpl node = currentLeaf;
-            while (AbstractNode.keyComparator.validPrefix(searchKey, node.keys.getLast())) {
+            LeafNode node = currentLeaf;
+            while (Node.keyComparator.validPrefix(searchKey, node.keys.getLast())) {
                 try {
-                    node = (LeafNodeImpl) tree.getNode(node.followingNodeID);
+                    node = (LeafNode) tree.getNode(node.followingNodeID);
                     size += validKeysInNode(node);
                 } catch (IOException e) {
                     break;
@@ -121,10 +121,10 @@ public class CursorImpl implements Cursor{
      * @param node
      * @return
      */
-    private int validKeysInNode(LeafNodeImpl node){
+    private int validKeysInNode(LeafNode node){
         int sum = 0;
         for(Long[] key : node.keys){
-            if(AbstractNode.keyComparator.validPrefix(searchKey, key)){
+            if(Node.keyComparator.validPrefix(searchKey, key)){
                 sum++;
             }
         }

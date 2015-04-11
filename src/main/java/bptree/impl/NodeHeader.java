@@ -1,10 +1,7 @@
-package bptree;
+package bptree.impl;
 
 import java.nio.ByteBuffer;
 
-/**
- * Created by max on 3/23/15.
- */
 public final class NodeHeader {
     /*
 The Header of the block when stored as bytes is:

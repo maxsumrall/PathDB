@@ -1,4 +1,4 @@
-package bptree;
+package bptree.impl;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -25,13 +25,16 @@ public class InternalNode extends Node {
         tree.writeNodeToPage(this);
     }
 
-    public InternalNode(ByteBuffer buffer, Tree tree, Long id) throws IOException{
+    private InternalNode(ByteBuffer buffer, Tree tree, Long id) throws IOException{
         this.tree = tree;
         this.id = id;
         keys = new LinkedList<>();
         children = new LinkedList<>();
         deserialize(buffer);
+    }
 
+    public static Node instantiateNodeFromBuffer(ByteBuffer buffer, Tree tree, long id) throws IOException {
+        return new InternalNode(buffer, tree, id);
     }
 
     /**
@@ -162,7 +165,7 @@ public class InternalNode extends Node {
      * @throws IOException
      */
     @Override
-    public Cursor find(Long[] search_key) throws IOException {
+    public CursorImpl find(Long[] search_key) throws IOException {
         return tree.getNode(children.get(search(search_key))).find(search_key);
     }
 

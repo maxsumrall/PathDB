@@ -1,4 +1,4 @@
-package bptree;
+package bptree.impl;
 
 import java.io.*;
 
@@ -32,7 +32,7 @@ class Utils {
     }
 
 
-    public byte[] serialize(PathIndex index) throws IOException {
+    public byte[] serialize(PathIndexImpl index) throws IOException {
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         ObjectOutput out = null;
         byte[] byteRep;
@@ -56,13 +56,13 @@ class Utils {
         }
         return byteRep;
     }
-    public PathIndex deserialize(byte[] byteRep) throws IOException, ClassNotFoundException {
+    public PathIndexImpl deserialize(byte[] byteRep) throws IOException, ClassNotFoundException {
         ByteArrayInputStream bis = new ByteArrayInputStream(byteRep);
         ObjectInput in = null;
-    PathIndex index;
+    PathIndexImpl index;
         try {
             in = new ObjectInputStream(bis);
-            index = (PathIndex) in.readObject();
+            index = (PathIndexImpl) in.readObject();
         } finally {
             try {
                 bis.close();

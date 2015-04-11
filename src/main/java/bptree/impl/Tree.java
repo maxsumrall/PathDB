@@ -1,4 +1,4 @@
-package bptree;
+package bptree.impl;
 
 import java.io.*;
 import java.nio.ByteBuffer;
@@ -12,7 +12,7 @@ public class Tree implements Closeable, Serializable, ObjectInputValidation {
     protected static String DEFAULT_TREE_FILE_NAME = "tree.bin";
     protected String tree_filename;
     private long nextAvailablePageID = 0l;
-    protected long rootNodePageID;
+    public long rootNodePageID;
     private DiskCache diskCache;
     /**
      * Constructs a new Tree object
@@ -26,8 +26,11 @@ public class Tree implements Closeable, Serializable, ObjectInputValidation {
         rootNodePageID = rootNode.id;
     }
 
-    public static Tree initializeNewTree() throws IOException {
-        return initializeNewTree(DEFAULT_TREE_FILE_NAME, DiskCache.defaultDiskCache()); //Delete on exit
+    public static Tree initializeTemporaryNewTree() throws IOException {
+        return initializeNewTree(DEFAULT_TREE_FILE_NAME, DiskCache.temporaryDiskCache()); //Delete on exit
+    }
+    public static Tree initializePersistentNewTree() throws IOException {
+        return initializeNewTree(DEFAULT_TREE_FILE_NAME, DiskCache.persistentDiskCache()); //Delete on exit
     }
 
     public static Tree initializeNewTree(String tree_filename, DiskCache diskCache) throws IOException {
@@ -62,10 +65,10 @@ public class Tree implements Closeable, Serializable, ObjectInputValidation {
             throw new IOException("Unable to read page from cache. Page: " + id);
         }
         if(NodeHeader.isLeafNode(buffer)){
-            node = new LeafNode(buffer, this, id);
+            node = LeafNode.instantiateNodeFromBuffer(buffer, this, id);
         }
         else{
-            node = new InternalNode(buffer, this, id);
+            node = InternalNode.instantiateNodeFromBuffer(buffer, this, id);
         }
         return node;
     }
@@ -106,7 +109,7 @@ public class Tree implements Closeable, Serializable, ObjectInputValidation {
      * @return
      * @throws IOException
      */
-    public Cursor find(Long[] key) throws IOException {
+    public CursorImpl find(Long[] key) throws IOException {
         return getNode(rootNodePageID).find(key);
     }
 

@@ -19,10 +19,19 @@ public class KeyImpl implements Key, Comparator<Long[]> {
         this.nodes = nodes;
         composed_key = new Long[nodes.length + 1];
     }
+    private KeyImpl(){
+
+    }
+
+    public static KeyImpl getComparator(){
+        return new KeyImpl();
+    }
 
     public Long[] getLabelPath(){
         return this.labelPath;
     }
+
+    public Long[] getNodes(){ return this.nodes;}
 
     public Long[] getComposedKey(Long pathID){
         composed_key[0] = pathID;

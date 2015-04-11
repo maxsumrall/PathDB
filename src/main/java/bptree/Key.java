@@ -7,6 +7,8 @@ public interface Key{
 
     Long[] getLabelPath();
 
+    Long[] getNodes();
+
     Long[] getComposedKey(Long pathID);
 
 }

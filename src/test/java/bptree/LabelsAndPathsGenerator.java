@@ -1,5 +1,7 @@
 package bptree;
 
+import bptree.impl.*;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -64,7 +66,7 @@ public class LabelsAndPathsGenerator {
      * @param number_of_keys The number of keys to generate
      * @return An ArrayList of keys ready to be inserted into the database.
      */
-    public static ArrayList<Long[][]> exampleRandomKeys(ArrayList<Long[]> labelPaths, int number_of_keys) {
+    public static ArrayList<Key> exampleRandomKeys(ArrayList<Long[]> labelPaths, int number_of_keys) {
         return exampleKeys(labelPaths, number_of_keys, true);
     }
     /**
@@ -74,20 +76,20 @@ public class LabelsAndPathsGenerator {
      * @param number_of_keys The number of keys to generate
      * @return An ArrayList of keys ready to be inserted into the database.
      */
-    public static ArrayList<Long[][]> exampleSequentialKeys(ArrayList<Long[]> labelPaths, int number_of_keys) {
+    public static ArrayList<Key> exampleSequentialKeys(ArrayList<Long[]> labelPaths, int number_of_keys) {
         return exampleKeys(labelPaths, number_of_keys, false);
     }
 
-    private static ArrayList<Long[][]> exampleKeys(ArrayList<Long[]> labelPaths, int number_of_keys, boolean randomNodeIds) {
+    private static ArrayList<Key> exampleKeys(ArrayList<Long[]> labelPaths, int number_of_keys, boolean randomNodeIds) {
         Random random = new Random();
-        ArrayList<Long[][]> keys = new ArrayList<>();
+        ArrayList<Key> keys = new ArrayList<>();
         for (int i = 0; i < number_of_keys; i++) {
             Long[] randomPath = labelPaths.get(i%labelPaths.size());
             Long[] nodes = new Long[randomPath.length + 1];
             for (int j = 0; j < nodes.length; j++) {
                 nodes[j] = randomNodeIds ? random.nextLong() : i;
             }
-            keys.add(new Long[][]{randomPath, nodes});
+            keys.add(new KeyImpl(randomPath, nodes));
         }
         return keys;
     }

@@ -1,5 +1,6 @@
 package bptree;
 
+import bptree.impl.KeyImpl;
 import org.junit.Test;
 
 import java.util.Random;
@@ -27,7 +28,7 @@ public class KeyTest {
         Long[] keyD = new Long[]{2l,3l,4l,5l};
         Long[] keyD1 = new Long[]{2l,3l,4l,5l, 6l, 7l};
         Long[] keyD2 = new Long[]{2l,3l,4l,5l, 6l, 7l, 8l};
-        Key comparator = new Key();
+        KeyImpl comparator = KeyImpl.getComparator();
         assert((comparator.compare(keyA, keyB)) < 0);
         assert((comparator.compare(keyB, keyC)) < 0);
         assert((comparator.compare(keyC, keyD)) < 0);

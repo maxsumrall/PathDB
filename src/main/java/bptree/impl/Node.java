@@ -1,4 +1,4 @@
-package bptree;
+package bptree.impl;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -10,11 +10,11 @@ import java.util.LinkedList;
  */
 public abstract class Node {
     protected static final long KEY_DELIMITER = -1;
-    protected static final Key keyComparator = new Key();
+    public static final KeyImpl keyComparator = KeyImpl.getComparator();
     protected Tree tree;
     protected NodeHeader nodeHeader;
-    protected LinkedList<Long[]> keys;
-    protected long id;
+    public LinkedList<Long[]> keys;
+    public long id;
     protected long precedingNodeID = -1;
     protected long followingNodeID = -1;
     protected boolean sameLengthKeys = true;
@@ -78,22 +78,22 @@ public abstract class Node {
 
 
     /**
-     * Write the header of this block to the cursor given.
+     * Write the header of this block to the buffer given.
      * @param buffer
      */
-    protected void serializeHeaderToBuffer(ByteBuffer buffer){
+    protected ByteBuffer serializeHeaderToBuffer(ByteBuffer buffer){
         buffer.put(NodeHeader.BYTE_POSITION_NODE_TYPE, (byte) (this instanceof LeafNode ? 1 : 2));
         buffer.putInt(NodeHeader.BYTE_POSITION_KEY_LENGTH, sameLengthKeys ? (keys.size() > 0 ? keys.getFirst().length : 0) : -1);
         buffer.putInt(NodeHeader.BYTE_POSITION_KEY_COUNT, keys.size());
         buffer.putLong(NodeHeader.BYTE_POSITION_SIBLING_ID, followingNodeID);
+        return buffer;
     }
 
     /**
-     * Writes the keys to the a byte[] array.
+     * Writes the keys to the a ByteBuffer.
      */
     public ByteBuffer serialize(){
         return serialize(ByteBuffer.allocate(DiskCache.PAGE_SIZE));
-
     }
 
     /**
@@ -158,7 +158,7 @@ public abstract class Node {
 
     abstract protected int search(Long[] key);
 
-    abstract public Cursor find(Long[] key) throws IOException;
+    abstract public CursorImpl find(Long[] key) throws IOException;
 
     abstract public SplitResult insert(Long[] key) throws IOException;
 

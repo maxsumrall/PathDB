@@ -10,9 +10,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
-/**
- * Use this class for all interaction with the index.
- */
+
 public class PathIndexImpl implements Index, Closeable, Serializable, ObjectInputValidation{
 
     public static final String DEFAULT_INDEX_FILE_NAME = "path_index.bin";
@@ -24,7 +22,7 @@ public class PathIndexImpl implements Index, Closeable, Serializable, ObjectInpu
     private int minimum_k_value_indexed;
     private int maximum_k_value_indexed;
     private final String path_to_tree;
-    public transient TreeImpl tree; //transient means 'do not serialize this'
+    public transient Tree tree; //transient means 'do not serialize this'
 
     private PathIndexImpl(File file) throws IOException {
         path_to_tree = file.getName();
@@ -38,7 +36,7 @@ public class PathIndexImpl implements Index, Closeable, Serializable, ObjectInpu
         File file = getUniqueFile();
         file.deleteOnExit();
         PathIndexImpl index = new PathIndexImpl(file);
-        index.tree = TreeImpl.initializeNewTree();
+        index.tree = Tree.initializeTemporaryNewTree();
         return index;
     }
 
@@ -48,8 +46,8 @@ public class PathIndexImpl implements Index, Closeable, Serializable, ObjectInpu
      */
     public static Index getPersistentPathIndex() throws IOException {
         PathIndexImpl index = new PathIndexImpl(getUniqueFile());
-        DiskCacheImpl diskCache = DiskCacheImpl.defaultDiskCache();
-        index.tree = TreeImpl.initializeNewTree(TreeImpl.DEFAULT_TREE_FILE_NAME, diskCache);
+        DiskCache diskCache = DiskCache.temporaryDiskCache();
+        index.tree = Tree.initializeNewTree(Tree.DEFAULT_TREE_FILE_NAME, diskCache);
         return index;
     }
 
@@ -68,7 +66,7 @@ public class PathIndexImpl implements Index, Closeable, Serializable, ObjectInpu
         catch (InvalidClassException e){
             throw new InvalidClassException("Invalid object found at file: " + filepath_to_index);
         }
-        pathIndex.tree = TreeImpl.loadTreeFromFile(pathIndex.path_to_tree); //TODO make sure this works
+        pathIndex.tree = Tree.loadTreeFromFile(pathIndex.path_to_tree); //TODO make sure this works
         return pathIndex;
     }
 
@@ -76,9 +74,9 @@ public class PathIndexImpl implements Index, Closeable, Serializable, ObjectInpu
      *Returns a File object on an unused path name for the Tree, as reported by the File.exists() method.
      */
     private static File getUniqueFile(){
-        File file = new File(TreeImpl.DEFAULT_TREE_FILE_NAME);
+        File file = new File(Tree.DEFAULT_TREE_FILE_NAME);
         while(file.exists()){
-            file = new File(System.currentTimeMillis() + "_" + TreeImpl.DEFAULT_TREE_FILE_NAME);
+            file = new File(System.currentTimeMillis() + "_" + Tree.DEFAULT_TREE_FILE_NAME);
         }
         return file;
     }
@@ -90,7 +88,7 @@ public class PathIndexImpl implements Index, Closeable, Serializable, ObjectInpu
      * @return This path index with the labeledPathMapping set.
      */
     public Index setLabelPaths(List<Long[]> labelPaths){
-        labelPaths.sort(AbstractNode.keyComparator);
+        labelPaths.sort(Node.keyComparator);
         for(int i = 0; i < labelPaths.size(); i++){
             labelPathMapping.put(labelPaths.get(i), (long) i);
         }
@@ -179,7 +177,7 @@ public class PathIndexImpl implements Index, Closeable, Serializable, ObjectInpu
     public List<Integer[]> getDefaultSignatures(){
         ArrayList<Integer[]> defaultSignatures = new ArrayList<>(maximum_k_value_indexed - minimum_k_value_indexed);
         for (int k = minimum_k_value_indexed; k < maximum_k_value_indexed; k++){
-            defaultSignatures.set((k - minimum_k_value_indexed), new Integer[k + 1]);
+            defaultSignatures.add(new Integer[k + 1]);
             for (int i = 0; i < k + 1; i++) {
                 defaultSignatures.get(k - minimum_k_value_indexed)[i] = i;
             }

@@ -1,4 +1,4 @@
-package bptree;
+package bptree.impl;
 
 /**
  * Created by max on 3/19/15.

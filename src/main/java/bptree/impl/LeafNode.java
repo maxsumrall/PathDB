@@ -1,4 +1,4 @@
-package bptree;
+package bptree.impl;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -25,10 +25,14 @@ public class LeafNode extends Node {
         tree.writeNodeToPage(this);
     }
 
-    public LeafNode(ByteBuffer buffer, Tree tree, Long id) throws IOException {
+    private LeafNode(ByteBuffer buffer, Tree tree, Long id) throws IOException {
         this.tree = tree;
         this.id = id;
         deserialize(buffer); //set the keys and the followingNodeID, as read from the page cache
+    }
+
+    public static Node instantiateNodeFromBuffer(ByteBuffer buffer, Tree tree, long id) throws IOException {
+        return new LeafNode(buffer, tree, id);
     }
 
     /**
@@ -136,11 +140,11 @@ public class LeafNode extends Node {
      * @param search_key The key to use as a search parameter.
      * @return The first key matching this search parameter.
      */
-    public Cursor find(Long[] search_key){
+    public CursorImpl find(Long[] search_key){
         for(Long[] key : keys){
-            if (keyComparator.prefixCompare(search_key, key) == 0) { return new Cursor(tree, this, search_key, keys.indexOf(key));} //returns the index of the correct pointer to the next block.
+            if (keyComparator.prefixCompare(search_key, key) == 0) { return new CursorImpl(tree, this, search_key, keys.indexOf(key));} //returns the index of the correct pointer to the next block.
         }
-        return new Cursor(tree, this, search_key, 0); //Did not find anything
+        return new CursorImpl(tree, this, search_key, 0); //Did not find anything
     }
 
     /**
@@ -191,4 +195,5 @@ public class LeafNode extends Node {
         this.followingNodeID = newSiblingID;
         tree.writeNodeToPage(this);
     }
+
 }

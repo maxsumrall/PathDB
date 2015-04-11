@@ -1,13 +1,14 @@
-package bptree;
+package bptree.impl;
 
 import java.util.*;
 
 /**
- * Created by max on 3/19/15.
+ * Maybe in the future I can use to instead of giving nodes a reference to Keys of type long and having to change it all the time,
+ * this can be used to mask how the key set is implemented.
  */
 public class KeySet implements Iterable<Long[]>, Comparator<long[]>, Comparable<long[]>{
     private LinkedList<Long[]> keys;
-    private Key keyComparator = new Key();
+    private KeyImpl keyComparator = new KeyImpl(null, null);
 
     public KeySet(){
         keys = new LinkedList<>();

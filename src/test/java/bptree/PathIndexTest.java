@@ -1,112 +1,109 @@
 package bptree;
 
+import bptree.impl.KeyImpl;
+import bptree.impl.Node;
+import bptree.impl.PathIndexImpl;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.LinkedList;
 
 import static bptree.LabelsAndPathsGenerator.*;
 
 public class PathIndexTest {
-    private PathIndex index;
+    private Index index;
     private File indexFile;
     private ArrayList<Long[]> labelPaths;
 
     @Before
     public void initializeIndex() throws IOException {
         labelPaths = exampleLabelPaths(20,2);
-        index = PathIndex.temporaryPathIndex()
-                        .setKValues(2, 2)
-                        .buildLabelPathMapping(labelPaths)
-                        .setSignatures(PathIndex.defaultSignatures(2,2));
-        assert(index.ready());
+        index = PathIndexImpl.getTemporaryPathIndex()
+                        .setRangeOfPathLengths(2, 2)
+                        .setLabelPaths(labelPaths)
+                        .setSignaturesToDefault();
     }
 
     @Test
     public void testInsertSequentialKeysIntoIndex() throws IOException {
         int number_of_keys_to_insert = 1000;
-        ArrayList<Long[][]> keys = exampleSequentialKeys(labelPaths, number_of_keys_to_insert);
-        for(Long[][] key: keys){
-            index.insert(key[0], key[1]);
+        ArrayList<Key> keys = exampleSequentialKeys(labelPaths, number_of_keys_to_insert);
+        for(Key key: keys){
+            index.insert(key);
         }
         Cursor cursor;
-        for(Long[][] key : keys){
-            cursor = index.find(key[0], key[1]);
+        for(Key key : keys){
+            cursor = index.find(key);
             assert(cursor.hasNext());
-            assert(Arrays.equals(cursor.next(), index.build_searchKey(key[0], key[1]))); //the empty set
+            assert(Arrays.equals(cursor.next(), index.buildComposedKey(key))); //the empty set
         }
     }
 
     @Test
     public void testInsertRandomKeysIntoIndex() throws IOException {
         int number_of_keys_to_insert = 1000;
-        ArrayList<Long[][]> keys = exampleRandomKeys(labelPaths, number_of_keys_to_insert);
-        for(Long[][] key: keys){
-            index.insert(key[0], key[1]);
+        ArrayList<Key> keys = exampleRandomKeys(labelPaths, number_of_keys_to_insert);
+        for(Key key: keys){
+            index.insert(key);
         }
         Cursor cursor;
-        for(Long[][] key : keys){
-            cursor = index.find(key[0], key[1]);
+        for(Key key : keys){
+            cursor = index.find(key);
             assert(cursor.hasNext());
-            assert(Arrays.equals(cursor.next(), index.build_searchKey(key[0], key[1]))); //the empty set
+            assert(Arrays.equals(cursor.next(), index.buildComposedKey(key))); //the empty set
         }
     }
     @Test
     public void testInsertRandomKeysWithRandomLengthIntoIndex() throws IOException {
         int number_of_keys_to_insert = 1000;
         ArrayList<Long[]> different_length_paths  = exampleVariableLengthLabelPaths(number_of_keys_to_insert, 2, 4);
-        ArrayList<Long[][]> keys = exampleRandomKeys(different_length_paths, number_of_keys_to_insert);
-        index = PathIndex.temporaryPathIndex()
-                .setKValues(2, 4)
-                .buildLabelPathMapping(different_length_paths)
-                .setSignatures(PathIndex.defaultSignatures(2,4));
-        for(Long[][] key: keys){
-            index.insert(key[0], key[1]);
+        ArrayList<Key> keys = exampleRandomKeys(different_length_paths, number_of_keys_to_insert);
+        index = PathIndexImpl.getTemporaryPathIndex()
+                .setRangeOfPathLengths(2, 4)
+                .setLabelPaths(different_length_paths)
+                .setSignaturesToDefault();
+        for(Key key: keys){
+            index.insert(key);
         }
         Cursor cursor;
-        for(Long[][] key : keys){
-            cursor = index.find(key[0], key[1]);
-           // if(!Arrays.equals(cursor.next(), index.build_searchKey(key[0], key[1]))){
-            //    Tree tree  = index.tree;
-            //    System.out.println("Search Key: " + Arrays.toString(index.build_searchKey(key[0], key[1])));
-            //    System.out.println(tree.logger);
-            //    printTree(tree.getNode(tree.rootNodePageID), tree);
-            //    cursor = index.find(key[0], key[1]);
-           // }
+        for(Key key : keys){
+            cursor = index.find(key);
             assert(cursor.hasNext());
-            assert(Arrays.equals(cursor.next(), index.build_searchKey(key[0], key[1])));
+            assert(Arrays.equals(cursor.next(), index.buildComposedKey(key)));
         }
     }
-
 
     @Test
     public void testPrefixCheckingMultipleResults() throws IOException {
         int number_of_keys_to_insert = 2000;
         ArrayList<Long[]> different_length_paths = exampleVariableLengthRandomLabelPaths(50, 2, 4);
-        ArrayList<Long[][]> keys = exampleRandomKeys(different_length_paths, number_of_keys_to_insert);
-        index = PathIndex.temporaryPathIndex()
-                .setKValues(2, 4)
-                .buildLabelPathMapping(different_length_paths)
-                .setSignatures(PathIndex.defaultSignatures(2, 4));
+        ArrayList<Key> keys = exampleRandomKeys(different_length_paths, number_of_keys_to_insert);
+        index = PathIndexImpl.getTemporaryPathIndex()
+                .setRangeOfPathLengths(2, 4)
+                .setLabelPaths(different_length_paths)
+                .setSignaturesToDefault();
         LinkedList<Long[]> keys_built = new LinkedList<>();
-        for (Long[][] key : keys) {
-            keys_built.add(index.build_searchKey(key[0], key[1]));
+        for (Key key : keys) {
+            keys_built.add(index.buildComposedKey(key));
         }
-        for (Long[][] key : keys) {
-            index.insert(key[0], key[1]);
+        for (Key key : keys) {
+            index.insert(key);
         }
         Cursor cursor;
         HashMap<Long[], Integer> results = new HashMap<>();
         for (Long[] path: different_length_paths) {
-            cursor = index.find(path, new Long[]{});
+            cursor = index.find(new KeyImpl(path, new Long[]{}));
             while (cursor.hasNext()) {
                 Long[] result = cursor.next();
-                if(!Node.keyComparator.validPrefix(index.build_searchKey(path, new Long[]{}), result)){
+                if(!Node.keyComparator.validPrefix(index.buildComposedKey(new KeyImpl(path, new Long[]{})), result)){
                     break;
                 }
-                assert(Node.keyComparator.validPrefix(index.build_searchKey(path, new Long[]{}), result));
+                assert(Node.keyComparator.validPrefix(index.buildComposedKey(new KeyImpl(path, new Long[]{})), result));
                 results.put(result, 1);
             }
         }
@@ -137,38 +134,39 @@ public class PathIndexTest {
     public void testVariablePrefixCheckingMultipleResults() throws IOException {
         int number_of_keys_to_insert = 500;
         ArrayList<Long[]> different_length_paths = exampleVariableLengthRandomLabelPaths(50, 2, 4);
-        ArrayList<Long[][]> keys = exampleRandomKeys(different_length_paths, number_of_keys_to_insert);
-        index = PathIndex.temporaryPathIndex()
-                .setKValues(2, 4)
-                .buildLabelPathMapping(different_length_paths)
-                .setSignatures(PathIndex.defaultSignatures(2, 4));
+        ArrayList<Key> keys = exampleRandomKeys(different_length_paths, number_of_keys_to_insert);
+        index = PathIndexImpl.getTemporaryPathIndex()
+                .setRangeOfPathLengths(2, 4)
+                .setLabelPaths(different_length_paths)
+                .setSignaturesToDefault();
         LinkedList<Long[]> keys_built = new LinkedList<>();
-        for (Long[][] key : keys) {
-            keys_built.add(index.build_searchKey(key[0], key[1]));
+        for (Key key : keys) {
+            keys_built.add(index.buildComposedKey(key));
         }
-        for (Long[][] key : keys) {
-            index.insert(key[0], key[1]);
+        for (Key key : keys) {
+            index.insert(key);
         }
         Cursor cursor;
         HashMap<Long[], Integer> results = new HashMap<>();
         for (int i = 0; i < keys.size(); i++){
-            Long[][] key = keys.get(i);
+            Key key = keys.get(i);
 
             if(i%3 == 0) {
-                cursor = index.find(key[0], new Long[]{});
+                cursor = index.find(new KeyImpl(key.getLabelPath(), new Long[]{}));
             }
             else if (i%3 == 1){
-                cursor = index.find(key[0], new Long[]{key[1][0]});
+                cursor = index.find(new KeyImpl(key.getLabelPath(), new Long[]{key.getNodes()[0]}));
+
             }
             else{
-                cursor = index.find(key[0], new Long[]{key[1][0], key[1][1]});
+                cursor = index.find(new KeyImpl(key.getLabelPath(), new Long[]{key.getNodes()[1]}));
             }
             int resultsFound = 0;
             int cursorSize = cursor.size();
             while (cursor.hasNext()) {
                 resultsFound++;
                 Long[] result = cursor.next();
-                assert(Node.keyComparator.validPrefix(index.build_searchKey(key[0], new Long[]{}), result));
+                assert(Node.keyComparator.validPrefix(index.buildComposedKey(new KeyImpl(key.getLabelPath(), new Long[]{})), result));
                 results.put(result, 1);
             }
             System.out.println("Found by .next(): " + resultsFound + " ||| cursor.size(): " + cursorSize);
@@ -192,7 +190,7 @@ public class PathIndexTest {
         for(Long[] lost : keys_built){
             System.out.println(Arrays.toString(lost));
         }
-        printTree(index.tree.getNode(index.tree.rootNodePageID), index.tree);
+        printTree(((PathIndexImpl)index).tree.getNode(((PathIndexImpl)index).tree.rootNodePageID), ((PathIndexImpl)index).tree);
 
 
     }
