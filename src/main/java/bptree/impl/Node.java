@@ -1,7 +1,10 @@
 package bptree.impl;
 
+import bptree.RemoveResult;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedList;
 
@@ -54,14 +57,21 @@ public abstract class Node {
         tree.writeNodeToPage(this);
     }
 
-    protected void removeKey(Long[] removeKey){
-        Long[] keyToRemove = null;
+    protected void removeKeyWithoutWriting(Long[] removeKey){
         for(Long[] key : keys){
-            if(removeKey.equals(key)){
-                keyToRemove = key;
+            if(Arrays.equals(removeKey, key)){
+                keys.remove(key);
+                return;
             }
         }
-        keys.remove(keyToRemove);
+    }
+
+    protected void removeKeyAndWrite(Long[] removeKey){
+        removeKeyWithoutWriting(removeKey);
+        tree.writeNodeToPage(this);
+    }
+
+    protected void writeNodeToPage(){
         tree.writeNodeToPage(this);
     }
 
@@ -159,6 +169,8 @@ public abstract class Node {
     abstract protected int search(Long[] key);
 
     abstract public CursorImpl find(Long[] key) throws IOException;
+
+    abstract public RemoveResult remove(Long[] key) throws IOException;
 
     abstract public SplitResult insert(Long[] key) throws IOException;
 

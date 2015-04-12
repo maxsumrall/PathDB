@@ -1,5 +1,7 @@
 package bptree.impl;
 
+import bptree.RemoveResult;
+
 import java.io.*;
 import java.nio.ByteBuffer;
 import java.util.LinkedList;
@@ -111,6 +113,10 @@ public class Tree implements Closeable, Serializable, ObjectInputValidation {
      */
     public CursorImpl find(Long[] key) throws IOException {
         return getNode(rootNodePageID).find(key);
+    }
+
+    public RemoveResult remove(Long[] key) throws IOException {
+        return getNode(rootNodePageID).remove(key);
     }
 
     /**

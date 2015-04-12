@@ -1,5 +1,7 @@
 package bptree.impl;
 
+import bptree.RemoveResult;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.LinkedList;
@@ -167,6 +169,11 @@ public class InternalNode extends Node {
     @Override
     public CursorImpl find(Long[] search_key) throws IOException {
         return tree.getNode(children.get(search(search_key))).find(search_key);
+    }
+
+    @Override
+    public RemoveResult remove(Long[] search_key) throws IOException {
+        return tree.getNode(children.get(search(search_key))).remove(search_key);
     }
 
     /**

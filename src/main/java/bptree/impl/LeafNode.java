@@ -1,5 +1,7 @@
 package bptree.impl;
 
+import bptree.RemoveResult;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.LinkedList;
@@ -140,11 +142,20 @@ public class LeafNode extends Node {
      * @param search_key The key to use as a search parameter.
      * @return The first key matching this search parameter.
      */
+    @Override
     public CursorImpl find(Long[] search_key){
         for(Long[] key : keys){
-            if (keyComparator.prefixCompare(search_key, key) == 0) { return new CursorImpl(tree, this, search_key, keys.indexOf(key));} //returns the index of the correct pointer to the next block.
+            if (keyComparator.prefixCompare(search_key, key) == 0) {
+                return new CursorImpl(tree, this, search_key, keys.indexOf(key));
+            } //returns the index of the correct pointer to the next block.
         }
         return new CursorImpl(tree, this, search_key, 0); //Did not find anything
+    }
+
+    @Override
+    public RemoveResult remove(Long[] search_key){
+        KeyRemover remover = new KeyRemover(find(search_key));
+        return remover.removeAll();
     }
 
     /**
@@ -182,14 +193,14 @@ public class LeafNode extends Node {
             LeafNode sibling = tree.createLeafNode(siblingKeys, this.followingNodeID);
 
             LinkedList<Long[]> newKeys = new LinkedList<>(keys.subList(0, midPoint));
-            updateAfterSplit(newKeys, sibling.id);
+            updateThisNodeAfterSplit(newKeys, sibling.id);
 
             splitResult = new SplitResult(sibling.keys.getFirst(), this.id, sibling.id);
         }
         return splitResult;
     }
 
-    private void updateAfterSplit(LinkedList<Long[]> updatedKeyList, Long newSiblingID){
+    private void updateThisNodeAfterSplit(LinkedList<Long[]> updatedKeyList, Long newSiblingID){
         keys = updatedKeyList;
         determineIfKeysAreSameLength();
         this.followingNodeID = newSiblingID;

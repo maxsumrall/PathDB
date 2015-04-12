@@ -69,6 +69,11 @@ public class CursorImpl implements Cursor{
             }
         }
     }
+
+    protected LeafNode getCurrentLeaf(){
+        return currentLeaf;
+    }
+
     @Override
     public Long[] next(){
         if(remainingElements == 0){
@@ -89,6 +94,10 @@ public class CursorImpl implements Cursor{
     public boolean hasNext(){
         if(remainingElements == 0){
             if(cursorPosition == currentLeaf.keys.size()){ //No more remainingElements, but there are no more keys in this node...
+                if(currentLeaf.keys.size() == 0){//TODO remove this if block.
+                    System.out.println("Empty Node Found!");
+                    return false;
+                }
                 loadNextNode();
                 return hasNext();
             }

@@ -41,6 +41,12 @@ public class DeleteKeysTest {
             assert(cursor.hasNext());
             assert(Arrays.equals(cursor.next(), index.buildComposedKey(key))); //the empty set
         }
+        for(Key key : keys){
+            RemoveResult removeResult = index.remove(key);
+            assert(removeResult.getN() == 1);
+            cursor = index.find(key);
+            assert(!cursor.hasNext());
+        }
     }
 
     @Test
@@ -56,5 +62,12 @@ public class DeleteKeysTest {
             assert(cursor.hasNext());
             assert(Arrays.equals(cursor.next(), index.buildComposedKey(key))); //the empty set
         }
+        for(Key key : keys){
+            RemoveResult removeResult = index.remove(key);
+            assert(removeResult.getN() == 1);
+            cursor = index.find(key);
+            assert(!cursor.hasNext());
+        }
+
     }
 }

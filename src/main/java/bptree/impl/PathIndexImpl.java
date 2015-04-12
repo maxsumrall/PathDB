@@ -3,6 +3,7 @@ package bptree.impl;
 import bptree.Cursor;
 import bptree.Index;
 import bptree.Key;
+import bptree.RemoveResult;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -231,8 +232,9 @@ public class PathIndexImpl implements Index, Closeable, Serializable, ObjectInpu
      * Searches for a key in the index and removes it.
      * @return false if this key is not found.
      */
-    public boolean remove(Key key){
-        return true;
+    public RemoveResult remove(Key key) throws IOException {
+        Long[] search_key = buildComposedKey(key);
+        return tree.remove(search_key);
     }
 
     public Long[] buildComposedKey(Key key){

@@ -24,7 +24,7 @@ public interface Index {
 
     void insert(Key key) throws IOException;
 
-    boolean remove(Key key) throws IOException;
+    RemoveResult remove(Key key) throws IOException;
 
     void close() throws IOException;
 }
