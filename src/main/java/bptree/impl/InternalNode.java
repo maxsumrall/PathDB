@@ -1,5 +1,6 @@
 package bptree.impl;
 
+import bptree.Cursor;
 import bptree.RemoveResult;
 
 import java.io.IOException;
@@ -155,7 +156,7 @@ public class InternalNode extends Node {
     @Override
     protected int search(Long[] search_key){
             for (int i = 0; i < keys.size(); i++){
-            if (keyComparator.prefixCompare(search_key, keys.get(i)) <= 0) { return i; }
+            if (keyComparator.prefixCompare(search_key, keys.get(i)) < 0) { return i; }
         }
         return keys.size(); //Then the position is the last one.
     }
@@ -167,13 +168,83 @@ public class InternalNode extends Node {
      * @throws IOException
      */
     @Override
-    public CursorImpl find(Long[] search_key) throws IOException {
+    public Cursor find(Long[] search_key) throws IOException {
+        if(children.size() == 0){
+            return new NullCursorImpl();
+        }
         return tree.getNode(children.get(search(search_key))).find(search_key);
     }
 
     @Override
     public RemoveResult remove(Long[] search_key) throws IOException {
-        return tree.getNode(children.get(search(search_key))).remove(search_key);
+        RemoveResult removeResult = tree.getNode(children.get(search(search_key))).remove(search_key);
+        boolean thisNodeChanged = handleModifiedChildNodes(removeResult);
+        if(thisNodeChanged){
+            addNodeToRemoveResult(this, removeResult);
+        }
+        return removeResult;
+    }
+
+    protected boolean handleModifiedChildNodes(RemoveResult removeResult) throws IOException {
+        Long[] firstKeyPreRemoval = keys.getFirst();
+        for(Long nodeId : removeResult.getNodeIds()){
+            Long childId = getChild(nodeId);
+            if(childId != null){
+                updateToReflectCurrentStateOfChild(childId, removeResult.getStateOfNode(childId));
+                removeResult.declareNodeHasBeenTakenCareOf(nodeId);
+            }
+        }
+        if(removeResult.containsNodesWhichRequireAttention()){
+            passRemoveResultToSibling(removeResult);
+        }
+        if(keys.size() == 0){
+            return true;
+        }
+        else {
+            return keys.getFirst() != firstKeyPreRemoval;
+        }
+    }
+
+    private RemoveResult passRemoveResultToSibling(RemoveResult removeResult) throws IOException {
+        InternalNode sibling = (InternalNode)tree.getNode(followingNodeID);
+        boolean siblingChanged = sibling.handleModifiedChildNodes(removeResult);
+        if(siblingChanged) {
+            addNodeToRemoveResult(sibling, removeResult);
+        }
+        return removeResult;
+    }
+
+    private void addNodeToRemoveResult(InternalNode node, RemoveResult removeResult){
+        if(node.keys.size() == 0){
+            removeResult.addDeletedNode(node.id);
+        }
+        else{
+            removeResult.addModifiedNode(node.id, node.keys.getFirst());
+        }
+    }
+
+    private Long getChild(Long desiredChild){
+        for(Long childId : children){
+            if(childId.equals(desiredChild)){
+                return childId;
+            }
+        }
+        return null;
+    }
+
+    private void updateToReflectCurrentStateOfChild(Long childId, Long[] currentState){
+        int indexOfCorrespondingKey = children.indexOf(childId) - 1;
+        if(currentState == ModifiedNodeIdsList.DELETED_NODE){
+            children.remove(childId);//Remove child first, then the remove key call writes to disk.
+            if(indexOfCorrespondingKey >= 0) {
+                removeKeyAndWrite(keys.get(indexOfCorrespondingKey));
+            }
+        }
+        else{ //Modify key
+            if(indexOfCorrespondingKey >= 0) {
+                updateKeyAndWrite(indexOfCorrespondingKey, currentState);
+            }
+        }
     }
 
     /**
