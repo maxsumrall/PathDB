@@ -9,13 +9,15 @@ The Header of the block when stored as bytes is:
 (4) int - The size of the keys, only relevant if keys are the same length.
 (4) int - the number of keys in this node. A slightly delicate topic in the internal nodes, since they also contain child node ids and not just keys.
 (8) long - the id to the next node, the sibling node.
+(8) long - the id to the previous node, the preceding node.
  */
     public static final int BYTE_POSITION_NODE_TYPE = 0;
     public static final int BYTE_POSITION_KEY_LENGTH = 1;
     public static final int BYTE_POSITION_KEY_COUNT = 5;
     public static final int BYTE_POSITION_SIBLING_ID = 9;
+    public static final int BYTE_POSITION_PRECEDING_ID = 17;
     public static final int LEAF_FLAG = 1;
-    public static final int NODE_HEADER_LENGTH = 1 + 4 + 4 + 8;
+    public static final int NODE_HEADER_LENGTH = 1 + 4 + 4 + 8 + 8;
 
     protected static boolean isLeafNode(ByteBuffer buffer){
         return buffer.get(BYTE_POSITION_NODE_TYPE) == LEAF_FLAG;
@@ -35,6 +37,10 @@ The Header of the block when stored as bytes is:
 
     protected static long getSiblingID(ByteBuffer buffer){
         return buffer.getLong(BYTE_POSITION_SIBLING_ID);
+    }
+
+    protected static long getPrecedingID(ByteBuffer buffer){
+        return buffer.getLong(BYTE_POSITION_PRECEDING_ID);
     }
 
 }
