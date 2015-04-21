@@ -1,45 +1,35 @@
 package bptree.impl;
 
-import java.util.HashMap;
-import java.util.Set;
+import java.util.LinkedList;
+import java.util.List;
 
 public class MergedNodesList {
-    private HashMap<Long, Long[]> modifiedNodes;
-    public static final Long[] DELETED_NODE = new Long[]{-1l};
-    public MergedNodesList(){
-        modifiedNodes = new HashMap<>();
+    public static final Long LEAF_NODES = -1l;
+    public static final Long INTERNAL_NODES = -2l;
+    private LinkedList<Long[]> modifiedNodes = new LinkedList<>();
+
+    public List<Long[]> getMergedNodes(){
+        return new LinkedList<>(modifiedNodes);
     }
 
-    public Set<Long> getModifiedNodeIds(){
-        return modifiedNodes.keySet();
-    }
-
-    public Long[] getNodeState(Long nodeId){
-        return modifiedNodes.get(nodeId);
-    }
-
-    public void addModifiedNode(Long nodeId, Long[] newSmallestKey){
-        modifiedNodes.put(nodeId, newSmallestKey);
-    }
-
-    public void addDeletedNode(Long nodeId){
-        modifiedNodes.put(nodeId, DELETED_NODE);
+    public void addMergedNodes(Long deletedNodeId,Long mergedIntoNodeId, boolean areLeaves){
+        modifiedNodes.push(new Long[]{deletedNodeId, mergedIntoNodeId, areLeaves ? LEAF_NODES : INTERNAL_NODES});
     }
 
     public boolean isEmpty(){
         return modifiedNodes.isEmpty();
     }
 
-    public void removeNode(Long idOfNodeToRemove){
-        Long keyToDelete = null;
-        for(Long keySetNodeId : modifiedNodes.keySet()){
-            if(keySetNodeId == idOfNodeToRemove){
-                keyToDelete = keySetNodeId;
+    public void removePair(Long deletedNodeId, Long mergedIntoNodeId){
+        Long[] pairToDelete = null;
+        for(Long[] pair : modifiedNodes){
+            if(deletedNodeId.equals(pair[0]) && mergedIntoNodeId.equals(pair[1])){
+                pairToDelete = pair;
                 break;
             }
         }
-        if(keyToDelete != null){
-            modifiedNodes.remove(keyToDelete);
+        if(pairToDelete != null){
+            modifiedNodes.remove(pairToDelete);
         }
     }
 

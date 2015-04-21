@@ -1,5 +1,7 @@
 package bptree;
 
+import bptree.impl.LeafNode;
+
 import java.util.Iterator;
 
 /**
@@ -12,4 +14,6 @@ public interface Cursor extends Iterator<Long[]> {
     boolean hasNext();
 
     int size();
+
+    LeafNode getCurrentLeaf();
 }

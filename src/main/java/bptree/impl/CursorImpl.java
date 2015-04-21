@@ -62,7 +62,7 @@ public class CursorImpl implements Cursor{
     }
 
     private void loadSiblingNodeAndSetRemainingElements() throws IOException{
-        this.currentLeaf = (LeafNode)tree.getNode(currentLeaf.followingNodeID);
+        this.currentLeaf = (LeafNode)tree.getNode(currentLeaf.followingNodeId);
         for(Long[] key: this.currentLeaf.keys){
             if(Node.keyComparator.validPrefix(searchKey, key)){
                 this.remainingElements++;
@@ -70,7 +70,8 @@ public class CursorImpl implements Cursor{
         }
     }
 
-    protected LeafNode getCurrentLeaf(){
+    @Override
+    public LeafNode getCurrentLeaf(){
         return currentLeaf;
     }
 
@@ -95,7 +96,7 @@ public class CursorImpl implements Cursor{
         if(remainingElements == 0){
             if(cursorPosition == currentLeaf.keys.size()){ //No more remainingElements, but there are no more keys in this node...
                 if(currentLeaf.keys.size() == 0){//TODO remove this if block.
-                    System.out.println("Empty Node Found!");
+                    //System.out.println("Empty Node Found!");
                     return false;
                 }
                 loadNextNode();
@@ -114,7 +115,7 @@ public class CursorImpl implements Cursor{
             LeafNode node = currentLeaf;
             while (Node.keyComparator.validPrefix(searchKey, node.keys.getLast())) {
                 try {
-                    node = (LeafNode) tree.getNode(node.followingNodeID);
+                    node = (LeafNode) tree.getNode(node.followingNodeId);
                     size += validKeysInNode(node);
                 } catch (IOException e) {
                     break;

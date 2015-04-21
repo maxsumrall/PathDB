@@ -170,7 +170,8 @@ public class InternalNode extends Node {
     @Override
     public Cursor find(Long[] search_key) throws IOException {
         if(children.size() == 0){
-            return new NullCursorImpl();
+            //return new NullCursorImpl();
+            throw new IOException("No Children in internal node");
         }
         return tree.getNode(children.get(search(search_key))).find(search_key);
     }
@@ -186,27 +187,24 @@ public class InternalNode extends Node {
     }
 
     protected boolean handleModifiedChildNodes(RemoveResult removeResult) throws IOException {
-        Long[] firstKeyPreRemoval = keys.getFirst();
-        for(Long nodeId : removeResult.getNodeIds()){
-            Long childId = getChild(nodeId);
-            if(childId != null){
-                updateToReflectCurrentStateOfChild(childId, removeResult.getStateOfNode(childId));
-                removeResult.declareNodeHasBeenTakenCareOf(nodeId);
+        for(Long[] mergedPairs : removeResult.getMergedNodes()){
+            Long childIdObjFromChildrenList = getChild(mergedPairs[0]);
+            if(childIdObjFromChildrenList != null){
+                updateToReflectCurrentStateOfChild(mergedPairs);
+                removeResult.declarePairHasBeenTakenCareOf(mergedPairs[0], mergedPairs[1]);
             }
         }
         if(removeResult.containsNodesWhichRequireAttention()){
             passRemoveResultToSibling(removeResult);
         }
-        if(keys.size() == 0){
+        if(children.size() == 0){
             return true;
         }
-        else {
-            return keys.getFirst() != firstKeyPreRemoval;
-        }
+        return false;
     }
 
     private RemoveResult passRemoveResultToSibling(RemoveResult removeResult) throws IOException {
-        InternalNode sibling = (InternalNode)tree.getNode(followingNodeID);
+        InternalNode sibling = (InternalNode)tree.getNode(followingNodeId);
         boolean siblingChanged = sibling.handleModifiedChildNodes(removeResult);
         if(siblingChanged) {
             addNodeToRemoveResult(sibling, removeResult);
@@ -215,12 +213,7 @@ public class InternalNode extends Node {
     }
 
     private void addNodeToRemoveResult(InternalNode node, RemoveResult removeResult){
-        if(node.keys.size() == 0){
-            removeResult.addDeletedNode(node.id);
-        }
-        else{
-            removeResult.addModifiedNode(node.id, node.keys.getFirst());
-        }
+        removeResult.addMergedNodes(node.id, node.followingNodeId, false);
     }
 
     private Long getChild(Long desiredChild){
@@ -232,19 +225,33 @@ public class InternalNode extends Node {
         return null;
     }
 
-    private void updateToReflectCurrentStateOfChild(Long childId, Long[] currentState){
-        int indexOfCorrespondingKey = children.indexOf(childId) - 1;
-        if(currentState == ModifiedNodeIdsList.DELETED_NODE){
-            children.remove(childId);//Remove child first, then the remove key call writes to disk.
-            if(indexOfCorrespondingKey >= 0) {
-                removeKeyAndWrite(keys.get(indexOfCorrespondingKey));
+    private void updateToReflectCurrentStateOfChild(Long[] mergedPair) throws IOException {
+        if(mergedPair[2].equals(MergedNodesList.LEAF_NODES)){
+            //Delete Child Pointer to deleted child
+            //DELETE the key which divides/divided deleted child and mergedIntoChild
+            int index = children.indexOf(getChild(mergedPair[0]));
+            if(index == keys.size() && keys.size() > 0 && children.size() > 1){
+                keys.remove(index -1); //More than 1 child, but the right-most child is deleted.
             }
-        }
-        else{ //Modify key
-            if(indexOfCorrespondingKey >= 0) {
-                updateKeyAndWrite(indexOfCorrespondingKey, currentState);
+            else if(index < keys.size()){ // There exists a key to delete
+                keys.remove(index);
             }
+            children.remove(index);
         }
+        else{//Internal Nodes
+            //Delete Child Pointer to deleted child
+            //DRAG (MOVE) the key which divides/divided deleted child and mergedIntoChild into mergedIntoChild.
+            int index = children.indexOf(getChild(mergedPair[0]));
+            if(index < keys.size()){ // There exists a key to delete TODO possible bug here, simialr to the fix done in the LeafNode case.
+                Long[] movingKey = keys.get(index);
+                keys.remove(index);
+                Node mergedIntoChild = tree.getNode(mergedPair[1]);
+                mergedIntoChild.addKey(movingKey);
+            }
+            children.remove(index);
+        }
+        this.writeNodeToPage();
+
     }
 
     /**
@@ -284,6 +291,14 @@ public class InternalNode extends Node {
 
             sibling.children = new LinkedList<>(children.subList(midPoint + 1, children.size()));
             children = new LinkedList<>(children.subList(0, midPoint + 1));
+
+            sibling.followingNodeId = this.followingNodeId;
+            sibling.precedingNodeId = this.id;
+            if(!this.followingNodeId.equals(-1l)) {
+                Node secondSibling = tree.getNode(followingNodeId);
+                secondSibling.setPrecedingNodeId(sibling.id);
+            }
+            this.followingNodeId = sibling.id;
 
             this.determineIfKeysAreSameLength();
             sibling.determineIfKeysAreSameLength();

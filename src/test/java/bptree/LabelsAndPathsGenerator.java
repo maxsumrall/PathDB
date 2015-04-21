@@ -94,28 +94,61 @@ public class LabelsAndPathsGenerator {
         return keys;
     }
 
-    public static void printTree(Node node, Tree tree) throws IOException {
-        printNode(node);
+    public static String treeString(Tree tree) throws IOException {
+        Node rootNode = tree.getNode(tree.rootNodePageID);
+        StringBuilder string = new StringBuilder();
+        treeStringRecursive(rootNode, tree, string);
+        return string.toString();
+    }
+    private static void treeStringRecursive(Node node, Tree tree, StringBuilder string) throws IOException {
+        nodeString(node, string);
         if(node instanceof InternalNode){
             for(Long child : ((InternalNode)node).children){
-                printTree(tree.getNode(child), tree);
+                treeStringRecursive(tree.getNode(child), tree, string);
             }
         }
 
     }
-    public static void printNode(Node node){
-        System.out.println((node instanceof LeafNode ? "Leaf Node, " : "Internal Node, ") + "Node ID: " + node.id);
-        System.out.print("Keys: ");
+    public static String nodeString(Node node, StringBuilder string){
+        string.append(node instanceof LeafNode ? "Leaf Node, " : "Internal Node, ").append("Node ID: ").append(node.id);
+        string.append(" PrecedingNode: ").append(node.precedingNodeId).append(" FollowingNode: ").append(node.followingNodeId);
+        string.append(" Keys: ");
         for(Long[] key : node.keys){
-            System.out.print(Arrays.toString(key) + ", ");
+            string.append(Arrays.toString(key)).append(", ");
         }
-        System.out.print("\n");
+        string.append("\n");
         if(node instanceof InternalNode){
-            System.out.print("Children: ");
+            string.append("Children: ");
             for(Long child : ((InternalNode)node).children){
-                System.out.print(child + ", ");
+                string.append(child).append(", ");
             }
-            System.out.print("\n");
+            string.append("\n");
         }
+        return string.toString();
     }
+
+    public static Long forceSearch(Tree tree, Long[] search_key) throws IOException {
+         Node rootNode = tree.getNode(tree.rootNodePageID);
+        return forceSearchRecursive(tree, rootNode, search_key);
+    }
+
+    private static Long forceSearchRecursive(Tree tree, Node node,  Long[] search_key) throws IOException {
+        if(node instanceof InternalNode){
+            for(Long childId : ((InternalNode) node).children){
+                Long result = forceSearchRecursive(tree, tree.getNode(childId), search_key);
+                        if(result != -1l){
+                    return result;
+                }
+            }
+        }
+        else{
+            for(Long[] key : node.keys){
+                if(Arrays.equals(key, search_key)){
+                    return node.id;
+                }
+            }
+        }
+        return -1l;
+    }
+
 }

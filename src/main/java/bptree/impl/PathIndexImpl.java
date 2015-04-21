@@ -242,6 +242,10 @@ public class PathIndexImpl implements Index, Closeable, Serializable, ObjectInpu
         return key.getComposedKey(pathIdForKey);
     }
 
+    public void shutdown() throws IOException {
+        tree.shutdown();
+    }
+
 
     /**
      * Save the state of the index to the file to load later.

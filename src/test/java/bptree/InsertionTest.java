@@ -15,7 +15,7 @@ import java.util.LinkedList;
 
 import static bptree.LabelsAndPathsGenerator.*;
 
-public class PathIndexTest {
+public class InsertionTest {
     private Index index;
     private File indexFile;
     private ArrayList<Long[]> labelPaths;
@@ -107,7 +107,7 @@ public class PathIndexTest {
                 results.put(result, 1);
             }
         }
-        System.out.println(keys_built.size() + " " + results.size());
+        //System.out.println(keys_built.size() + " " + results.size());
 
         for(Long[] result : results.keySet()){
             ArrayList<Long[]> intermediate = new ArrayList<>();
@@ -169,10 +169,10 @@ public class PathIndexTest {
                 assert(Node.keyComparator.validPrefix(index.buildComposedKey(new KeyImpl(key.getLabelPath(), new Long[]{})), result));
                 results.put(result, 1);
             }
-            System.out.println("Found by .next(): " + resultsFound + " ||| cursor.size(): " + cursorSize);
+            //System.out.println("Found by .next(): " + resultsFound + " ||| cursor.size(): " + cursorSize);
             assert(resultsFound == cursorSize);
         }
-        System.out.println(keys_built.size() + " " + results.size());
+        //System.out.println(keys_built.size() + " " + results.size());
 
         for(Long[] result : results.keySet()){
             ArrayList<Long[]> intermediate = new ArrayList<>();
@@ -190,7 +190,7 @@ public class PathIndexTest {
         for(Long[] lost : keys_built){
             System.out.println(Arrays.toString(lost));
         }
-        printTree(((PathIndexImpl)index).tree.getNode(((PathIndexImpl)index).tree.rootNodePageID), ((PathIndexImpl)index).tree);
+        //printTree(((PathIndexImpl)index).tree);
 
 
     }

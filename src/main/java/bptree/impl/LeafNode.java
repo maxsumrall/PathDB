@@ -1,5 +1,6 @@
 package bptree.impl;
 
+import bptree.Cursor;
 import bptree.RemoveResult;
 
 import java.io.IOException;
@@ -15,14 +16,15 @@ public class LeafNode extends Node {
         this(tree, id, new LinkedList<>());
     }
     public LeafNode(Tree tree, Long id, LinkedList<Long[]> k) throws IOException {
-        this(tree, id, k, -1l);
+        this(tree, id, k, -1l, -1l);
     }
 
-    public LeafNode(Tree tree, Long id, LinkedList<Long[]> keys, Long followingNodeID) throws IOException {
+    public LeafNode(Tree tree, Long id, LinkedList<Long[]> keys, Long followingNodeId, Long precedingNodeId) throws IOException {
         this.tree = tree;
         this.id = id;
         this.keys = keys;
-        this.followingNodeID = followingNodeID;
+        this.followingNodeId = followingNodeId;
+        this.precedingNodeId = precedingNodeId;
         determineIfKeysAreSameLength();
         tree.writeNodeToPage(this);
     }
@@ -30,7 +32,7 @@ public class LeafNode extends Node {
     private LeafNode(ByteBuffer buffer, Tree tree, Long id) throws IOException {
         this.tree = tree;
         this.id = id;
-        deserialize(buffer); //set the keys and the followingNodeID, as read from the page cache
+        deserialize(buffer); //set the keys and the followingNodeId, as read from the page cache
     }
 
     public static Node instantiateNodeFromBuffer(ByteBuffer buffer, Tree tree, long id) throws IOException {
@@ -143,17 +145,17 @@ public class LeafNode extends Node {
      * @return The first key matching this search parameter.
      */
     @Override
-    public CursorImpl find(Long[] search_key){
+    public Cursor find(Long[] search_key){
         for(Long[] key : keys){
             if (keyComparator.prefixCompare(search_key, key) == 0) {
                 return new CursorImpl(tree, this, search_key, keys.indexOf(key));
             } //returns the index of the correct pointer to the next block.
         }
-        return new CursorImpl(tree, this, search_key, 0); //Did not find anything
+        return new NullCursorImpl(); //Did not find anything
     }
 
     @Override
-    public RemoveResult remove(Long[] search_key){
+    public RemoveResult remove(Long[] search_key) throws IOException {
         KeyRemover remover = new KeyRemover(find(search_key));
         return remover.removeAll();
     }
@@ -190,7 +192,11 @@ public class LeafNode extends Node {
             int midPoint = keys.size() / 2;
 
             LinkedList<Long[]> siblingKeys = new LinkedList<>(keys.subList(midPoint,keys.size()));
-            LeafNode sibling = tree.createLeafNode(siblingKeys, this.followingNodeID);
+            LeafNode sibling = tree.createLeafNode(siblingKeys, this.followingNodeId, this.id);
+            if(!this.followingNodeId.equals(-1l)) {
+                Node secondSibling = tree.getNode(followingNodeId);
+                secondSibling.setPrecedingNodeId(sibling.id);
+            }
 
             LinkedList<Long[]> newKeys = new LinkedList<>(keys.subList(0, midPoint));
             updateThisNodeAfterSplit(newKeys, sibling.id);
@@ -203,7 +209,7 @@ public class LeafNode extends Node {
     private void updateThisNodeAfterSplit(LinkedList<Long[]> updatedKeyList, Long newSiblingID){
         keys = updatedKeyList;
         determineIfKeysAreSameLength();
-        this.followingNodeID = newSiblingID;
+        this.followingNodeId = newSiblingID;
         tree.writeNodeToPage(this);
     }
 

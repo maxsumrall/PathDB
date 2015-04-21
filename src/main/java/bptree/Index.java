@@ -26,5 +26,7 @@ public interface Index {
 
     RemoveResult remove(Key key) throws IOException;
 
+    void shutdown() throws IOException;
+
     void close() throws IOException;
 }

@@ -1,5 +1,6 @@
 package bptree.impl;
 
+import bptree.Cursor;
 import bptree.RemoveResult;
 
 import java.io.IOException;
@@ -17,9 +18,9 @@ public abstract class Node {
     protected Tree tree;
     protected NodeHeader nodeHeader;
     public LinkedList<Long[]> keys;
-    public long id;
-    protected long precedingNodeID = -1;
-    protected long followingNodeID = -1;
+    public Long id;
+    public Long precedingNodeId = -1l;
+    public Long followingNodeId = -1l;
     protected boolean sameLengthKeys = true;
 
     protected boolean hasSameKeyLength(Long[] newKey) {
@@ -54,7 +55,7 @@ public abstract class Node {
 
     protected void addKey(Long[] newKey){
         keys.add(newKey);
-        tree.writeNodeToPage(this);
+        writeNodeToPage();
     }
 
     protected void removeKeyWithoutWriting(Long[] removeKey){
@@ -68,7 +69,46 @@ public abstract class Node {
 
     protected void removeKeyAndWrite(Long[] removeKey){
         removeKeyWithoutWriting(removeKey);
-        tree.writeNodeToPage(this);
+        writeNodeToPage();
+    }
+
+    protected void updateKeyAndWrite(int indexOfKeyToUpdate, Long[] newValueOfKey){
+        keys.set(indexOfKeyToUpdate, newValueOfKey);
+        writeNodeToPage();
+    }
+    protected void nodeIsDeleted() throws IOException {
+        if(keys.size() != 0){
+            throw new IllegalStateException("Deleted node still contains keys. Node ID: " + id);
+        }
+
+        if(!precedingNodeId.equals(-1l) && !followingNodeId.equals(-1l)) {
+            Node precedingNode = tree.getNode(precedingNodeId);
+            Node followingNode = tree.getNode(followingNodeId);
+            precedingNode.setFollowingNodeId(followingNodeId);
+            followingNode.setPrecedingNodeId(precedingNodeId);
+        }
+        else if(precedingNodeId.equals(-1l) && followingNodeId.equals(-1l)){
+
+        }
+        else if(precedingNodeId.equals(-1l)){
+            Node followingNode = tree.getNode(followingNodeId);
+            followingNode.setPrecedingNodeId(precedingNodeId);
+        }
+        else if(followingNodeId.equals(-1l)){
+            Node precedingNode = tree.getNode(precedingNodeId);
+            precedingNode.setFollowingNodeId(followingNodeId);
+        }
+        tree.releaseNodeId(id);
+    }
+
+    protected void setFollowingNodeId(Long followingNodeID){
+        this.followingNodeId = followingNodeID;
+        writeNodeToPage();
+    }
+
+    protected void setPrecedingNodeId(Long precedingNodeId){
+        this.precedingNodeId = precedingNodeId;
+        writeNodeToPage();
     }
 
     protected void writeNodeToPage(){
@@ -95,7 +135,8 @@ public abstract class Node {
         buffer.put(NodeHeader.BYTE_POSITION_NODE_TYPE, (byte) (this instanceof LeafNode ? 1 : 2));
         buffer.putInt(NodeHeader.BYTE_POSITION_KEY_LENGTH, sameLengthKeys ? (keys.size() > 0 ? keys.getFirst().length : 0) : -1);
         buffer.putInt(NodeHeader.BYTE_POSITION_KEY_COUNT, keys.size());
-        buffer.putLong(NodeHeader.BYTE_POSITION_SIBLING_ID, followingNodeID);
+        buffer.putLong(NodeHeader.BYTE_POSITION_SIBLING_ID, followingNodeId);
+        buffer.putLong(NodeHeader.BYTE_POSITION_PRECEDING_ID, precedingNodeId);
         return buffer;
     }
 
@@ -126,7 +167,8 @@ public abstract class Node {
      */
     protected void deserialize(ByteBuffer buffer){
         sameLengthKeys = NodeHeader.isNodeWithSameLengthKeys(buffer);
-        followingNodeID = NodeHeader.getSiblingID(buffer);
+        followingNodeId = NodeHeader.getSiblingID(buffer);
+        precedingNodeId = NodeHeader.getPrecedingID(buffer);
         if(sameLengthKeys){
             sameLengthKeyDeserialization(buffer);
         }
@@ -168,7 +210,7 @@ public abstract class Node {
 
     abstract protected int search(Long[] key);
 
-    abstract public CursorImpl find(Long[] key) throws IOException;
+    abstract public Cursor find(Long[] key) throws IOException;
 
     abstract public RemoveResult remove(Long[] key) throws IOException;
 

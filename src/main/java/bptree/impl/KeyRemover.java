@@ -1,15 +1,18 @@
 package bptree.impl;
 
+import bptree.Cursor;
 import bptree.RemoveResult;
 
+import java.io.IOException;
 import java.util.LinkedList;
 
 
 public class KeyRemover {
 
-    private CursorImpl cursor;
-
-    public KeyRemover(CursorImpl cursor){
+    private Cursor cursor;
+    LeafNode currLeaf;
+    RemoveResultImpl removeResult = new RemoveResultImpl(0);
+    public KeyRemover(Cursor cursor){
         this.cursor = cursor;
     }
 
@@ -17,9 +20,12 @@ public class KeyRemover {
      * Removes all elements from the current node returned by next() of the cursor.
      * @return RemoveResult resulting from this operation.
      */
-    public RemoveResult removeAll(){
+    public RemoveResult removeAll() throws IOException {
+        if(cursor instanceof NullCursorImpl){
+            return removeResult;
+        }
         LinkedList<Long[]> keysToBeSafelyRemovedLater = new LinkedList<>();
-        LeafNode currLeaf = cursor.getCurrentLeaf();
+        currLeaf = cursor.getCurrentLeaf();
         int removedKeys = 0;
         while(cursor.hasNext()){
             if(cursor.getCurrentLeaf() == currLeaf){
@@ -33,13 +39,18 @@ public class KeyRemover {
 
         }
         removeKeysFromNode(keysToBeSafelyRemovedLater, currLeaf);
-        return new RemoveResultImpl(removedKeys);
+        removeResult.setN(removedKeys);
+        return removeResult;
     }
 
-    private void removeKeysFromNode(LinkedList<Long[]> keys, LeafNode node){
-        for(Long[] key : keys){
+    private void removeKeysFromNode(LinkedList<Long[]> keysToBeSafelyRemovedLater, LeafNode node) throws IOException {
+        for(Long[] key : keysToBeSafelyRemovedLater){
             node.removeKeyWithoutWriting(key);
         }
         node.writeNodeToPage();
+        if(node.keys.size() == 0){
+            node.nodeIsDeleted();
+            removeResult.addMergedNodes(node.id, node.followingNodeId, true);
+        }
     }
 }

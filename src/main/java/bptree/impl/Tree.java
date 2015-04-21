@@ -1,5 +1,6 @@
 package bptree.impl;
 
+import bptree.Cursor;
 import bptree.RemoveResult;
 
 import java.io.*;
@@ -13,9 +14,11 @@ public class Tree implements Closeable, Serializable, ObjectInputValidation {
 
     protected static String DEFAULT_TREE_FILE_NAME = "tree.bin";
     protected String tree_filename;
-    private long nextAvailablePageID = 0l;
+    private AvailablePageIdPool idPool;
     public long rootNodePageID;
     private DiskCache diskCache;
+    private LinkedList<Long> lastTrace = new LinkedList<>();
+
     /**
      * Constructs a new Tree object
      * @param file The file where the tree should be based.
@@ -24,10 +27,10 @@ public class Tree implements Closeable, Serializable, ObjectInputValidation {
     private Tree(String tree_filename, DiskCache diskCache) throws IOException {
         this.diskCache =  diskCache;
         this.tree_filename = tree_filename;
+        idPool = new AvailablePageIdPool(this.diskCache.getMaxNumberOfPages());
         Node rootNode = createLeafNode();
         rootNodePageID = rootNode.id;
     }
-
     public static Tree initializeTemporaryNewTree() throws IOException {
         return initializeNewTree(DEFAULT_TREE_FILE_NAME, DiskCache.temporaryDiskCache()); //Delete on exit
     }
@@ -60,6 +63,7 @@ public class Tree implements Closeable, Serializable, ObjectInputValidation {
      * @return a reference to this node.
      */
     public Node getNode(long id) throws IOException {
+        updateLogger(id);
         if(id < 0){throw new IOException("Invalid Node ID");}
         Node node;
         ByteBuffer buffer = this.diskCache.readPage(id);
@@ -75,16 +79,27 @@ public class Tree implements Closeable, Serializable, ObjectInputValidation {
         return node;
     }
 
+    private void updateLogger(Long id){
+        if(id.equals(rootNodePageID))
+            lastTrace.clear();
+        lastTrace.add(id);
+    }
+
     public long getNewID(){
-        return nextAvailablePageID++;
+        return idPool.acquireId();
+
+    }
+
+    public void releaseNodeId(Long id){
+        idPool.releaseId(id);
     }
 
     public LeafNode createLeafNode() throws IOException {
         return new LeafNode(this, getNewID());
     }
 
-    public LeafNode createLeafNode(LinkedList<Long[]> keys, Long followingNodeID) throws IOException {
-        return new LeafNode(this, getNewID(), keys, followingNodeID);
+    public LeafNode createLeafNode(LinkedList<Long[]> keys, Long followingNodeId, Long precedingNodeId) throws IOException {
+        return new LeafNode(this, getNewID(), keys, followingNodeId, precedingNodeId);
     }
 
 
@@ -111,7 +126,7 @@ public class Tree implements Closeable, Serializable, ObjectInputValidation {
      * @return
      * @throws IOException
      */
-    public CursorImpl find(Long[] key) throws IOException {
+    public Cursor find(Long[] key) throws IOException {
         return getNode(rootNodePageID).find(key);
     }
 
@@ -136,6 +151,10 @@ public class Tree implements Closeable, Serializable, ObjectInputValidation {
             InternalNode newRoot = createInternalNode(keys, children);
             rootNodePageID = newRoot.id;
         }
+    }
+
+    public void shutdown() throws IOException {
+        diskCache.shutdown();
     }
 
     /**
