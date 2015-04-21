@@ -51,7 +51,8 @@ public class InternalNode extends Node {
         LinkedList<Long> newKey = new LinkedList<>();
         buffer.position(NodeHeader.NODE_HEADER_LENGTH);
         //Read all of the children id values
-        for(int i = 0; (numberOfKeys > 0) && i < (numberOfKeys + 1); i++){ //There is +1 children ids more than the number of keys
+        //for(int i = 0; (numberOfKeys > 0) && i < (numberOfKeys + 1); i++){ //There is +1 children ids more than the number of keys
+        for(int i = 0; i < (numberOfKeys + 1); i++){ //There is +1 children ids more than the number of keys
             children.add(buffer.getLong());
         }
         for(int i = 0; i < numberOfKeys; i++){
@@ -115,6 +116,21 @@ public class InternalNode extends Node {
         }
 
     }
+    @Override
+    protected ByteBuffer serializeHeaderToBuffer(ByteBuffer buffer){
+        buffer.put(NodeHeader.BYTE_POSITION_NODE_TYPE, (byte) 2);
+        buffer.putInt(NodeHeader.BYTE_POSITION_KEY_LENGTH, sameLengthKeys ? (keys.size() > 0 ? keys.getFirst().length : 0) : -1);
+        //buffer.putInt(NodeHeader.BYTE_POSITION_KEY_COUNT, keys.size());
+        if(( keys.size() == 0) && (children.size() == 0)){
+            buffer.putInt(NodeHeader.BYTE_POSITION_KEY_COUNT, -1);
+        }
+        else{
+            buffer.putInt(NodeHeader.BYTE_POSITION_KEY_COUNT, keys.size());
+        }
+        buffer.putLong(NodeHeader.BYTE_POSITION_SIBLING_ID, followingNodeId);
+        buffer.putLong(NodeHeader.BYTE_POSITION_PRECEDING_ID, precedingNodeId);
+        return buffer;
+    }
 
     /**
      * Determines if the byte representation of this block with the new key added is still
@@ -170,7 +186,6 @@ public class InternalNode extends Node {
     @Override
     public Cursor find(Long[] search_key) throws IOException {
         if(children.size() == 0){
-            //return new NullCursorImpl();
             throw new IOException("No Children in internal node");
         }
         return tree.getNode(children.get(search(search_key))).find(search_key);
@@ -242,11 +257,18 @@ public class InternalNode extends Node {
             //Delete Child Pointer to deleted child
             //DRAG (MOVE) the key which divides/divided deleted child and mergedIntoChild into mergedIntoChild.
             int index = children.indexOf(getChild(mergedPair[0]));
-            if(index < keys.size()){ // There exists a key to delete TODO possible bug here, simialr to the fix done in the LeafNode case.
+           /* if(index < keys.size()){ // There exists a key to delete TODO possible bug here, simialr to the fix done in the LeafNode case.
                 Long[] movingKey = keys.get(index);
                 keys.remove(index);
                 Node mergedIntoChild = tree.getNode(mergedPair[1]);
                 mergedIntoChild.addKey(movingKey);
+            }
+            */
+            if(index == keys.size() && keys.size() > 0 && children.size() > 1){
+                keys.remove(index -1); //More than 1 child, but the right-most child is deleted.
+            }
+            else if(index < keys.size()){ // There exists a key to delete
+                keys.remove(index);
             }
             children.remove(index);
         }

@@ -30,7 +30,7 @@ public class DeletetionTest {
     }
 
     @Test
-    public void testInsertSequentialKeysIntoIndex() throws IOException {
+    public void testInsertSequentialKeysIntoIndexSmall() throws IOException {
         int number_of_keys_to_insert = 50;
         ArrayList<Key> keys = exampleSequentialKeys(labelPaths, number_of_keys_to_insert);
         for(Key key: keys){
@@ -47,12 +47,57 @@ public class DeletetionTest {
             assert(removeResult.getN() == 1);
             cursor = index.find(keys.get(i));
             assert(!cursor.hasNext());
+            assert(leafNodesAreConsistent(((PathIndexImpl) index).tree));
+        }
+    }
+
+    @Test
+    public void testInsertRandomKeysIntoIndexSmall() throws IOException {
+        int number_of_keys_to_insert = 50;
+        ArrayList<Key> keys = exampleRandomKeys(labelPaths, number_of_keys_to_insert);
+        for(Key key: keys){
+            index.insert(key);
+        }
+        Cursor cursor;
+        for(Key key : keys){
+            cursor = index.find(key);
+            assert(cursor.hasNext());
+            assert(Arrays.equals(cursor.next(), index.buildComposedKey(key))); //the empty set
+        }
+        for(int i  = 0; i < keys.size(); i++){
+            RemoveResult removeResult = index.remove(keys.get(i));
+            assert(removeResult.getN() == 1);
+            cursor = index.find(keys.get(i));
+            assert(!cursor.hasNext());
+            assert(leafNodesAreConsistent(((PathIndexImpl) index).tree));
+        }
+    }
+
+    @Test
+    public void testInsertSequentialKeysIntoIndex() throws IOException {
+        int number_of_keys_to_insert = 3000;
+        ArrayList<Key> keys = exampleSequentialKeys(labelPaths, number_of_keys_to_insert);
+        for(Key key: keys){
+            index.insert(key);
+        }
+        Cursor cursor;
+        for(Key key : keys){
+            cursor = index.find(key);
+            assert(cursor.hasNext());
+            assert(Arrays.equals(cursor.next(), index.buildComposedKey(key))); //the empty set
+        }
+        for(int i  = 0; i < keys.size(); i++){
+            RemoveResult removeResult = index.remove(keys.get(i));
+            assert(removeResult.getN() == 1);
+            cursor = index.find(keys.get(i));
+            assert(!cursor.hasNext());
+            assert(leafNodesAreConsistent(((PathIndexImpl) index).tree));
         }
     }
 
     @Test
     public void testInsertRandomKeysIntoIndex() throws IOException {
-        int number_of_keys_to_insert = 1000;
+        int number_of_keys_to_insert = 5000;
         ArrayList<Key> keys = exampleRandomKeys(labelPaths, number_of_keys_to_insert);
         for(Key key: keys){
             index.insert(key);
@@ -68,12 +113,12 @@ public class DeletetionTest {
             assert(removeResult.getN() == 1);
             cursor = index.find(keys.get(i));
             assert(!cursor.hasNext());
+            assert(leafNodesAreConsistent(((PathIndexImpl) index).tree));
         }
     }
-
     @Test
     public void testEnsureNoEmptyNodesRemain() throws IOException {
-        int number_of_keys_to_insert = 1000;
+        int number_of_keys_to_insert = 5000;
         ArrayList<Key> keys = exampleRandomKeys(labelPaths, number_of_keys_to_insert);
         for(Key key: keys){
             index.insert(key);
@@ -89,6 +134,7 @@ public class DeletetionTest {
             assert(removeResult.getN() == 1);
             cursor = index.find(keys.get(i));
             assert(!cursor.hasNext());
+            assert(leafNodesAreConsistent(((PathIndexImpl) index).tree));
         }
 
         assert(!doEmptyChildrenExistInNode(((PathIndexImpl) index).tree.rootNodePageID, ((PathIndexImpl) index).tree));

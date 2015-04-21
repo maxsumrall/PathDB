@@ -65,6 +65,9 @@ public class Tree implements Closeable, Serializable, ObjectInputValidation {
     public Node getNode(long id) throws IOException {
         updateLogger(id);
         if(id < 0){throw new IOException("Invalid Node ID");}
+        if(idPool.isNodeIdInFreePool(id)){
+            throw new IOException("Invalid Node ID: Attempting to read page ID of free'd page/node");
+        }
         Node node;
         ByteBuffer buffer = this.diskCache.readPage(id);
         if(buffer.capacity() == 0){
@@ -131,7 +134,19 @@ public class Tree implements Closeable, Serializable, ObjectInputValidation {
     }
 
     public RemoveResult remove(Long[] key) throws IOException {
-        return getNode(rootNodePageID).remove(key);
+        RemoveResult result = getNode(rootNodePageID).remove(key);
+        if(result.containsNodesWhichRequireAttention()){ //Root node collapsed.
+            assert(result.getMergedNodes().size() == 1);
+            Node root = getNode(rootNodePageID);
+            assert(root.keys.size() == 0);
+            if(root instanceof InternalNode){
+                assert(((InternalNode) root).children.size() == 0);
+            }
+            releaseNodeId(root.id);
+            Node newRoot = createLeafNode();
+            rootNodePageID = newRoot.id;
+        }
+        return result;
     }
 
     /**

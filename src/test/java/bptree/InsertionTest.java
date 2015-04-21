@@ -31,7 +31,7 @@ public class InsertionTest {
 
     @Test
     public void testInsertSequentialKeysIntoIndex() throws IOException {
-        int number_of_keys_to_insert = 1000;
+        int number_of_keys_to_insert = 2000;
         ArrayList<Key> keys = exampleSequentialKeys(labelPaths, number_of_keys_to_insert);
         for(Key key: keys){
             index.insert(key);
@@ -60,7 +60,7 @@ public class InsertionTest {
     }
     @Test
     public void testInsertRandomKeysWithRandomLengthIntoIndex() throws IOException {
-        int number_of_keys_to_insert = 1000;
+        int number_of_keys_to_insert = 2000;
         ArrayList<Long[]> different_length_paths  = exampleVariableLengthLabelPaths(number_of_keys_to_insert, 2, 4);
         ArrayList<Key> keys = exampleRandomKeys(different_length_paths, number_of_keys_to_insert);
         index = PathIndexImpl.getTemporaryPathIndex()
@@ -80,7 +80,7 @@ public class InsertionTest {
 
     @Test
     public void testPrefixCheckingMultipleResults() throws IOException {
-        int number_of_keys_to_insert = 2000;
+        int number_of_keys_to_insert = 4000;
         ArrayList<Long[]> different_length_paths = exampleVariableLengthRandomLabelPaths(50, 2, 4);
         ArrayList<Key> keys = exampleRandomKeys(different_length_paths, number_of_keys_to_insert);
         index = PathIndexImpl.getTemporaryPathIndex()
@@ -132,7 +132,7 @@ public class InsertionTest {
 
     @Test
     public void testVariablePrefixCheckingMultipleResults() throws IOException {
-        int number_of_keys_to_insert = 500;
+        int number_of_keys_to_insert = 2000;
         ArrayList<Long[]> different_length_paths = exampleVariableLengthRandomLabelPaths(50, 2, 4);
         ArrayList<Key> keys = exampleRandomKeys(different_length_paths, number_of_keys_to_insert);
         index = PathIndexImpl.getTemporaryPathIndex()

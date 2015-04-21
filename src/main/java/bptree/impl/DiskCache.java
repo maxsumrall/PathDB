@@ -13,7 +13,7 @@ import java.nio.ByteBuffer;
 
 public class DiskCache {
     //public static int PAGE_SIZE = bptree.Utils.getIdealBlockSize();
-    public static int PAGE_SIZE = 512;
+    public static int PAGE_SIZE = 8192;
     protected final static String DEFAULT_CACHE_FILE_NAME = "cache.bin";
     protected int recordSize = 9; //TODO What is this?
     protected int maxPages = 200; //TODO How big should this be?

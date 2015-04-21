@@ -52,16 +52,17 @@ public class CursorImpl implements Cursor{
      */
     private boolean loadNextNode(){
         this.cursorPosition = 0;
-        try {
-            loadSiblingNodeAndSetRemainingElements();
-        }
-        catch(IOException e){
-            return false;
+        if(!currentLeaf.followingNodeId.equals(-1l)) {
+            try {
+                loadSiblingNodeAndSetRemainingElements();
+            } catch (IOException e) {
+                return false;
+            }
         }
         return (this.remainingElements > 0);
     }
 
-    private void loadSiblingNodeAndSetRemainingElements() throws IOException{
+    private void loadSiblingNodeAndSetRemainingElements() throws IOException {
         this.currentLeaf = (LeafNode)tree.getNode(currentLeaf.followingNodeId);
         for(Long[] key: this.currentLeaf.keys){
             if(Node.keyComparator.validPrefix(searchKey, key)){

@@ -98,7 +98,9 @@ public abstract class Node {
             Node precedingNode = tree.getNode(precedingNodeId);
             precedingNode.setFollowingNodeId(followingNodeId);
         }
-        tree.releaseNodeId(id);
+        if(!id.equals(tree.rootNodePageID)) {//Don't release the root ID.
+            tree.releaseNodeId(id);
+        }
     }
 
     protected void setFollowingNodeId(Long followingNodeID){

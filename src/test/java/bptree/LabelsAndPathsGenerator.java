@@ -5,6 +5,7 @@ import bptree.impl.*;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedList;
 import java.util.Random;
 
 /**
@@ -14,16 +15,17 @@ public class LabelsAndPathsGenerator {
 
     /**
      * Generates Label Paths with random relationship ids.
+     *
      * @param number_of_paths The number of paths to generate.
-     * @param k The length of paths to generate.
+     * @param k               The length of paths to generate.
      * @return An ArrayList containing labeled paths each of k length.
      */
-    public static ArrayList<Long[]> exampleLabelPaths(int number_of_paths, int k){
+    public static ArrayList<Long[]> exampleLabelPaths(int number_of_paths, int k) {
         Random random = new Random();
         ArrayList<Long[]> labelPaths = new ArrayList<>();
-        for(int i = 0; i < number_of_paths; i++){
+        for (int i = 0; i < number_of_paths; i++) {
             labelPaths.add(new Long[k]);
-            for(int j = 0; j < k; j++){
+            for (int j = 0; j < k; j++) {
                 labelPaths.get(i)[j] = Math.abs(random.nextLong());
             }
         }
@@ -32,29 +34,30 @@ public class LabelsAndPathsGenerator {
 
     /**
      * Generates Label Paths with random relationship ids.
+     *
      * @param number_of_paths The number of paths to generate.
-     * @param minK The minimum length of paths to generate.
-     * @param maxK The maximum length of paths to generate.
+     * @param minK            The minimum length of paths to generate.
+     * @param maxK            The maximum length of paths to generate.
      * @return An ArrayList containing labeled paths each between minK and maxK length.
      */
-    public static ArrayList<Long[]> exampleVariableLengthRandomLabelPaths(int number_of_paths, int minK, int maxK){
+    public static ArrayList<Long[]> exampleVariableLengthRandomLabelPaths(int number_of_paths, int minK, int maxK) {
         Random random = new Random();
         ArrayList<Long[]> labelPaths = new ArrayList<>();
-        for(int i = 0; i < number_of_paths; i++){
+        for (int i = 0; i < number_of_paths; i++) {
             labelPaths.add(new Long[random.nextInt(maxK - minK + 1) + minK]);
-            for(int j = 0; j < labelPaths.get(i).length; j++){
+            for (int j = 0; j < labelPaths.get(i).length; j++) {
                 labelPaths.get(i)[j] = random.nextLong();
             }
         }
         return labelPaths;
     }
 
-    public static ArrayList<Long[]> exampleVariableLengthLabelPaths(int number_of_paths, int minK, int maxK){
+    public static ArrayList<Long[]> exampleVariableLengthLabelPaths(int number_of_paths, int minK, int maxK) {
         ArrayList<Long[]> labelPaths = new ArrayList<>();
-        for(int i = 0; i < number_of_paths; i++){
-            labelPaths.add(new Long[(i%5) + minK]);
-            for(int j = 0; j < labelPaths.get(i).length; j++){
-                labelPaths.get(i)[j] = (long)i;
+        for (int i = 0; i < number_of_paths; i++) {
+            labelPaths.add(new Long[(i % 5) + minK]);
+            for (int j = 0; j < labelPaths.get(i).length; j++) {
+                labelPaths.get(i)[j] = (long) i;
             }
         }
         return labelPaths;
@@ -62,17 +65,20 @@ public class LabelsAndPathsGenerator {
 
     /**
      * Generate keys ready to be inserted into the path index. Node ID's set to random values.
-     * @param labelPaths The label paths to use for generating the keys.
+     *
+     * @param labelPaths     The label paths to use for generating the keys.
      * @param number_of_keys The number of keys to generate
      * @return An ArrayList of keys ready to be inserted into the database.
      */
     public static ArrayList<Key> exampleRandomKeys(ArrayList<Long[]> labelPaths, int number_of_keys) {
         return exampleKeys(labelPaths, number_of_keys, true);
     }
+
     /**
      * Generate keys ready to be inserted into the path index.
      * Node ID's set to sequential values from 0 to the parameter number_of_keys.
-     * @param labelPaths The label paths to use for generating the keys.
+     *
+     * @param labelPaths     The label paths to use for generating the keys.
      * @param number_of_keys The number of keys to generate
      * @return An ArrayList of keys ready to be inserted into the database.
      */
@@ -84,7 +90,7 @@ public class LabelsAndPathsGenerator {
         Random random = new Random();
         ArrayList<Key> keys = new ArrayList<>();
         for (int i = 0; i < number_of_keys; i++) {
-            Long[] randomPath = labelPaths.get(i%labelPaths.size());
+            Long[] randomPath = labelPaths.get(i % labelPaths.size());
             Long[] nodes = new Long[randomPath.length + 1];
             for (int j = 0; j < nodes.length; j++) {
                 nodes[j] = randomNodeIds ? random.nextLong() : i;
@@ -100,26 +106,28 @@ public class LabelsAndPathsGenerator {
         treeStringRecursive(rootNode, tree, string);
         return string.toString();
     }
+
     private static void treeStringRecursive(Node node, Tree tree, StringBuilder string) throws IOException {
         nodeString(node, string);
-        if(node instanceof InternalNode){
-            for(Long child : ((InternalNode)node).children){
+        if (node instanceof InternalNode) {
+            for (Long child : ((InternalNode) node).children) {
                 treeStringRecursive(tree.getNode(child), tree, string);
             }
         }
 
     }
-    public static String nodeString(Node node, StringBuilder string){
+
+    public static String nodeString(Node node, StringBuilder string) {
         string.append(node instanceof LeafNode ? "Leaf Node, " : "Internal Node, ").append("Node ID: ").append(node.id);
         string.append(" PrecedingNode: ").append(node.precedingNodeId).append(" FollowingNode: ").append(node.followingNodeId);
         string.append(" Keys: ");
-        for(Long[] key : node.keys){
+        for (Long[] key : node.keys) {
             string.append(Arrays.toString(key)).append(", ");
         }
         string.append("\n");
-        if(node instanceof InternalNode){
+        if (node instanceof InternalNode) {
             string.append("Children: ");
-            for(Long child : ((InternalNode)node).children){
+            for (Long child : ((InternalNode) node).children) {
                 string.append(child).append(", ");
             }
             string.append("\n");
@@ -128,22 +136,21 @@ public class LabelsAndPathsGenerator {
     }
 
     public static Long forceSearch(Tree tree, Long[] search_key) throws IOException {
-         Node rootNode = tree.getNode(tree.rootNodePageID);
+        Node rootNode = tree.getNode(tree.rootNodePageID);
         return forceSearchRecursive(tree, rootNode, search_key);
     }
 
-    private static Long forceSearchRecursive(Tree tree, Node node,  Long[] search_key) throws IOException {
-        if(node instanceof InternalNode){
-            for(Long childId : ((InternalNode) node).children){
+    private static Long forceSearchRecursive(Tree tree, Node node, Long[] search_key) throws IOException {
+        if (node instanceof InternalNode) {
+            for (Long childId : ((InternalNode) node).children) {
                 Long result = forceSearchRecursive(tree, tree.getNode(childId), search_key);
-                        if(result != -1l){
+                if (result != -1l) {
                     return result;
                 }
             }
-        }
-        else{
-            for(Long[] key : node.keys){
-                if(Arrays.equals(key, search_key)){
+        } else {
+            for (Long[] key : node.keys) {
+                if (Arrays.equals(key, search_key)) {
                     return node.id;
                 }
             }
@@ -151,4 +158,46 @@ public class LabelsAndPathsGenerator {
         return -1l;
     }
 
+    public static boolean leafNodesAreConsistent(Tree tree) throws IOException {
+        LinkedList<LeafNode> nodes = getLeafNodes(tree);
+        Long nextID = nodes.getFirst().followingNodeId;
+        Long previousId = nodes.getFirst().id;
+        Node thisNode = nodes.getFirst();
+        for(int i = 1; i < nodes.size() - 1 ; i++){
+            thisNode = nodes.get(i);
+            if(!nodes.get(i).id.equals(nextID)){
+                return false;
+            }
+            if(!nodes.get(i).precedingNodeId.equals(previousId)){
+                return false;
+            }
+            nextID = nodes.get(i).followingNodeId;
+            previousId = nodes.get(i).id;
+        }
+        if(nodes.getFirst().precedingNodeId != -1){
+            return false;
+        }
+        if(nodes.getLast().followingNodeId != -1){
+            return false;
+        }
+        return true;
+    }
+
+    private static LinkedList<LeafNode> getLeafNodes(Tree tree) throws IOException {
+        Node rootNode = tree.getNode(tree.rootNodePageID);
+        LinkedList<LeafNode> nodes = new LinkedList<>();
+        getLeafNodesRecursive(rootNode, tree, nodes);
+        return nodes;
+    }
+
+    private static void getLeafNodesRecursive(Node node, Tree tree, LinkedList<LeafNode> nodes) throws IOException {
+        if (node instanceof InternalNode) {
+            for (Long child : ((InternalNode) node).children) {
+                getLeafNodesRecursive(tree.getNode(child), tree, nodes);
+            }
+        } else {
+            nodes.add((LeafNode) node);
+        }
+    }
 }
+

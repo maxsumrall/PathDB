@@ -22,4 +22,13 @@ public class AvailablePageIdPool {
     public void releaseId(Long id){
         pool.push(id);
     }
+
+    public boolean isNodeIdInFreePool(Long search_id){
+        for(Long id : pool){
+            if(search_id.equals(id)){
+                return true;
+            }
+        }
+        return false;
+    }
 }
