@@ -123,7 +123,7 @@ public class InsertionTest {
 
         }
         for(Long[] lost : keys_built){
-            System.out.println(Arrays.toString(lost));
+            //System.out.println(Arrays.toString(lost));
         }
 
 
@@ -188,7 +188,7 @@ public class InsertionTest {
 
         }
         for(Long[] lost : keys_built){
-            System.out.println(Arrays.toString(lost));
+            //System.out.println(Arrays.toString(lost));
         }
         //printTree(((PathIndexImpl)index).tree);
 

@@ -18,6 +18,7 @@ public class Tree implements Closeable, Serializable, ObjectInputValidation {
     public long rootNodePageID;
     private DiskCache diskCache;
     private LinkedList<Long> lastTrace = new LinkedList<>();
+    private int keySetSize = 0;
 
     /**
      * Constructs a new Tree object
@@ -107,10 +108,23 @@ public class Tree implements Closeable, Serializable, ObjectInputValidation {
 
 
     public InternalNode createInternalNode() throws IOException {
-        return new InternalNode(this, getNewID());
+        try {
+            return new InternalNode(this, getNewID());
+        }
+        catch(IOException e){
+            //TODO log error here
+            throw new IOException("Error creating new Internal Node");
+        }
     }
     public InternalNode createInternalNode(LinkedList<Long[]> keys, LinkedList<Long> children) throws IOException {
-        return new InternalNode(this, getNewID(), keys, children);
+        try {
+            return new InternalNode(this, getNewID(), keys, children);
+        }
+        catch(IOException e){
+            //TODO log error here
+            throw new IOException("Error creating new Internal Node");
+        }
+
     }
 
     /**
@@ -130,11 +144,28 @@ public class Tree implements Closeable, Serializable, ObjectInputValidation {
      * @throws IOException
      */
     public Cursor find(Long[] key) throws IOException {
-        return getNode(rootNodePageID).find(key);
+        try {
+            return getNode(rootNodePageID).find(key);
+        }
+        catch(IOException e){
+            return new NullCursorImpl(); //TODO consider what to do when a find() calls bad nodes. This means tree is broken.
+        }
     }
 
-    public RemoveResult remove(Long[] key) throws IOException {
+    public RemoveResult remove(Long[] key) {
+        RemoveResult result;
+        try {
+            result = attemptRemoval(key);
+            keySetSize = keySetSize - result.getN();
+        }
+        catch(IOException e){
+            result = new RemoveResultImpl();
+        }
+        return result;
+    }
+    private RemoveResult attemptRemoval(Long[] key) throws IOException{
         RemoveResult result = getNode(rootNodePageID).remove(key);
+
         if(result.containsNodesWhichRequireAttention()){ //Root node collapsed.
             assert(result.getMergedNodes().size() == 1);
             Node root = getNode(rootNodePageID);
@@ -155,8 +186,18 @@ public class Tree implements Closeable, Serializable, ObjectInputValidation {
      * If the root returns a split result, make a new block and set it as the root.
      * @param key
      */
-    public void insert(Long[] key) throws IOException {
+    public void insert(Long[] key){
+        try {
+            attemptInsertion(key);
+            keySetSize++;
+        }
+        catch (IOException e){
+            //TODO log error here
+        }
+    }
+    private void attemptInsertion(Long[] key) throws IOException{
         SplitResult result = getNode(rootNodePageID).insert(key);
+
         if (result != null){ //Root block split.
             LinkedList<Long[]> keys = new LinkedList<>();
             LinkedList<Long> children = new LinkedList<>();
@@ -166,6 +207,68 @@ public class Tree implements Closeable, Serializable, ObjectInputValidation {
             InternalNode newRoot = createInternalNode(keys, children);
             rootNodePageID = newRoot.id;
         }
+    }
+
+    public int getCountOfMatchingKeys(Long[] search_key) throws IOException {
+        int count = 0;
+        LeafNode leaf = getFirstLeaf();
+        for(Long[] key : leaf.keys){
+            if (Node.keyComparator.validPrefix(search_key, key)){
+                count++;
+            }
+        }
+        while(!leaf.followingNodeId.equals(-1l)){
+            leaf = (LeafNode)getNode(leaf.followingNodeId);
+            for(Long[] key : leaf.keys){
+                if (Node.keyComparator.validPrefix(search_key, key)){
+                    count++;
+                }
+            }
+        }
+        return count;
+    }
+
+    /**
+     * Returns the number of keys stored in this tree.
+     * @return number of keys in this tree.
+     */
+    public int getKeySetSize(){
+        return keySetSize;
+    }
+
+    /**
+     *Forces the tree to read each leaf node and count the number of keys in them.
+     * For Debugging Purposes.
+     * @return number of keys in this tree.
+     */
+    public int getKeySetSizeForceCheck(){
+        int count = 0;
+        try {
+            LeafNode leaf = getFirstLeaf();
+            count += leaf.keys.size();
+            while(!leaf.followingNodeId.equals(-1l)){
+                leaf = (LeafNode)getNode(leaf.followingNodeId);
+                count += leaf.keys.size();
+            }
+        }
+        catch(IOException e){
+            //TODO Log this
+        }
+        return count;
+    }
+
+    /**
+     * Finds the first leaf in the tree.
+     * Can be used for doing a complete walk along leaf node linked lists.
+     * @return
+     */
+    private LeafNode getFirstLeaf() throws IOException {
+        Node currentNode = getNode(rootNodePageID);
+        while(currentNode instanceof InternalNode){
+            currentNode = getNode(((InternalNode) currentNode).children.getFirst());
+        }
+        assert(currentNode.precedingNodeId.equals(-1l));
+        return (LeafNode) currentNode;
     }
 
     public void shutdown() throws IOException {

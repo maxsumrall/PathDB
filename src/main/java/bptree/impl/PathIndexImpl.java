@@ -223,7 +223,7 @@ public class PathIndexImpl implements Index, Closeable, Serializable, ObjectInpu
     /**
      * Inserts a key into the index.
      */
-    public void insert(Key key) throws IOException {
+    public void insert(Key key){
         Long[] search_key = buildComposedKey(key);
         tree.insert(search_key);
     }
@@ -232,7 +232,7 @@ public class PathIndexImpl implements Index, Closeable, Serializable, ObjectInpu
      * Searches for a key in the index and removes it.
      * @return false if this key is not found.
      */
-    public RemoveResult remove(Key key) throws IOException {
+    public RemoveResult remove(Key key) {
         Long[] search_key = buildComposedKey(key);
         return tree.remove(search_key);
     }

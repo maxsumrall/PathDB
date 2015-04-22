@@ -64,14 +64,14 @@ public class InternalNodeTest {
             for(int j = 0; j < key.length; j ++){
                 key[j] = (long)i;
             }
-            System.out.println("Children size: " + node.children.size());
+            //System.out.println("Children size: " + node.children.size());
             int total_longs_key = 0;
             for(Long[] k : node.keys){
                 total_longs_key += k.length;
             }
-            System.out.println("Keys length: " + node.keys.size());
-            System.out.println("Keys sum: " + total_longs_key);
-            System.out.println("Byte rep size: " + node.byte_representation_size(key));
+            //System.out.println("Keys length: " + node.keys.size());
+            //System.out.println("Keys sum: " + total_longs_key);
+            //System.out.println("Byte rep size: " + node.byte_representation_size(key));
 
             SplitResult result = node.insertFromResult(new SplitResult(key, (long) i, (long) i+1));
             if (result != null){

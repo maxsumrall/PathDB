@@ -155,7 +155,7 @@ public class DeletetionTest {
                 }
             }
         }
-        System.out.println(nodeString(node, new StringBuilder()));
+        //System.out.println(nodeString(node, new StringBuilder()));
         return false;
     }
 }

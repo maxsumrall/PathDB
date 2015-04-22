@@ -20,11 +20,11 @@ public interface Index {
 
     Long[] buildComposedKey(Key key);
 
-    Cursor find(Key key) throws IOException;
+    Cursor find(Key key);
 
-    void insert(Key key) throws IOException;
+    void insert(Key key);
 
-    RemoveResult remove(Key key) throws IOException;
+    RemoveResult remove(Key key);
 
     void shutdown() throws IOException;
 
