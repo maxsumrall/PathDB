@@ -237,6 +237,10 @@ public class PathIndexImpl implements Index, Closeable, Serializable, ObjectInpu
         return tree.remove(search_key);
     }
 
+    public Key buildKey(Long[] relationships, Long[] nodes){
+        return new KeyImpl(relationships, nodes);
+    }
+
     public Long[] buildComposedKey(Key key){
         Long pathIdForKey = labelPathMapping.get(key.getLabelPath());
         return key.getComposedKey(pathIdForKey);

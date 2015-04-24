@@ -18,6 +18,8 @@ public interface Index {
 
     List<Integer[]> getDefaultSignatures();
 
+    Key buildKey(Long[] relationships, Long[] nodes);
+
     Long[] buildComposedKey(Key key);
 
     Cursor find(Key key);
