@@ -4,7 +4,10 @@ import bptree.Index;
 import bptree.Key;
 import bptree.impl.PathIndexImpl;
 
+import java.io.BufferedWriter;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.*;
 
 
@@ -14,7 +17,7 @@ public class Benchmark {
 
 
     public static void main(String[] args) throws IOException {
-       /* System.out.println("------ 1000 -------");
+        System.out.println("------ 1000 -------");
         runInsertionExperiment(1000);
 
         System.out.println("------ 10000 -------");
@@ -22,9 +25,21 @@ public class Benchmark {
 
         System.out.println("------ 100000 -------");
         runInsertionExperiment(100000);
-*/
+
         System.out.println("------ 1000000 -------");
         runInsertionExperiment(1000000);
+
+        System.out.println("------ 10,000,000 -------");
+        runInsertionExperiment(10000000);
+
+        System.out.println("------ 100,000,000 -------");
+        runInsertionExperiment(100000000);
+
+        System.out.println("------ 1,000,000,000 -------");
+        runInsertionExperiment(1000000000);
+
+
+        System.out.println("Benchmarking completed.");
     }
 
     public static void runInsertionExperiment(int items_to_insert) throws IOException {
@@ -57,14 +72,18 @@ public class Benchmark {
             long duration = (endTime - startTime);
             durations.add(duration);
         }
+        index.shutdown();
 
         Long sum = calculateSum(durations);
-        System.out.println("Sum Insertion time: " + sum);
-        System.out.println("Average Insertion time: " + calculateAverage(durations, sum));
         Collections.sort(durations);
-        System.out.println("Quickest time: " + durations.getFirst());
-        System.out.println("Slowest time: " + durations.getLast());
-        index.shutdown();
+
+        StringBuilder strBuilder = new StringBuilder();
+        strBuilder.append("\n -------").append(items_to_insert).append("-------").append((new Date().toString()));
+        strBuilder.append("\n Sum Insertion time: ").append(sum);
+        strBuilder.append("\n Average Insertion time: ").append(calculateAverage(durations, sum));
+        strBuilder.append("\n Quickest time: ").append(durations.getFirst());
+        strBuilder.append("\n Slowest time: ").append(durations.getLast());
+        logToFile(strBuilder.toString());
     }
 
     public static Long calculateSum(List<Long> items){
@@ -91,5 +110,13 @@ public class Benchmark {
             }
         }
         return labelPaths;
+    }
+
+    public static void logToFile(String text){
+        try(PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter("benchmarking_results.txt", true)))) {
+            out.println(text);
+        }catch (IOException e) {
+            //exception handling left as an exercise for the reader
+        }
     }
 }
