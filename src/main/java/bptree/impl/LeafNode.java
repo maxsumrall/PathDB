@@ -48,15 +48,17 @@ public class LeafNode extends Node {
         int keyLength = NodeHeader.getKeyLength(buffer);
         int numberOfKeys = NodeHeader.getNumberOfKeys(buffer);
         LinkedList<Long[]> deserialize_keys = new LinkedList<>();
-        LinkedList<Long> newKey = new LinkedList<>();
+        //LinkedList<Long> newKey = new LinkedList<>();
         buffer.position(NodeHeader.NODE_HEADER_LENGTH);
         for(int i = 0; i < numberOfKeys; i++){
+            Long[] newKey = new Long[keyLength];
             for(int j = 0; j < keyLength; j++){
-                newKey.add(buffer.getLong());
+                newKey[j] = (buffer.getLong());
             }
             //Now the variable newKey contains all the items in this key.
-            deserialize_keys.add(newKey.toArray(new Long[newKey.size()]));
-            newKey.clear(); //clear if for the next round.
+            //deserialize_keys.add(newKey.toArray(new Long[newKey.size()]));
+            deserialize_keys.add(newKey);
+            //newKey.clear(); //clear if for the next round.
         }
         this.keys = deserialize_keys;
     }

@@ -48,7 +48,7 @@ public class InternalNode extends Node {
     protected void sameLengthKeyDeserialization(ByteBuffer buffer){
         int keyLength = NodeHeader.getKeyLength(buffer);
         int numberOfKeys = NodeHeader.getNumberOfKeys(buffer);
-        LinkedList<Long> newKey = new LinkedList<>();
+        //LinkedList<Long> newKey = new LinkedList<>();
         buffer.position(NodeHeader.NODE_HEADER_LENGTH);
         //Read all of the children id values
         //for(int i = 0; (numberOfKeys > 0) && i < (numberOfKeys + 1); i++){ //There is +1 children ids more than the number of keys
@@ -56,12 +56,14 @@ public class InternalNode extends Node {
             children.add(buffer.getLong());
         }
         for(int i = 0; i < numberOfKeys; i++){
+            Long[] newKey = new Long[keyLength];
             for(int j = 0; j < keyLength; j++){
-                newKey.add(buffer.getLong());
+                newKey[j] = (buffer.getLong());
             }
             //Now the variable newKey contains all the items in this key.
-            keys.add(newKey.toArray(new Long[newKey.size()]));
-            newKey.clear(); //clear if for the next round.
+            //keys.add(newKey.toArray(new Long[newKey.size()]));
+            keys.add(newKey);
+            //newKey.clear(); //clear if for the next round.
         }
     }
 

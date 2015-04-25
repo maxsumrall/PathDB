@@ -16,7 +16,7 @@ public class Tree implements Closeable, Serializable, ObjectInputValidation {
     protected String tree_filename;
     private AvailablePageIdPool idPool;
     public long rootNodePageID;
-    private DiskCache diskCache;
+    private NodeKeeper nodeKeeper;
     private LinkedList<Long> lastTrace = new LinkedList<>();
     private int keySetSize = 0;
 
@@ -26,9 +26,9 @@ public class Tree implements Closeable, Serializable, ObjectInputValidation {
      * @throws IOException
      */
     private Tree(String tree_filename, DiskCache diskCache) throws IOException {
-        this.diskCache =  diskCache;
+        this.nodeKeeper = new NodeKeeper(this, diskCache);
         this.tree_filename = tree_filename;
-        idPool = new AvailablePageIdPool(this.diskCache.getMaxNumberOfPages());
+        idPool = new AvailablePageIdPool(nodeKeeper.diskCache.getMaxNumberOfPages());
         Node rootNode = createLeafNode();
         rootNodePageID = rootNode.id;
     }
@@ -64,23 +64,12 @@ public class Tree implements Closeable, Serializable, ObjectInputValidation {
      * @return a reference to this node.
      */
     public Node getNode(long id) throws IOException {
-        updateLogger(id);
+        //updateLogger(id);
         if(id < 0){throw new IOException("Invalid Node ID");}
         if(idPool.isNodeIdInFreePool(id)){
             throw new IOException("Invalid Node ID: Attempting to read page ID of free'd page/node");
         }
-        Node node;
-        ByteBuffer buffer = this.diskCache.readPage(id);
-        if(buffer.capacity() == 0){
-            throw new IOException("Unable to read page from cache. Page: " + id);
-        }
-        if(NodeHeader.isLeafNode(buffer)){
-            node = LeafNode.instantiateNodeFromBuffer(buffer, this, id);
-        }
-        else{
-            node = InternalNode.instantiateNodeFromBuffer(buffer, this, id);
-        }
-        return node;
+        return nodeKeeper.getNode(id);
     }
 
     private void updateLogger(Long id){
@@ -134,7 +123,8 @@ public class Tree implements Closeable, Serializable, ObjectInputValidation {
      * @param node the Node which would like to be serialized.
      */
     public void writeNodeToPage(Node node){
-        this.diskCache.writePage(node.id, node.serialize().array());
+        nodeKeeper.writeNodeToPage(node);
+        //this.diskCache.writePage(node.id, node.serialize().array());
     }
 
     /**
@@ -272,7 +262,7 @@ public class Tree implements Closeable, Serializable, ObjectInputValidation {
     }
 
     public void shutdown() throws IOException {
-        diskCache.shutdown();
+        nodeKeeper.shutdown();
     }
 
     /**

@@ -61,7 +61,8 @@ public class DiskCache {
 
     public ByteBuffer readPage(long id) {
         byte[] byteArray = new byte[0];
-        try (PageCursor cursor = pagedFile.io(id, PagedFile.PF_EXCLUSIVE_LOCK)) {
+        //try (PageCursor cursor = pagedFile.io(id, PagedFile.PF_EXCLUSIVE_LOCK)) {
+        try (PageCursor cursor = pagedFile.io(id, PagedFile.PF_SHARED_LOCK)) {
             if (cursor.next()) {
                 do {
                     byteArray = new byte[PAGE_SIZE];

@@ -29,7 +29,7 @@ public class Benchmark {
         System.out.println("------ 1000000 -------");
         runInsertionExperiment(1000000);
 
-        System.out.println("------ 10,000,000 -------");
+       /* System.out.println("------ 10,000,000 -------");
         runInsertionExperiment(10000000);
 
         System.out.println("------ 100,000,000 -------");
@@ -37,7 +37,7 @@ public class Benchmark {
 
         System.out.println("------ 1,000,000,000 -------");
         runInsertionExperiment(1000000000);
-
+*/
 
         System.out.println("Benchmarking completed.");
     }
@@ -48,41 +48,39 @@ public class Benchmark {
                 .setRangeOfPathLengths(2, 2)
                 .setLabelPaths(labelPaths)
                 .setSignaturesToDefault();
-        LinkedList<Long> durations = new LinkedList<>();
-
+        //LinkedList<Long> durations = new LinkedList<>();
+        Double totalSum = (double) 0;
 
         for(int i = 0; i < items_to_insert; i++){
             Long[] relationships = labelPaths.get(i%labelPaths.size());
-            Long[] nodes = new Long[]{new Long(i), new Long(i), new Long(i)};
+            Long[] nodes = new Long[]{(long) i, (long) i, (long) i};
             Key key = index.buildKey(relationships, nodes);
 
             long startTime = System.nanoTime();
             //Do timed operation here
-            try {
+
                 index.insert(key);
-            }
-            catch (Exception e){
-                System.out.println(i);
-                System.exit(1);
-            }
+
+           //     System.out.println(i);
 
             //
             long endTime = System.nanoTime();
 
             long duration = (endTime - startTime);
-            durations.add(duration);
+            //durations.add(duration);
+            totalSum += duration / 1000 ;//convert to from nanoseconds to microseconds.
         }
         index.shutdown();
 
-        Long sum = calculateSum(durations);
-        Collections.sort(durations);
+        //Long sum = calculateSum(durations);
+        //Collections.sort(durations);
 
         StringBuilder strBuilder = new StringBuilder();
         strBuilder.append("\n -------").append(items_to_insert).append("-------").append((new Date().toString()));
-        strBuilder.append("\n Sum Insertion time: ").append(sum);
-        strBuilder.append("\n Average Insertion time: ").append(calculateAverage(durations, sum));
-        strBuilder.append("\n Quickest time: ").append(durations.getFirst());
-        strBuilder.append("\n Slowest time: ").append(durations.getLast());
+        strBuilder.append("\n Sum Insertion time(minutes): ").append(totalSum/60000000000d);
+        strBuilder.append("\n Average Insertion time(micro seconds): ").append(totalSum/items_to_insert);
+        //strBuilder.append("\n Quickest time: ").append(durations.getFirst());
+        //strBuilder.append("\n Slowest time: ").append(durations.getLast());
         logToFile(strBuilder.toString());
     }
 
