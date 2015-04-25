@@ -17,7 +17,9 @@ public class Benchmark {
 
 
     public static void main(String[] args) throws IOException {
+        /*
         System.out.println("------ 1000 -------");
+
         runInsertionExperiment(1000);
 
         System.out.println("------ 10000 -------");
@@ -25,7 +27,7 @@ public class Benchmark {
 
         System.out.println("------ 100000 -------");
         runInsertionExperiment(100000);
-
+*/
         System.out.println("------ 1000000 -------");
         runInsertionExperiment(1000000);
 

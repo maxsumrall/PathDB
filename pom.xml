@@ -50,7 +50,29 @@
                     </execution>
                 </executions>
                 <configuration>
+                    <executable>java</executable>
                     <mainClass>Benchmark.Benchmark</mainClass>
+                    <arguments>
+                        <argument>-XX:+UseFastAccessorMethods</argument>
+                        <argument>-XX:+DisableExplicitGC</argument>
+                        <argument>-XX:+UseConcMarkSweepGC</argument>
+                        <argument>rNewGC</argument>
+                        <argument>-XX:+UseNUMA</argument>
+                        <argument>-XX:+CMSParallelRemarkEnabled</argument>
+                        <argument>-XX:MaxTenuringThreshold=15</argument>
+                        <argument>-XX:MaxGCPauseMillis=30</argument>
+                        <argument>-XX:GCPauseIntervalMillis=150</argument>
+                        <argument>-XX:+UseAdaptiveGCBoundary</argument>
+                        <argument>-XX:-UseGCOverheadLimit</argument>
+                        <argument>-XX:+UseBiasedLocking</argument>
+                        <argument>-XX:SurvivorRatio=8</argument>
+                        <argument>-XX:TargetSurvivorRatio=90</argument>
+                        <argument>-XX:MaxTenuringThreshold=15</argument>
+                        <argument>-Dfml.ignorePatchDiscrepancies=true</argument>
+                        <argument>-Dfml.ignoreInvalidMinecraftCertificates=true</argument>
+                        <argument>-XX:+UseFastAccessorMethods</argument>
+                        <argument>-XX:+UseCompressedOops</argument>
+                    </arguments>
                 </configuration>
             </plugin>
         </plugins>

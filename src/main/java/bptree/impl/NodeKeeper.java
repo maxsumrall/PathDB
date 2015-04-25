@@ -51,58 +51,6 @@ public class NodeKeeper {
         diskCache.shutdown();
     }
 
-    /*private class SortedList{
-        int maximumSize;
-        //TreeSet<ListItem> set = new TreeSet<>(new ListItem());
-        LRUCache<Long, Node> set = new LRUCache<>(maximumSize);
-        public SortedList(int maximumSize){
-            this.maximumSize = maximumSize;
-        }
-
-        public Node get(long id){
-            // If list contains node, return it. Otherwise return null
-            return set.get(id);
-        }
-        public Node add(Node node){
-            //if list is full, remove some unpopular node and add the new node in.
-            //Return the removed node so it can be written to disk or something.
-            //If no node evicted, return null.
-            set.put(node.id, node);
-            return null;
-        }
-
-        public void update(Node node){
-            //if this node is in the list, the node in the list is updated. Is this necessary? it's the same reference.
-            //the goal is to not later request this node and then its not in the right state.
-            //if(set.get(node.id) != null){
-           // }
-            set.put(node.id, node);
-            /*for(ListItem item : set){
-                if(item.nodeItem.id.equals(node.id)){
-                    item.nodeItem = node;
-                    return;
-                }
-            }
-
-        }
-    }
-
-    private class ListItem implements Comparator<ListItem> {
-        public Node nodeItem;
-        public int popularity = 4;
-        public ListItem(Node nodeItem){
-            this.nodeItem = nodeItem;
-        }
-        public ListItem(){
-
-        }
-        @Override
-        public int compare(ListItem firstItem, ListItem otherItem){
-            return Integer.compare(firstItem.popularity, otherItem.popularity);
-        }
-    }
-    */
-
     private class LRUCache<Long, Node> extends LinkedHashMap<Long, Node> {
         private int cacheSize;
 

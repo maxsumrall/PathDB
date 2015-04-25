@@ -66,9 +66,9 @@ public class Tree implements Closeable, Serializable, ObjectInputValidation {
     public Node getNode(long id) throws IOException {
         //updateLogger(id);
         if(id < 0){throw new IOException("Invalid Node ID");}
-        if(idPool.isNodeIdInFreePool(id)){
-            throw new IOException("Invalid Node ID: Attempting to read page ID of free'd page/node");
-        }
+        //if(idPool.isNodeIdInFreePool(id)){ //this is slow.
+        //    throw new IOException("Invalid Node ID: Attempting to read page ID of free'd page/node");
+        //}
         return nodeKeeper.getNode(id);
     }
 

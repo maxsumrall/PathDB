@@ -118,8 +118,10 @@ public abstract class Node {
     }
 
     protected void addKeyAndSort(Long[] newKey){
-        keys.add(newKey);
-        Collections.sort(keys, keyComparator);
+        int index = ~Collections.binarySearch(keys, newKey, keyComparator);
+        //keys.add(index, newKey);
+        keys.add(index, newKey);
+        //Collections.sort(keys, keyComparator);
         tree.writeNodeToPage(this);
 
     }
