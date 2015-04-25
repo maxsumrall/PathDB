@@ -114,7 +114,7 @@ public class CursorImpl implements Cursor{
         if(size == -1) {
             size = validKeysInNode(currentLeaf);
             LeafNode node = currentLeaf;
-            while (Node.keyComparator.validPrefix(searchKey, node.keys.getLast())) {
+            while (Node.keyComparator.validPrefix(searchKey, node.keys.get(node.keys.size()-1))) {
                 try {
                     node = (LeafNode) tree.getNode(node.followingNodeId);
                     size += validKeysInNode(node);

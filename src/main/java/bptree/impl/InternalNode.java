@@ -5,22 +5,22 @@ import bptree.RemoveResult;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.LinkedList;
+import java.util.ArrayList;
 
 /**
  * Created by max on 2/13/15.
  */
 public class InternalNode extends Node {
 
-    public LinkedList<Long> children = new LinkedList<>();
+    public ArrayList<Long> children = new ArrayList<>();
 
     public InternalNode(Tree tree, long id) throws IOException {
-        this(tree, id, new LinkedList<>(), new LinkedList<>());
+        this(tree, id, new ArrayList<>(), new ArrayList<>());
     }
-    public InternalNode(Tree tree, long id, LinkedList<Long[]> keys) throws IOException {
-        this(tree, id, keys, new LinkedList<>());
+    public InternalNode(Tree tree, long id, ArrayList<Long[]> keys) throws IOException {
+        this(tree, id, keys, new ArrayList<>());
     }
-    public InternalNode(Tree tree, long id, LinkedList<Long[]> keys, LinkedList<Long> children) throws IOException {
+    public InternalNode(Tree tree, long id, ArrayList<Long[]> keys, ArrayList<Long> children) throws IOException {
         this.tree = tree;
         this.id = id;
         this.keys = keys;
@@ -31,8 +31,8 @@ public class InternalNode extends Node {
     private InternalNode(ByteBuffer buffer, Tree tree, Long id) throws IOException{
         this.tree = tree;
         this.id = id;
-        keys = new LinkedList<>();
-        children = new LinkedList<>();
+        keys = new ArrayList<>();
+        children = new ArrayList<>();
         deserialize(buffer);
     }
 
@@ -48,7 +48,7 @@ public class InternalNode extends Node {
     protected void sameLengthKeyDeserialization(ByteBuffer buffer){
         int keyLength = NodeHeader.getKeyLength(buffer);
         int numberOfKeys = NodeHeader.getNumberOfKeys(buffer);
-        //LinkedList<Long> newKey = new LinkedList<>();
+        //ArrayList<Long> newKey = new ArrayList<>();
         buffer.position(NodeHeader.NODE_HEADER_LENGTH);
         //Read all of the children id values
         //for(int i = 0; (numberOfKeys > 0) && i < (numberOfKeys + 1); i++){ //There is +1 children ids more than the number of keys
@@ -75,7 +75,7 @@ public class InternalNode extends Node {
     @Override
     protected void variableLengthKeyDeserialization(ByteBuffer buffer){
         int numberOfKeys = NodeHeader.getNumberOfKeys(buffer);
-        LinkedList<Long> newKey = new LinkedList<>();
+        ArrayList<Long> newKey = new ArrayList<>();
         buffer.position(NodeHeader.NODE_HEADER_LENGTH);
         //Read all of the children id values
         for(int i = 0; i < numberOfKeys + 1; i++){ //There is +1 children ids more than the number of keys
@@ -121,7 +121,7 @@ public class InternalNode extends Node {
     @Override
     protected ByteBuffer serializeHeaderToBuffer(ByteBuffer buffer){
         buffer.put(NodeHeader.BYTE_POSITION_NODE_TYPE, (byte) 2);
-        buffer.putInt(NodeHeader.BYTE_POSITION_KEY_LENGTH, sameLengthKeys ? (keys.size() > 0 ? keys.getFirst().length : 0) : -1);
+        buffer.putInt(NodeHeader.BYTE_POSITION_KEY_LENGTH, sameLengthKeys ? (keys.size() > 0 ? keys.get(0).length : 0) : -1);
         //buffer.putInt(NodeHeader.BYTE_POSITION_KEY_COUNT, keys.size());
         if(( keys.size() == 0) && (children.size() == 0)){
             buffer.putInt(NodeHeader.BYTE_POSITION_KEY_COUNT, -1);
@@ -310,11 +310,11 @@ public class InternalNode extends Node {
 
             int midPoint = keys.size() / 2;
             InternalNode sibling = tree.createInternalNode();
-            sibling.keys = new LinkedList<>(keys.subList(midPoint, keys.size()));
-            keys = new LinkedList<>(keys.subList(0, midPoint));
+            sibling.keys = new ArrayList<>(keys.subList(midPoint, keys.size()));
+            keys = new ArrayList<>(keys.subList(0, midPoint));
 
-            sibling.children = new LinkedList<>(children.subList(midPoint + 1, children.size()));
-            children = new LinkedList<>(children.subList(0, midPoint + 1));
+            sibling.children = new ArrayList<>(children.subList(midPoint + 1, children.size()));
+            children = new ArrayList<>(children.subList(0, midPoint + 1));
 
             sibling.followingNodeId = this.followingNodeId;
             sibling.precedingNodeId = this.id;
@@ -327,7 +327,7 @@ public class InternalNode extends Node {
             this.determineIfKeysAreSameLength();
             sibling.determineIfKeysAreSameLength();
 
-            SplitResult newResult = new SplitResult(sibling.keys.pop(), this.id, sibling.id);
+            SplitResult newResult = new SplitResult(sibling.keys.remove(0), this.id, sibling.id);
 
             tree.writeNodeToPage(this);
             tree.writeNodeToPage(sibling);

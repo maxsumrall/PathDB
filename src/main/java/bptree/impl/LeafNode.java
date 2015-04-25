@@ -5,7 +5,7 @@ import bptree.RemoveResult;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.LinkedList;
+import java.util.ArrayList;
 
 /**
  * Created by max on 2/13/15.
@@ -13,13 +13,13 @@ import java.util.LinkedList;
 public class LeafNode extends Node {
 
     public LeafNode(Tree tree, long id) throws IOException {
-        this(tree, id, new LinkedList<>());
+        this(tree, id, new ArrayList<>());
     }
-    public LeafNode(Tree tree, Long id, LinkedList<Long[]> k) throws IOException {
+    public LeafNode(Tree tree, Long id, ArrayList<Long[]> k) throws IOException {
         this(tree, id, k, -1l, -1l);
     }
 
-    public LeafNode(Tree tree, Long id, LinkedList<Long[]> keys, Long followingNodeId, Long precedingNodeId) throws IOException {
+    public LeafNode(Tree tree, Long id, ArrayList<Long[]> keys, Long followingNodeId, Long precedingNodeId) throws IOException {
         this.tree = tree;
         this.id = id;
         this.keys = keys;
@@ -47,7 +47,7 @@ public class LeafNode extends Node {
     protected void sameLengthKeyDeserialization(ByteBuffer buffer){
         int keyLength = NodeHeader.getKeyLength(buffer);
         int numberOfKeys = NodeHeader.getNumberOfKeys(buffer);
-        LinkedList<Long[]> deserialize_keys = new LinkedList<>();
+        ArrayList<Long[]> deserialize_keys = new ArrayList<>();
         //LinkedList<Long> newKey = new LinkedList<>();
         buffer.position(NodeHeader.NODE_HEADER_LENGTH);
         for(int i = 0; i < numberOfKeys; i++){
@@ -70,8 +70,8 @@ public class LeafNode extends Node {
     @Override
     protected void variableLengthKeyDeserialization(ByteBuffer buffer){
         int numberOfKeys = NodeHeader.getNumberOfKeys(buffer);
-        LinkedList<Long[]> deserialize_keys = new LinkedList<>();
-        LinkedList<Long> newKey = new LinkedList<>();
+        ArrayList<Long[]> deserialize_keys = new ArrayList<>();
+        ArrayList<Long> newKey = new ArrayList<>();
         buffer.position(NodeHeader.NODE_HEADER_LENGTH);
         Long nextValue = buffer.getLong();
         for(int i = 0; i < numberOfKeys; i++){ //check if we are at the final end of the block
@@ -193,22 +193,22 @@ public class LeafNode extends Node {
             addKeyAndSortWithoutPageWrite(key);
             int midPoint = keys.size() / 2;
 
-            LinkedList<Long[]> siblingKeys = new LinkedList<>(keys.subList(midPoint,keys.size()));
+            ArrayList<Long[]> siblingKeys = new ArrayList<>(keys.subList(midPoint,keys.size()));
             LeafNode sibling = tree.createLeafNode(siblingKeys, this.followingNodeId, this.id);
             if(!this.followingNodeId.equals(-1l)) {
                 Node secondSibling = tree.getNode(followingNodeId);
                 secondSibling.setPrecedingNodeId(sibling.id);
             }
 
-            LinkedList<Long[]> newKeys = new LinkedList<>(keys.subList(0, midPoint));
+            ArrayList<Long[]> newKeys = new ArrayList<>(keys.subList(0, midPoint));
             updateThisNodeAfterSplit(newKeys, sibling.id);
 
-            splitResult = new SplitResult(sibling.keys.getFirst(), this.id, sibling.id);
+            splitResult = new SplitResult(sibling.keys.get(0), this.id, sibling.id);
         }
         return splitResult;
     }
 
-    private void updateThisNodeAfterSplit(LinkedList<Long[]> updatedKeyList, Long newSiblingID){
+    private void updateThisNodeAfterSplit(ArrayList<Long[]> updatedKeyList, Long newSiblingID){
         keys = updatedKeyList;
         determineIfKeysAreSameLength();
         this.followingNodeId = newSiblingID;

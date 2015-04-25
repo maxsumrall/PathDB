@@ -4,7 +4,7 @@ import bptree.Cursor;
 import bptree.RemoveResult;
 
 import java.io.*;
-import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.LinkedList;
 
 /**
@@ -91,7 +91,7 @@ public class Tree implements Closeable, Serializable, ObjectInputValidation {
         return new LeafNode(this, getNewID());
     }
 
-    public LeafNode createLeafNode(LinkedList<Long[]> keys, Long followingNodeId, Long precedingNodeId) throws IOException {
+    public LeafNode createLeafNode(ArrayList<Long[]> keys, Long followingNodeId, Long precedingNodeId) throws IOException {
         return new LeafNode(this, getNewID(), keys, followingNodeId, precedingNodeId);
     }
 
@@ -105,7 +105,7 @@ public class Tree implements Closeable, Serializable, ObjectInputValidation {
             throw new IOException("Error creating new Internal Node");
         }
     }
-    public InternalNode createInternalNode(LinkedList<Long[]> keys, LinkedList<Long> children) throws IOException {
+    public InternalNode createInternalNode(ArrayList<Long[]> keys, ArrayList<Long> children) throws IOException {
         try {
             return new InternalNode(this, getNewID(), keys, children);
         }
@@ -189,8 +189,8 @@ public class Tree implements Closeable, Serializable, ObjectInputValidation {
         SplitResult result = getNode(rootNodePageID).insert(key);
 
         if (result != null){ //Root block split.
-            LinkedList<Long[]> keys = new LinkedList<>();
-            LinkedList<Long> children = new LinkedList<>();
+            ArrayList<Long[]> keys = new ArrayList<>();
+            ArrayList<Long> children = new ArrayList<>();
             keys.add(result.key);
             children.add(result.left);
             children.add(result.right);
@@ -255,7 +255,7 @@ public class Tree implements Closeable, Serializable, ObjectInputValidation {
     private LeafNode getFirstLeaf() throws IOException {
         Node currentNode = getNode(rootNodePageID);
         while(currentNode instanceof InternalNode){
-            currentNode = getNode(((InternalNode) currentNode).children.getFirst());
+            currentNode = getNode(((InternalNode) currentNode).children.get(0));
         }
         assert(currentNode.precedingNodeId.equals(-1l));
         return (LeafNode) currentNode;

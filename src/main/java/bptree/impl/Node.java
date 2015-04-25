@@ -5,9 +5,9 @@ import bptree.RemoveResult;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.LinkedList;
 
 /**
  * Created by max on 2/12/15.
@@ -17,7 +17,7 @@ public abstract class Node {
     public static final KeyImpl keyComparator = KeyImpl.getComparator();
     protected Tree tree;
     protected NodeHeader nodeHeader;
-    public LinkedList<Long[]> keys;
+    public ArrayList<Long[]> keys;
     public Long id;
     public Long precedingNodeId = -1l;
     public Long followingNodeId = -1l;
@@ -30,7 +30,7 @@ public abstract class Node {
         else if(!sameLengthKeys){
             return false;
         }
-        else if (keys.getFirst().length == newKey.length) {
+        else if (keys.get(0).length == newKey.length) {
             return true;
         }
         else {
@@ -39,7 +39,7 @@ public abstract class Node {
     }
     protected boolean updateSameLengthKeyFlag(Long[] newKey){
         if(sameLengthKeys){
-            if(keys.size() > 0 && newKey.length != keys.getFirst().length){
+            if(keys.size() > 0 && newKey.length != keys.get(0).length){
                 sameLengthKeys = false;
             }
         }
@@ -49,7 +49,7 @@ public abstract class Node {
     protected void determineIfKeysAreSameLength(){
         sameLengthKeys = true;
         for(int i = 0 ; i < keys.size(); i++){
-            if (keys.getFirst().length != keys.get(i).length){ sameLengthKeys = false; }
+            if (keys.get(0).length != keys.get(i).length){ sameLengthKeys = false; }
         }
     }
 
@@ -137,7 +137,7 @@ public abstract class Node {
      */
     protected ByteBuffer serializeHeaderToBuffer(ByteBuffer buffer){
         buffer.put(NodeHeader.BYTE_POSITION_NODE_TYPE, (byte) (this instanceof LeafNode ? 1 : 2));
-        buffer.putInt(NodeHeader.BYTE_POSITION_KEY_LENGTH, sameLengthKeys ? (keys.size() > 0 ? keys.getFirst().length : 0) : -1);
+        buffer.putInt(NodeHeader.BYTE_POSITION_KEY_LENGTH, sameLengthKeys ? (keys.size() > 0 ? keys.get(0).length : 0) : -1);
         buffer.putInt(NodeHeader.BYTE_POSITION_KEY_COUNT, keys.size());
         buffer.putLong(NodeHeader.BYTE_POSITION_SIBLING_ID, followingNodeId);
         buffer.putLong(NodeHeader.BYTE_POSITION_PRECEDING_ID, precedingNodeId);
