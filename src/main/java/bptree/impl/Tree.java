@@ -80,7 +80,6 @@ public class Tree implements Closeable, Serializable, ObjectInputValidation {
 
     public long getNewID(){
         return idPool.acquireId();
-
     }
 
     public void releaseNodeId(Long id){

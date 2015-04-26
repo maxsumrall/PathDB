@@ -16,8 +16,8 @@ public class DiskCache {
     public static int PAGE_SIZE = 8192;
     protected final static String DEFAULT_CACHE_FILE_NAME = "cache.bin";
     protected int recordSize = 9; //TODO What is this?
-    protected int max_size_in_mb = 2048;
-    protected int maxPages = (max_size_in_mb * 1000000) / PAGE_SIZE;
+    protected int max_size_in_mb = 8192;
+    protected int maxPages = max_size_in_mb * (1000000 / PAGE_SIZE);
     //protected int maxPages = 8000; //TODO How big should this be?
     protected int pageCachePageSize = PAGE_SIZE;
     protected int recordsPerFilePage = pageCachePageSize / recordSize;

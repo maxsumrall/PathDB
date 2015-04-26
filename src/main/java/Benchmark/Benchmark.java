@@ -27,16 +27,16 @@ public class Benchmark {
 
         System.out.println("------ 100000 -------");
         runInsertionExperiment(100000);
-*/
+
         System.out.println("------ 1000000 -------");
         runInsertionExperiment(1000000);
 
-       /* System.out.println("------ 10,000,000 -------");
+        System.out.println("------ 10,000,000 -------");
         runInsertionExperiment(10000000);
-
+*/
         System.out.println("------ 100,000,000 -------");
         runInsertionExperiment(100000000);
-
+/*
         System.out.println("------ 1,000,000,000 -------");
         runInsertionExperiment(1000000000);
 */

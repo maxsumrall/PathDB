@@ -7,16 +7,21 @@ import java.util.LinkedList;
  */
 public class AvailablePageIdPool {
     private LinkedList<Long> pool;
+    private long currentID = 0;
+    //private long maximumNumberOfPages;
 
     public AvailablePageIdPool(long maximumNumberOfPages){
         pool = new LinkedList<>();
-        for(long i = 0; i < maximumNumberOfPages; i++){
-            pool.add(i);
-        }
+        //this.maximumNumberOfPages = maximumNumberOfPages;
     }
 
     public Long acquireId(){
-        return pool.pop();
+        if(pool.size() > 0) {
+            return pool.pop();
+        }
+        else{
+            return currentID++;
+        }
     }
 
     public void releaseId(Long id){
