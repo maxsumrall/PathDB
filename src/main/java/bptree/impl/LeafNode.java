@@ -127,18 +127,22 @@ public class LeafNode extends Node {
      */
     @Override
     protected boolean notFull(Long[] newKey){
+        return byteRepresentationSize(newKey) < DiskCache.PAGE_SIZE;
+    }
+
+    public int byteRepresentationSize(Long[] newKey){
         int byte_representation_size = NodeHeader.NODE_HEADER_LENGTH;
         //If the keys are the same length, there is no delimiter value. Need to check if this new key is of the same length.
         if(hasSameKeyLength(newKey)){ //the keys here are the same length already AND the new key is of the same length
             byte_representation_size += (keys.size() + 1) * newKey.length * 8; //(Number of keys including the new one) * the number of longs in these keys * 8 bytes for each long.
         }
         else{ //Else, calculate the size including delimiters.
-                for(Long[] key : keys){
-                    byte_representation_size += (key.length + 1) * 8; //The number of longs in this key plus a delimiter * 8 bytes for each long = the byte size of this key.
-                }
+            for(Long[] key : keys){
+                byte_representation_size += (key.length + 1) * 8; //The number of longs in this key plus a delimiter * 8 bytes for each long = the byte size of this key.
+            }
             byte_representation_size += (newKey.length + 1) * 8;
         }
-        return byte_representation_size < DiskCache.PAGE_SIZE;
+        return byte_representation_size;
     }
 
     /**
