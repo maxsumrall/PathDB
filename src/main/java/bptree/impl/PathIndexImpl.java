@@ -8,7 +8,6 @@ import bptree.RemoveResult;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 
 
@@ -18,7 +17,7 @@ public class PathIndexImpl implements Index, Closeable, Serializable, ObjectInpu
     private boolean signatures_specified = false;
     private boolean paths_mapping_specified = false;
     private boolean k_values_specified = false;
-    private HashMap<Long[], Long> labelPathMapping = new HashMap<>();
+    private LabelPathMapper labelPathMapping = new LabelPathMapper();
     private List<Integer[]> signatures;
     private int minimum_k_value_indexed;
     private int maximum_k_value_indexed;
@@ -91,7 +90,7 @@ public class PathIndexImpl implements Index, Closeable, Serializable, ObjectInpu
     public Index setLabelPaths(List<Long[]> labelPaths){
         labelPaths.sort(Node.keyComparator);
         for(int i = 0; i < labelPaths.size(); i++){
-            labelPathMapping.put(labelPaths.get(i), (long) i);
+            labelPathMapping.put(labelPaths.get(i));
         }
         paths_mapping_specified = true;
         return this;
@@ -244,6 +243,13 @@ public class PathIndexImpl implements Index, Closeable, Serializable, ObjectInpu
     public Long[] buildComposedKey(Key key){
         Long pathIdForKey = labelPathMapping.get(key.getLabelPath());
         return key.getComposedKey(pathIdForKey);
+    }
+
+    public int indexSize(){
+        return tree.diskCacheSize();
+    }
+    public int getDepthOfTree() throws IOException {
+        return tree.getDepthOfTree();
     }
 
     public void shutdown() throws IOException {

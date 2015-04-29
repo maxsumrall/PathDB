@@ -172,11 +172,11 @@ public class LeafNode extends Node {
      * @return
      */
     @Override
-    protected int search(Long[] search_key){
-        for(Long[] key : keys){
-            if (keyComparator.prefixCompare(search_key, key) >= 0) { return keys.indexOf(key); }
+    public int search(Long[] search_key){
+        for (int i = 0; i < keys.size(); i++){
+            if (keyComparator.prefixCompare(search_key, keys.get(i)) < 0) { return i; }
         }
-        return 0;
+        return keys.size(); //Then the position is the last one.
     }
 
     /**

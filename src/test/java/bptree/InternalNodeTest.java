@@ -71,7 +71,7 @@ public class InternalNodeTest {
             }
             //System.out.println("Keys length: " + node.keys.size());
             //System.out.println("Keys sum: " + total_longs_key);
-            //System.out.println("Byte rep size: " + node.byte_representation_size(key));
+            //System.out.println("Byte rep size: " + node.byteRepresentationSize(key));
 
             SplitResult result = node.insertFromResult(new SplitResult(key, (long) i, (long) i+1));
             if (result != null){

@@ -25,12 +25,14 @@ public class DiskCache {
     protected int filePageSize = recordsPerFilePage * recordSize;
     protected transient DefaultFileSystemAbstraction fs;
     protected transient MuninnPageCache pageCache;
-    protected transient PagedFile pagedFile;
+    public transient PagedFile pagedFile;
+    public File cache_file;
 
 
     private DiskCache(File cache_file) {
         try {
             initializePageCache(cache_file);
+            this.cache_file = cache_file;
         }
         catch (IOException e){
             e.printStackTrace();
@@ -96,6 +98,13 @@ public class DiskCache {
         return pageCache.maxCachedPages();
     }
 
+    public int cache_size(){
+        return (int)(cache_file.length() / 1000000l);
+    }
+
+    public PagedFile getPagedFile(){
+        return this.pagedFile;
+    }
     public void shutdown() throws IOException {
         pagedFile.close();
         pageCache.close();

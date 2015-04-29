@@ -19,7 +19,7 @@ public class KeyImpl implements Key, Comparator<Long[]> {
         this.nodes = nodes;
         composed_key = new Long[nodes.length + 1];
     }
-    private KeyImpl(){
+    public KeyImpl(){
 
     }
 
@@ -63,6 +63,16 @@ public class KeyImpl implements Key, Comparator<Long[]> {
             temp = search_key[i] - key[i];
             if (temp != 0) {
                 return search_key[i].compareTo(key[i]);
+            }
+        }
+        return 0;
+    }
+    public int prefixCompare(long[] search_key, long[] key) {
+        long temp;
+        for (int i = 0; i < search_key.length; i++) {
+            temp = search_key[i] - key[i];
+            if (temp != 0) {
+                return (int) (search_key[i] - (key[i]));
             }
         }
         return 0;

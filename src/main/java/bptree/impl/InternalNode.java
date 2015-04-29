@@ -145,10 +145,10 @@ public class InternalNode extends Node {
      */
     @Override
     protected boolean notFull(Long[] newKey) {
-        return byte_representation_size(newKey) <= DiskCache.PAGE_SIZE;
+        return byteRepresentationSize(newKey) <= DiskCache.PAGE_SIZE;
     }
 
-    public int byte_representation_size(Long[] newKey){
+    public int byteRepresentationSize(Long[] newKey){
         int byte_representation_size = NodeHeader.NODE_HEADER_LENGTH;
 
         byte_representation_size += (children.size() + 1) * 8; //Each child * 8bytes, +1 for the new child
@@ -172,7 +172,7 @@ public class InternalNode extends Node {
      * @return the index.
      */
     @Override
-    protected int search(Long[] search_key){
+    public int search(Long[] search_key){
             for (int i = 0; i < keys.size(); i++){
             if (keyComparator.prefixCompare(search_key, keys.get(i)) < 0) { return i; }
         }

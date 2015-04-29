@@ -16,7 +16,7 @@ public class Tree implements Closeable, Serializable, ObjectInputValidation {
     protected String tree_filename;
     private AvailablePageIdPool idPool;
     public long rootNodePageID;
-    private NodeKeeper nodeKeeper;
+    public NodeKeeper nodeKeeper;
     private LinkedList<Long> lastTrace = new LinkedList<>();
     private int keySetSize = 0;
 
@@ -251,13 +251,28 @@ public class Tree implements Closeable, Serializable, ObjectInputValidation {
      * Can be used for doing a complete walk along leaf node linked lists.
      * @return
      */
-    private LeafNode getFirstLeaf() throws IOException {
+    public LeafNode getFirstLeaf() throws IOException {
         Node currentNode = getNode(rootNodePageID);
         while(currentNode instanceof InternalNode){
             currentNode = getNode(((InternalNode) currentNode).children.get(0));
         }
         assert(currentNode.precedingNodeId.equals(-1l));
         return (LeafNode) currentNode;
+    }
+    public int getDepthOfTree() throws IOException{
+        Node currentNode = getNode(rootNodePageID);
+        int  depth = 1;
+        while(currentNode instanceof InternalNode){
+            depth++;
+            currentNode = getNode(((InternalNode) currentNode).children.get(0));
+        }
+        depth++;
+        assert(currentNode.precedingNodeId.equals(-1l));
+        return depth;
+    }
+
+    public int diskCacheSize(){
+        return nodeKeeper.disk_cache_size();
     }
 
     public void shutdown() throws IOException {

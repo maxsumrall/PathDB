@@ -28,6 +28,9 @@ public interface Index {
 
     RemoveResult remove(Key key);
 
+    int indexSize();
+    int getDepthOfTree() throws IOException;
+
     void shutdown() throws IOException;
 
     void close() throws IOException;

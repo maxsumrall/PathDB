@@ -7,7 +7,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 public class NodeKeeper {
-    protected DiskCache diskCache;
+    public DiskCache diskCache;
     int max_cache_size_mb = 1024;
     private int max_cache_size;
     private LRUCache<Long, Node> cache;
@@ -42,6 +42,10 @@ public class NodeKeeper {
     public void writeNodeToPage(Node node){
         this.diskCache.writePage(node.id, node.serialize().array());
         cache.put(node.id, node);
+    }
+
+    public int disk_cache_size(){
+        return diskCache.cache_size();
     }
 
     public void shutdown() throws IOException {

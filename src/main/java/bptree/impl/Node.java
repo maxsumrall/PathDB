@@ -23,7 +23,7 @@ public abstract class Node {
     public Long followingNodeId = -1l;
     protected boolean sameLengthKeys = true;
 
-    protected boolean hasSameKeyLength(Long[] newKey) {
+    public boolean hasSameKeyLength(Long[] newKey) {
         if (keys.size() == 0) {
             return true;
         }
@@ -46,7 +46,7 @@ public abstract class Node {
         return sameLengthKeys;
     }
 
-    protected void determineIfKeysAreSameLength(){
+    public void determineIfKeysAreSameLength(){
         sameLengthKeys = true;
         for(int i = 0 ; i < keys.size(); i++){
             if (keys.get(0).length != keys.get(i).length){ sameLengthKeys = false; }
