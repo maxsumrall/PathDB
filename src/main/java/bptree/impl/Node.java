@@ -19,6 +19,7 @@ public abstract class Node {
     protected NodeHeader nodeHeader;
     public ArrayList<Long[]> keys;
     public Long id;
+    public int numberOfKeys;
     public Long precedingNodeId = -1l;
     public Long followingNodeId = -1l;
     protected boolean sameLengthKeys = true;
@@ -117,7 +118,7 @@ public abstract class Node {
         tree.writeNodeToPage(this);
     }
 
-    protected void addKeyAndSort(Long[] newKey){
+    public void addKeyAndSort(Long[] newKey){
         int index = ~Collections.binarySearch(keys, newKey, keyComparator);
         //keys.add(index, newKey);
         keys.add(index, newKey);
@@ -173,6 +174,7 @@ public abstract class Node {
         sameLengthKeys = NodeHeader.isNodeWithSameLengthKeys(buffer);
         followingNodeId = NodeHeader.getSiblingID(buffer);
         precedingNodeId = NodeHeader.getPrecedingID(buffer);
+        numberOfKeys = NodeHeader.getNumberOfKeys(buffer);
         if(sameLengthKeys){
             sameLengthKeyDeserialization(buffer);
         }

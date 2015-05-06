@@ -62,6 +62,13 @@ The Header of the block when stored as bytes is:
     protected static long getPrecedingID(ByteBuffer buffer){
         return buffer.getLong(BYTE_POSITION_PRECEDING_ID);
     }
+    protected static long getSiblingID(PageCursor cursor){
+        return cursor.getLong(BYTE_POSITION_SIBLING_ID);
+    }
+
+    protected static long getPrecedingID(PageCursor cursor){
+        return cursor.getLong(BYTE_POSITION_PRECEDING_ID);
+    }
 
     protected static void setFollowingID(PageCursor cursor, long followingId){
         cursor.putLong(BYTE_POSITION_SIBLING_ID, followingId);
@@ -69,6 +76,22 @@ The Header of the block when stored as bytes is:
 
     protected static void setPrecedingId(PageCursor cursor, long precedingId){
         cursor.putLong(BYTE_POSITION_PRECEDING_ID, precedingId);
+    }
+
+    protected static void initializeLeafNode(PageCursor cursor){
+        cursor.putByte(NodeHeader.BYTE_POSITION_NODE_TYPE, (byte) 1);
+        cursor.putInt(NodeHeader.BYTE_POSITION_KEY_LENGTH, 0);
+        cursor.putInt(NodeHeader.BYTE_POSITION_KEY_COUNT, 0);
+        cursor.putLong(NodeHeader.BYTE_POSITION_SIBLING_ID, -1);
+        cursor.putLong(NodeHeader.BYTE_POSITION_PRECEDING_ID, -1);
+    }
+
+    protected static void initializeInternalNode(PageCursor cursor){
+        cursor.putByte(NodeHeader.BYTE_POSITION_NODE_TYPE, (byte) 2);
+        cursor.putInt(NodeHeader.BYTE_POSITION_KEY_LENGTH, 0);
+        cursor.putInt(NodeHeader.BYTE_POSITION_KEY_COUNT, 0);
+        cursor.putLong(NodeHeader.BYTE_POSITION_SIBLING_ID, -1);
+        cursor.putLong(NodeHeader.BYTE_POSITION_PRECEDING_ID, -1);
     }
 
 }

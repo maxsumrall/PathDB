@@ -59,6 +59,9 @@ public class KeyImpl implements Key, Comparator<Long[]> {
     }
     public int prefixCompare(Long[] search_key, Long[] key) {
         long temp;
+        if(search_key.length != key.length){
+            return search_key.length - key.length;
+        }
         for (int i = 0; i < search_key.length; i++) {
             temp = search_key[i] - key[i];
             if (temp != 0) {
@@ -69,6 +72,9 @@ public class KeyImpl implements Key, Comparator<Long[]> {
     }
     public int prefixCompare(long[] search_key, long[] key) {
         long temp;
+        //if(search_key.length != key.length){
+        //    return search_key.length - key.length;
+        //}
         for (int i = 0; i < search_key.length; i++) {
             temp = search_key[i] - key[i];
             if (temp != 0) {
@@ -96,6 +102,19 @@ public class KeyImpl implements Key, Comparator<Long[]> {
         }
         return true;
 
+    }
+
+    public boolean validPrefix(long[] a, long[] b){
+
+        if((a.length > b.length) || a.length == 0){ //The empty prefix should match nothing. You must specify atleast the path, so give me at least one item.
+            return false;
+        }
+        for(int i = 0; i < a.length; i++){
+            if(!(a[i] == (b[i]))){
+                return false;
+            }
+        }
+        return true;
     }
 
     public static String toString(Long[] key){

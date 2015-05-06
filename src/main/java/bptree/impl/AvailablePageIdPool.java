@@ -6,16 +6,20 @@ import java.util.LinkedList;
  * Created by max on 4/13/15.
  */
 public class AvailablePageIdPool {
-    private LinkedList<Long> pool;
-    private long currentID = 0;
+    private static LinkedList<Long> pool = null;
+    private static long currentID = 0;
     //private long maximumNumberOfPages;
 
     public AvailablePageIdPool(long maximumNumberOfPages){
-        pool = new LinkedList<>();
-        //this.maximumNumberOfPages = maximumNumberOfPages;
+        if(pool == null) {
+            pool = new LinkedList<>();
+        }
     }
 
-    public Long acquireId(){
+    public static Long acquireId(){
+        if(pool == null) {
+            pool = new LinkedList<>();
+        }
         if(pool.size() > 0) {
             return pool.pop();
         }
@@ -24,7 +28,7 @@ public class AvailablePageIdPool {
         }
     }
 
-    public void releaseId(Long id){
+    public static void releaseId(Long id){
         pool.push(id);
     }
 

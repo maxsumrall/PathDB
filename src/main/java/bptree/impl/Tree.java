@@ -19,6 +19,7 @@ public class Tree implements Closeable, Serializable, ObjectInputValidation {
     public NodeKeeper nodeKeeper;
     private LinkedList<Long> lastTrace = new LinkedList<>();
     private int keySetSize = 0;
+    public NodeProxy proxy;
 
     /**
      * Constructs a new Tree object
@@ -31,6 +32,7 @@ public class Tree implements Closeable, Serializable, ObjectInputValidation {
         idPool = new AvailablePageIdPool(nodeKeeper.diskCache.getMaxNumberOfPages());
         Node rootNode = createLeafNode();
         rootNodePageID = rootNode.id;
+        proxy = new NodeProxy(rootNodePageID, diskCache.pagedFile);
     }
     public static Tree initializeTemporaryNewTree() throws IOException {
         return initializeNewTree(DEFAULT_TREE_FILE_NAME, DiskCache.temporaryDiskCache()); //Delete on exit
@@ -196,6 +198,20 @@ public class Tree implements Closeable, Serializable, ObjectInputValidation {
             InternalNode newRoot = createInternalNode(keys, children);
             rootNodePageID = newRoot.id;
         }
+    }
+
+    public void proxyInsertion(long[] key) throws IOException{
+        SplitResult result = proxy.insert(key);
+
+        if(result != null){
+            InternalNode newRoot = createInternalNode();
+            proxy.rootNodeId = newRoot.id;
+            proxy.newRoot(result.left, result.right, result.primkey);
+        }
+    }
+
+    public ProxyCursor proxyFind(long[] key) throws IOException{
+        return proxy.find(key);
     }
 
     public int getCountOfMatchingKeys(Long[] search_key) throws IOException {

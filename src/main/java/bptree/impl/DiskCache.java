@@ -25,7 +25,7 @@ public class DiskCache {
     protected int filePageSize = recordsPerFilePage * recordSize;
     protected transient DefaultFileSystemAbstraction fs;
     protected transient MuninnPageCache pageCache;
-    public transient PagedFile pagedFile;
+    public static transient PagedFile pagedFile;
     public File cache_file;
 
 

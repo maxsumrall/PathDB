@@ -70,7 +70,6 @@ public class Benchmark {
         strBuilder.append("\n Average Deletion time(micro seconds): ").append(totalSumDelete / items_to_insert);
         strBuilder.append("\n Disk Size(mb): ").append(disk_size);
 
-
         logToFile(strBuilder.toString());
     }
 

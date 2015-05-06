@@ -5,10 +5,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.LinkedList;
-import java.util.Random;
+import java.util.*;
 
 import static bptree.LabelsAndPathsGenerator.exampleLabelPaths;
 import static bptree.LabelsAndPathsGenerator.exampleSequentialKeys;
@@ -36,8 +33,7 @@ public class NodeProxyTest {
             index.insert(key);
         }
         pindex = ((PathIndexImpl)index);
-        proxy = new NodeProxy();
-        proxy.setPagedFile(pindex.tree.nodeKeeper.diskCache.getPagedFile());
+        proxy = new NodeProxy(pindex.tree.rootNodePageID, pindex.tree.nodeKeeper.diskCache.getPagedFile());
     }
 
     public long[] toPrimitive(Long[] key){
@@ -154,8 +150,32 @@ public class NodeProxyTest {
     }
 
     @Test
-    public void internalNodeSameLengthKeyInsertKeyAndChildNoSplit(){
+    public void internalNodeSameLengthKeyInsertKeyAndChildNoSplit() throws IOException {
+        InternalNode nodeA = (InternalNode) pindex.tree.createInternalNode();
+        InternalNode nodeB = (InternalNode) pindex.tree.createInternalNode();
 
+        LinkedList<Long[]> keys = new LinkedList<>();
+        for(long i = 0; i < 204l; i++){
+            keys.add(new Long[]{i,i,i,i});
+        }
+        SplitResult resultA = null;
+        SplitResult resultB = null;
+        SplitResult inserter = new SplitResult();
+        for(Long[] key : keys){
+            inserter.key = key;
+            inserter.left = key[0];
+            inserter.right = key[0];
+            resultA = nodeA.insertFromResult(inserter);
+            resultB = proxy.addKeyAndChildToInternalNode(nodeB.id, toPrimitive(key), key[0]);
+            assert(resultA == resultB);
+        }
+        keys.add(new Long[]{255l,255l,255l,255l});
+        inserter.key = keys.getLast();
+        inserter.left = keys.getLast()[0];
+        inserter.right = keys.getLast()[0];
+        resultA = nodeA.insertFromResult(inserter);
+        resultB = proxy.addKeyAndChildToInternalNode(nodeB.id, toPrimitive(keys.getLast()), keys.getLast()[0]);
+       // assert(Arrays.equals(toPrimitive(resultA.key), resultB.primkey));
     }
     @Test
     public void internalNodeSameLengthKeyInsertKeyAndChildSplit(){
@@ -192,15 +212,114 @@ public class NodeProxyTest {
     }
     @Test
     public void leafNodeSameLengthKeyInsertKeySplit() throws IOException {
-        LeafNode node = (LeafNode) pindex.tree.getFirstLeaf();
+        LeafNode nodeA = (LeafNode) pindex.tree.createLeafNode();
+        LeafNode nodeB = (LeafNode) pindex.tree.createLeafNode();
+
+        LinkedList<Long[]> keys = new LinkedList<>();
+        for(long i = 0; i < 255l; i++){
+            keys.add(new Long[]{i,i,i,i});
+        }
+        SplitResult resultA = null;
+        SplitResult resultB = null;
+        for(Long[] key : keys){
+            resultA = nodeA.insert(key);
+            resultB = proxy.addKeyToLeafNode(nodeB.id, toPrimitive(key));
+            assert(resultA == resultB);
+        }
+        keys.add(new Long[]{255l,255l,255l,255l});
+        resultA = nodeA.insert(keys.getLast());
+        resultB = proxy.addKeyToLeafNode(nodeB.id, toPrimitive(keys.getLast()));
+        assert(Arrays.equals(toPrimitive(resultA.key), resultB.primkey));
     }
 
     @Test
     public void leafNodeDifferentLengthKeyInsertKeyNoSplit() throws IOException {
-        LeafNode node = (LeafNode) pindex.tree.getFirstLeaf();
+        LeafNode nodeA = (LeafNode) pindex.tree.createLeafNode();
+        LeafNode nodeB = (LeafNode) pindex.tree.createLeafNode();
+
+        LinkedList<Long[]> keys = new LinkedList<>();
+        for(long i = 0; i < 10l; i++){
+            keys.add(new Long[]{i*100,i,i,i,i});
+        }
+        for(long i = 0; i < 192l; i++){
+            keys.add(new Long[]{i,i,i,i});
+        }
+        SplitResult resultA = null;
+        SplitResult resultB = null;
+        for(Long[] key : keys){
+            resultA = nodeA.insert(key);
+            resultB = proxy.addKeyToLeafNode(nodeB.id, toPrimitive(key));
+            assert(resultA == resultB);
+        }
+        keys.add(new Long[]{255l,255l,255l,255l});
+        resultA = nodeA.insert(keys.getLast());
+        resultB = proxy.addKeyToLeafNode(nodeB.id, toPrimitive(keys.getLast()));
+        assert(Arrays.equals(toPrimitive(resultA.key), resultB.primkey));
     }
     @Test
     public void leafNodeDifferentLengthKeyInsertKeySplit() throws IOException {
-        LeafNode node = (LeafNode) pindex.tree.getFirstLeaf();
+        //Todo this is not inducing a split
+        LeafNode nodeA = (LeafNode) pindex.tree.createLeafNode();
+        LeafNode nodeB = (LeafNode) pindex.tree.createLeafNode();
+
+        LinkedList<Long[]> keys = new LinkedList<>();
+        for(long i = 0; i < 10l; i++){
+            keys.add(new Long[]{i,i,i,i});
+        }
+        for(long i = 0; i < 10l; i++){
+            keys.add(new Long[]{i*100,i,i,i,i});
+        }
+        Collections.shuffle(keys, new Random());
+        for(Long[] key : keys){
+            nodeA.insert(key);
+            proxy.addKeyToLeafNode(nodeB.id, toPrimitive(key));
+        }
+
+        for(Long[] key : keys){
+            int resultA = nodeA.search(key);
+            int resultB = proxy.search(nodeB.id, toPrimitive(key))[0];
+            assert(resultA == resultB);
+        }
     }
+
+    @Test
+    public void leafNodeSameLengthKeyDeleteNoCollapse() throws IOException {
+
+    }
+
+    @Test
+    public void leafNodeSameLengthKeyDeleteCollapse() throws IOException {
+
+    }
+
+    @Test
+    public void leafNodeDifferentLengthKeyDeleteNoCollapse() throws IOException {
+
+    }
+
+    @Test
+    public void leafNodeDifferentLengthKeyDeleteCollapse() throws IOException {
+
+    }
+
+    @Test
+    public void internalNodeSameLengthKeyDeleteNoCollapse() throws IOException {
+
+    }
+
+    @Test
+    public void internalNodeSameLengthKeyDeleteCollapse() throws IOException {
+
+    }
+
+    @Test
+    public void internalNodeDifferentLengthKeyDeleteNoCollapse() throws IOException {
+
+    }
+
+    @Test
+    public void internalNodeDifferentLengthKeyDeleteCollapse() throws IOException {
+
+    }
+
 }

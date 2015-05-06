@@ -63,6 +63,11 @@ public class NodeKeeper {
             this.cacheSize = cacheSize;
         }
 
+        @Override
+        public Node get(Object id){
+            return null;
+        }
+
     protected boolean removeEldestEntry(Map.Entry<Long, Node> eldest) {
         return this.size() >= cacheSize;
     }

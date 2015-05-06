@@ -124,7 +124,7 @@ public class InternalNode extends Node {
         buffer.putInt(NodeHeader.BYTE_POSITION_KEY_LENGTH, sameLengthKeys ? (keys.size() > 0 ? keys.get(0).length : 0) : -1);
         //buffer.putInt(NodeHeader.BYTE_POSITION_KEY_COUNT, keys.size());
         if(( keys.size() == 0) && (children.size() == 0)){
-            buffer.putInt(NodeHeader.BYTE_POSITION_KEY_COUNT, -1);
+            buffer.putInt(NodeHeader.BYTE_POSITION_KEY_COUNT, 0);
         }
         else{
             buffer.putInt(NodeHeader.BYTE_POSITION_KEY_COUNT, keys.size());
