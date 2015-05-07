@@ -3,7 +3,6 @@ package bptree;
 import bptree.impl.NodeProxy;
 import bptree.impl.PathIndexImpl;
 import bptree.impl.ProxyCursor;
-import jdk.nashorn.internal.ir.annotations.Ignore;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -70,52 +69,5 @@ public class NodeProxyTreeTest {
             }
             assert(count == keys.length / number_of_paths);
         }
-    }
-
-    @Ignore
-    public void benchmarkTest() throws IOException{
-        double totalSum = 0;
-        double avg;
-        int items_to_insert = 1000000;
-        int number_of_paths = 10000;
-        long[][] keys = new long[items_to_insert][4];
-        for (int i = 0; i < keys.length; i++) {
-            keys[i][0] = (long) (i % number_of_paths);
-            keys[i][1] = (long) i;
-            keys[i][2] = (long) i;
-            keys[i][3] = (long) i;
-        }
-        for(long[] key : keys){
-            long startTime = System.nanoTime();
-            //Do timed operation here
-
-            proxy.insert(key);
-
-            long endTime = System.nanoTime();
-
-            long duration = (endTime - startTime);
-            totalSum += duration / 1000;//convert to from nanoseconds to microseconds.
-        }
-        avg = totalSum / items_to_insert;
-        System.out.println("Average Insertion Time: " + avg);
-
-        totalSum = 0d;
-
-        for(long[] key : keys){
-            long startTime = System.nanoTime();
-            //Do timed operation here
-
-            proxy.find(key);
-
-
-            long endTime = System.nanoTime();
-
-            long duration = (endTime - startTime);
-            totalSum += duration / 1000;//convert to from nanoseconds to microseconds.
-        }
-        avg = totalSum / items_to_insert;
-        System.out.println("Average Search Time: " + avg);
-
-
     }
 }

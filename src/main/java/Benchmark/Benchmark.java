@@ -1,20 +1,26 @@
 package Benchmark;
 
 import bptree.Index;
-import bptree.Key;
+import bptree.impl.NodeProxy;
 import bptree.impl.PathIndexImpl;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.*;
+import java.util.Date;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Random;
 
 
 public class Benchmark {
 
-    Random random;
-
+    public static Random random;
+    public static Index index;
+    public static LinkedList<Long[]> labelPaths;
+    public static PathIndexImpl pindex;
+    public static NodeProxy proxy;
 
     public static void main(String[] args) throws IOException {
 
@@ -30,34 +36,47 @@ public class Benchmark {
         //System.out.println("------ 1000000 -------");
         //runExperiment(1000000);
 
-        //System.out.println("------ 10,000,000 -------");
-        //runExperiment(10000000);
+        System.out.println("------ 10,000,000 -------");
+        runExperiment(10000000);
 
         System.out.println("------ 100,000,000 -------");
         runExperiment(100000000);
-/*
+
         System.out.println("------ 1,000,000,000 -------");
-        runInsertionExperiment(1000000000);
-*/
+        runExperiment(1000000000);
+
 
         System.out.println("Benchmarking completed.");
     }
 
     public static void runExperiment(int items_to_insert) throws IOException {
-        LinkedList<Long[]> labelPaths = exampleLabelPaths(10000, 2);
-        Index index = PathIndexImpl.getTemporaryPathIndex()
+        labelPaths = exampleLabelPaths(2, 2);
+        index = PathIndexImpl.getTemporaryPathIndex()
                 .setRangeOfPathLengths(2, 2)
                 .setLabelPaths(labelPaths)
                 .setSignaturesToDefault();
-        //LinkedList<Long> durations = new LinkedList<>();
 
+        pindex = ((PathIndexImpl) index);
+        proxy = new NodeProxy(pindex.tree.rootNodePageID, pindex.tree.nodeKeeper.diskCache.pagedFile);
+
+        int number_of_paths = 10000;
+
+        /*
+        long[][] keys = new long[items_to_insert][4];
+        for (int i = 0; i < keys.length; i++) {
+            keys[i][0] = (long) (i % number_of_paths);
+            keys[i][1] = (long) i;
+            keys[i][2] = (long) i;
+            keys[i][3] = (long) i;
+        }
+*/
         int disk_size = 0;
 
-        double totalSumInsert = performInsertionExperiment(index, items_to_insert, labelPaths);
+        double totalSumInsert = performInsertionExperiment(proxy, items_to_insert, number_of_paths);
         disk_size = index.indexSize();
         int depth = index.getDepthOfTree();
-        double totalSumSearch = performSearchExperiment(index, items_to_insert, labelPaths);
-        double totalSumDelete = performDeletionExperiment(index, items_to_insert, labelPaths);
+        double totalSumSearch = performSearchExperiment(proxy, items_to_insert, number_of_paths);
+        //double totalSumDelete = performDeletionExperiment(proxy, keys, items_to_insert, number_of_paths);
         index.shutdown();
 
 
@@ -67,19 +86,20 @@ public class Benchmark {
         strBuilder.append("\n Sum Insertion time(minutes): ").append(totalSumInsert / 60000000000d);
         strBuilder.append("\n Average Insertion time(micro seconds): ").append(totalSumInsert / items_to_insert);
         strBuilder.append("\n Average Search time(micro seconds): ").append(totalSumSearch / items_to_insert);
-        strBuilder.append("\n Average Deletion time(micro seconds): ").append(totalSumDelete / items_to_insert);
+        //strBuilder.append("\n Average Deletion time(micro seconds): ").append(totalSumDelete / items_to_insert);
         strBuilder.append("\n Disk Size(mb): ").append(disk_size);
 
         logToFile(strBuilder.toString());
     }
 
-    public static double performInsertionExperiment(Index index, int items_to_insert, List<Long[]> labelPaths){
+    public static double performInsertionExperiment(NodeProxy index, int items_to_insert, int number_of_paths){
         double totalSum = 0;
-        for(int i = 0; i < items_to_insert; i++) {
-            Long[] relationships = labelPaths.get(i % labelPaths.size());
-            Long[] nodes = new Long[]{(long) i, (long) i, (long) i};
-            Key key = index.buildKey(relationships, nodes);
-
+        long[] key = new long[4];
+        for (int i = 0; i < items_to_insert; i++) {
+            key[0] = (long) (i % number_of_paths);
+            key[1] = (long) i;
+            key[2] = (long) i;
+            key[3] = (long) i;
             long startTime = System.nanoTime();
             //Do timed operation here
 
@@ -93,13 +113,14 @@ public class Benchmark {
         return totalSum;
     }
 
-    public static double performSearchExperiment(Index index, int items_to_insert, List<Long[]> labelPaths){
+    public static double performSearchExperiment(NodeProxy index, int items_to_insert, int number_of_paths){
         double totalSum = 0;
-        for(int i = 0; i < items_to_insert; i++) {
-            Long[] relationships = labelPaths.get(i % labelPaths.size());
-            Long[] nodes = new Long[]{(long) i, (long) i, (long) i};
-            Key key = index.buildKey(relationships, nodes);
-
+        long[] key = new long[4];
+        for (int i = 0; i < items_to_insert; i++) {
+            key[0] = (long) (i % number_of_paths);
+            key[1] = (long) i;
+            key[2] = (long) i;
+            key[3] = (long) i;
             long startTime = System.nanoTime();
             //Do timed operation here
 
@@ -113,17 +134,19 @@ public class Benchmark {
         return totalSum;
     }
 
-    public static double performDeletionExperiment(Index index, int items_to_insert, List<Long[]> labelPaths){
+    public static double performDeletionExperiment(NodeProxy index, int items_to_insert, int number_of_paths){
         double totalSum = 0;
-        for(int i = 0; i < items_to_insert; i++) {
-            Long[] relationships = labelPaths.get(i % labelPaths.size());
-            Long[] nodes = new Long[]{(long) i, (long) i, (long) i};
-            Key key = index.buildKey(relationships, nodes);
+        long[] key = new long[4];
+        for (int i = 0; i < items_to_insert; i++) {
+            key[0] = (long) (i % number_of_paths);
+            key[1] = (long) i;
+            key[2] = (long) i;
+            key[3] = (long) i;
 
             long startTime = System.nanoTime();
             //Do timed operation here
 
-            index.remove(key);
+            //index.remove(key);
 
             long endTime = System.nanoTime();
 

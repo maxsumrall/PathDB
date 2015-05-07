@@ -519,9 +519,11 @@ public class NodeProxy {
                 do {
                     searchResult = find(cursor, key);
                     long currentNode = cursor.getCurrentPageId();
-                    int[] altResult = moveCursorBackIfPreviousNodeContainsValidKeys(cursor, key);
-                    if(currentNode != cursor.getCurrentPageId()){
-                        searchResult = altResult;
+                    if(searchResult[0] == 0) {
+                        int[] altResult = moveCursorBackIfPreviousNodeContainsValidKeys(cursor, key);
+                        if (currentNode != cursor.getCurrentPageId()) {
+                            searchResult = altResult;
+                        }
                     }
                     byte[] keys = new byte[NodeHeader.getNumberOfKeys(cursor) * NodeHeader.getKeyLength(cursor) * 8];
                     cursor.setOffset(NodeHeader.NODE_HEADER_LENGTH);
