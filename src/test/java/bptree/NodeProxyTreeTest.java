@@ -76,7 +76,7 @@ public class NodeProxyTreeTest {
     public void benchmarkTest() throws IOException{
         double totalSum = 0;
         double avg;
-        int items_to_insert = 10000000;
+        int items_to_insert = 1000000;
         int number_of_paths = 10000;
         long[][] keys = new long[items_to_insert][4];
         for (int i = 0; i < keys.length; i++) {
@@ -97,7 +97,6 @@ public class NodeProxyTreeTest {
             totalSum += duration / 1000;//convert to from nanoseconds to microseconds.
         }
         avg = totalSum / items_to_insert;
-        System.out.println("Total Sum : " + totalSum);
         System.out.println("Average Insertion Time: " + avg);
 
         totalSum = 0d;
@@ -108,14 +107,15 @@ public class NodeProxyTreeTest {
 
             proxy.find(key);
 
+
             long endTime = System.nanoTime();
 
             long duration = (endTime - startTime);
             totalSum += duration / 1000;//convert to from nanoseconds to microseconds.
         }
         avg = totalSum / items_to_insert;
-        System.out.println("Total Sum : " + totalSum);
         System.out.println("Average Search Time: " + avg);
+
 
     }
 }
