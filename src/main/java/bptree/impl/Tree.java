@@ -276,7 +276,7 @@ public class Tree implements Closeable, Serializable, ObjectInputValidation {
         return (LeafNode) currentNode;
     }
     public int getDepthOfTree() throws IOException{
-        Node currentNode = getNode(rootNodePageID);
+        Node currentNode = getNode(proxy.rootNodeId);
         int  depth = 1;
         while(currentNode instanceof InternalNode){
             depth++;
