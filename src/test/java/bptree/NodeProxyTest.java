@@ -18,7 +18,7 @@ public class NodeProxyTest {
     Index index;
     ArrayList labelPaths;
     PathIndexImpl pindex;
-    NodeProxy proxy;
+    NodeTree proxy;
     @Before
     public void initializeIndex() throws IOException {
         labelPaths = exampleLabelPaths(20,2);
@@ -33,7 +33,7 @@ public class NodeProxyTest {
             index.insert(key);
         }
         pindex = ((PathIndexImpl)index);
-        proxy = new NodeProxy(pindex.tree.rootNodePageID, pindex.tree.nodeKeeper.diskCache.getPagedFile());
+        proxy = new NodeTree(pindex.tree.rootNodePageID, pindex.tree.nodeKeeper.diskCache.getPagedFile());
     }
 
     public long[] toPrimitive(Long[] key){
@@ -49,7 +49,7 @@ public class NodeProxyTest {
             long[] keyprim = new long[key.length];
             for(int i = 0; i < key.length; i++){keyprim[i] = key[i];}
             int nodeSearch = node.search(key);
-            int proxySearch = proxy.search(pindex.tree.rootNodePageID, keyprim)[0];
+            int proxySearch = NodeSearch.search(pindex.tree.rootNodePageID, keyprim)[0];
             assert(nodeSearch == proxySearch);
         }
     }
@@ -65,7 +65,7 @@ public class NodeProxyTest {
         pindex.tree.writeNodeToPage(node);
         for(Long[] key : node.keys){
             int nodeSearch = node.search(key);
-            int proxySearch = proxy.search(pindex.tree.rootNodePageID, toPrimitive(key))[0];
+            int proxySearch = NodeSearch.search(pindex.tree.rootNodePageID, toPrimitive(key))[0];
             assert(nodeSearch == proxySearch);
         }
     }
@@ -75,7 +75,7 @@ public class NodeProxyTest {
         LeafNode node = (LeafNode) pindex.tree.getFirstLeaf();
         for(Long[] key : node.keys){
             int nodeSearch = node.search(key);
-            int proxySearch = proxy.search(node.id, toPrimitive(key))[0];
+            int proxySearch = NodeSearch.search(node.id, toPrimitive(key))[0];
             assert(nodeSearch == proxySearch);
         }
     }
@@ -89,7 +89,7 @@ public class NodeProxyTest {
         node.insert(newKey); //insert a new longer than normal key
         for(Long[] key : node.keys){
             int nodeSearch = node.search(key);
-            int proxySearch = proxy.search(node.id, toPrimitive(key))[0];
+            int proxySearch = NodeSearch.search(node.id, toPrimitive(key))[0];
             assert(nodeSearch == proxySearch);
         }
     }
@@ -102,7 +102,7 @@ public class NodeProxyTest {
             long[] keyprimitive = new long[key.length];
             for(int i = 0; i < key.length; i++){keyprimitive[i] = key[i];}
             int nodeSearch = node.search(key);
-            int proxySearch = proxy.search(pindex.tree.rootNodePageID, keyprimitive)[0];
+            int proxySearch = NodeSearch.search(pindex.tree.rootNodePageID, keyprimitive)[0];
             assert(node.children.get(nodeSearch) == proxy.getChildIdAtIndex(pindex.tree.rootNodePageID, proxySearch));
         }
     }
@@ -110,7 +110,7 @@ public class NodeProxyTest {
     @Test
     public void leafNodeSameLengthKeysByteSize() throws IOException{
         LeafNode node = (LeafNode) pindex.tree.getFirstLeaf();
-        int sizeProxy = proxy.leafNodeByteSize(node.id, toPrimitive(node.keys.get(0)));
+        int sizeProxy = NodeSize.leafNodeByteSize(node.id, toPrimitive(node.keys.get(0)));
         int sizeNode = node.byteRepresentationSize(node.keys.get(0));
         assert(sizeProxy == sizeNode);
     }
@@ -122,7 +122,7 @@ public class NodeProxyTest {
         Long[] newKey = pindex.buildComposedKey(new KeyImpl(new Long[]{9l, 9l, 9l}, new Long[]{6l, 6l, 6l, 6l}));
         assert(!node.hasSameKeyLength(newKey)); //New key is not the same length
         node.insert(newKey); //insert a new longer than normal key
-        int sizeProxy = proxy.leafNodeByteSize(node.id, toPrimitive(newKey));
+        int sizeProxy = NodeSize.leafNodeByteSize(node.id, toPrimitive(newKey));
         int sizeNode = node.byteRepresentationSize(newKey);
         assert(sizeProxy == sizeNode);
     }
@@ -130,7 +130,7 @@ public class NodeProxyTest {
     @Test
     public void internalNodeSameLengthKeysByteSize() throws IOException{
         InternalNode node = (InternalNode) pindex.tree.getNode(pindex.tree.rootNodePageID);
-        int sizeProxy = proxy.internalNodeByteSize(node.id, toPrimitive(node.keys.get(0)));
+        int sizeProxy = NodeSize.internalNodeByteSize(node.id, toPrimitive(node.keys.get(0)));
         int sizeNode = node.byteRepresentationSize(node.keys.get(0));
         assert(sizeProxy == sizeNode);
     }
@@ -144,7 +144,7 @@ public class NodeProxyTest {
         node.children.add(999l);
         node.determineIfKeysAreSameLength();
         pindex.tree.writeNodeToPage(node);
-        int sizeProxy = proxy.internalNodeByteSize(node.id, toPrimitive(newKey));
+        int sizeProxy = NodeSize.internalNodeByteSize(node.id, toPrimitive(newKey));
         int sizeNode = node.byteRepresentationSize(newKey);
         assert(sizeProxy == sizeNode);
     }
@@ -166,7 +166,7 @@ public class NodeProxyTest {
             inserter.left = key[0];
             inserter.right = key[0];
             resultA = nodeA.insertFromResult(inserter);
-            resultB = proxy.addKeyAndChildToInternalNode(nodeB.id, toPrimitive(key), key[0]);
+            resultB = NodeInsertion.addKeyAndChildToInternalNode(nodeB.id, toPrimitive(key), key[0]);
             assert(resultA == resultB);
         }
         keys.add(new Long[]{255l,255l,255l,255l});
@@ -174,7 +174,7 @@ public class NodeProxyTest {
         inserter.left = keys.getLast()[0];
         inserter.right = keys.getLast()[0];
         resultA = nodeA.insertFromResult(inserter);
-        resultB = proxy.addKeyAndChildToInternalNode(nodeB.id, toPrimitive(keys.getLast()), keys.getLast()[0]);
+        resultB = NodeInsertion.addKeyAndChildToInternalNode(nodeB.id, toPrimitive(keys.getLast()), keys.getLast()[0]);
        // assert(Arrays.equals(toPrimitive(resultA.key), resultB.primkey));
     }
     @Test
@@ -203,11 +203,11 @@ public class NodeProxyTest {
         Collections.shuffle(keys, new Random());
         for(Long[] key : keys){
             nodeA.insert(key);
-            proxy.addKeyToLeafNode(nodeB.id, toPrimitive(key));
+            NodeInsertion.addKeyToLeafNode(nodeB.id, toPrimitive(key));
         }
 
         for(Long[] key : keys){
-            assert(nodeA.search(key) == proxy.search(nodeB.id, toPrimitive(key))[0]);
+            assert(nodeA.search(key) == NodeSearch.search(nodeB.id, toPrimitive(key))[0]);
         }
     }
     @Test
@@ -223,12 +223,12 @@ public class NodeProxyTest {
         SplitResult resultB = null;
         for(Long[] key : keys){
             resultA = nodeA.insert(key);
-            resultB = proxy.addKeyToLeafNode(nodeB.id, toPrimitive(key));
+            resultB = NodeInsertion.addKeyToLeafNode(nodeB.id, toPrimitive(key));
             assert(resultA == resultB);
         }
         keys.add(new Long[]{255l,255l,255l,255l});
         resultA = nodeA.insert(keys.getLast());
-        resultB = proxy.addKeyToLeafNode(nodeB.id, toPrimitive(keys.getLast()));
+        resultB = NodeInsertion.addKeyToLeafNode(nodeB.id, toPrimitive(keys.getLast()));
         assert(Arrays.equals(toPrimitive(resultA.key), resultB.primkey));
     }
 
@@ -248,12 +248,12 @@ public class NodeProxyTest {
         SplitResult resultB = null;
         for(Long[] key : keys){
             resultA = nodeA.insert(key);
-            resultB = proxy.addKeyToLeafNode(nodeB.id, toPrimitive(key));
+            resultB = NodeInsertion.addKeyToLeafNode(nodeB.id, toPrimitive(key));
             assert(resultA == resultB);
         }
         keys.add(new Long[]{255l,255l,255l,255l});
         resultA = nodeA.insert(keys.getLast());
-        resultB = proxy.addKeyToLeafNode(nodeB.id, toPrimitive(keys.getLast()));
+        resultB = NodeInsertion.addKeyToLeafNode(nodeB.id, toPrimitive(keys.getLast()));
         assert(Arrays.equals(toPrimitive(resultA.key), resultB.primkey));
     }
     @Test
@@ -272,12 +272,12 @@ public class NodeProxyTest {
         Collections.shuffle(keys, new Random());
         for(Long[] key : keys){
             nodeA.insert(key);
-            proxy.addKeyToLeafNode(nodeB.id, toPrimitive(key));
+            NodeInsertion.addKeyToLeafNode(nodeB.id, toPrimitive(key));
         }
 
         for(Long[] key : keys){
             int resultA = nodeA.search(key);
-            int resultB = proxy.search(nodeB.id, toPrimitive(key))[0];
+            int resultB = NodeSearch.search(nodeB.id, toPrimitive(key))[0];
             assert(resultA == resultB);
         }
     }

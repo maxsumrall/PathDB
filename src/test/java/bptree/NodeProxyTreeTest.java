@@ -1,6 +1,6 @@
 package bptree;
 
-import bptree.impl.NodeProxy;
+import bptree.impl.NodeTree;
 import bptree.impl.PathIndexImpl;
 import bptree.impl.ProxyCursor;
 import org.junit.Before;
@@ -20,7 +20,7 @@ public class NodeProxyTreeTest {
     Index index;
     ArrayList<Long[]> labelPaths;
     PathIndexImpl pindex;
-    NodeProxy proxy;
+    NodeTree proxy;
 
     public long[] toPrimitive(Long[] key) {
         long[] keyprim = new long[key.length];
@@ -39,12 +39,12 @@ public class NodeProxyTreeTest {
                 .setSignaturesToDefault();
 
         pindex = ((PathIndexImpl) index);
-        proxy = new NodeProxy(pindex.tree.rootNodePageID, pindex.tree.nodeKeeper.diskCache.pagedFile);
+        proxy = new NodeTree(pindex.tree.rootNodePageID, pindex.tree.nodeKeeper.diskCache.pagedFile);
     }
 
     @Test
     public void insertStuffTest() throws IOException {
-        long[][] keys = new long[120000][4];
+        long[][] keys = new long[60000][4];
         int number_of_paths = 10000;
         for (int i = 0; i < keys.length; i++) {
             keys[i][0] = (long)(i % number_of_paths);
@@ -68,6 +68,17 @@ public class NodeProxyTreeTest {
                 count++;
             }
             assert(count == keys.length / number_of_paths);
+        }
+
+
+        for(int i = 0; i < keys.length/2; i++){
+            pindex.tree.proxyRemove(keys[i]);
+            }
+        for(int i = keys.length/2; i < keys.length; i++){
+            assert(pindex.tree.proxyFind(keys[i]).hasNext());
+        }
+        for(int i = 0; i < keys.length/2; i++){
+            assert(!pindex.tree.proxyFind(keys[i]).hasNext());
         }
     }
 }

@@ -1,6 +1,8 @@
 package bptree.impl;
 
 
+import org.neo4j.io.pagecache.PageCursor;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.LinkedHashMap;
@@ -37,6 +39,22 @@ public class NodeKeeper {
             cache.put(node.id, node);
             return node;
         }
+    }
+    public Node getNode(PageCursor cursor) throws IOException {
+        Node node;
+        ByteBuffer buffer = this.diskCache.readPage(cursor);
+        long id = cursor.getCurrentPageId();
+
+        if (buffer.capacity() == 0) {
+            throw new IOException("Unable to read page from cache. Page: " + id);
+        }
+        if (NodeHeader.isLeafNode(buffer)) {
+            node = LeafNode.instantiateNodeFromBuffer(buffer, tree, id);
+        } else {
+            node = InternalNode.instantiateNodeFromBuffer(buffer, tree, id);
+        }
+        cache.put(node.id, node);
+        return node;
     }
 
     public void writeNodeToPage(Node node){

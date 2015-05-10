@@ -17,16 +17,15 @@ public class ProxyCursor {
     int capacity;
     int keyLength;
     long[] searchKey;
-    NodeProxy proxy;
+    NodeTree proxy;
 
-    public ProxyCursor(long siblingNode, int position, LongBuffer keys, long[] searchKey, int keyLength, NodeProxy proxy){
+    public ProxyCursor(long siblingNode, int position, LongBuffer keys, long[] searchKey, int keyLength){
         this.siblingNode = siblingNode;
         this.keys = keys;
         this.searchKey = searchKey;
         this.keyLength = keyLength;
         this.position = position * keyLength;
         this.capacity = keys.capacity();
-        this.proxy = proxy;
     }
 
     public long[] next(){
@@ -70,7 +69,7 @@ public class ProxyCursor {
             if (cursor.next()) {
                 do {
                     this.siblingNode = NodeHeader.getSiblingID(cursor);
-                    this.position = proxy.search(cursor, searchKey)[0];
+                    this.position = NodeSearch.search(cursor, searchKey)[0];
                     byte[] keysB = new byte[NodeHeader.getNumberOfKeys(cursor) * keyLength *  8];
                     cursor.setOffset(NodeHeader.NODE_HEADER_LENGTH);
                     cursor.getBytes(keysB);

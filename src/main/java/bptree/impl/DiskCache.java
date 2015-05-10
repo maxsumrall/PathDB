@@ -79,6 +79,13 @@ public class DiskCache {
         }
         return ByteBuffer.wrap(byteArray);
     }
+    public ByteBuffer readPage(PageCursor cursor) {
+        cursor.setOffset(0);
+        byte[] byteArray = new byte[0];
+        byteArray = new byte[PAGE_SIZE];
+        cursor.getBytes(byteArray);
+        return ByteBuffer.wrap(byteArray);
+    }
 
     public void writePage(long id, byte[] bytes) {
         try (PageCursor cursor = pagedFile.io(id, PagedFile.PF_EXCLUSIVE_LOCK)) {

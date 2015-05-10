@@ -2,6 +2,7 @@ package bptree.impl;
 
 import bptree.Cursor;
 import bptree.RemoveResult;
+import org.neo4j.io.pagecache.PageCursor;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -19,7 +20,7 @@ public class Tree implements Closeable, Serializable, ObjectInputValidation {
     public NodeKeeper nodeKeeper;
     private LinkedList<Long> lastTrace = new LinkedList<>();
     private int keySetSize = 0;
-    public NodeProxy proxy;
+    public NodeTree proxy;
 
     /**
      * Constructs a new Tree object
@@ -32,7 +33,7 @@ public class Tree implements Closeable, Serializable, ObjectInputValidation {
         idPool = new AvailablePageIdPool(nodeKeeper.diskCache.getMaxNumberOfPages());
         Node rootNode = createLeafNode();
         rootNodePageID = rootNode.id;
-        proxy = new NodeProxy(rootNodePageID, diskCache.pagedFile);
+        proxy = new NodeTree(rootNodePageID, diskCache.pagedFile);
     }
     public static Tree initializeTemporaryNewTree() throws IOException {
         return initializeNewTree(DEFAULT_TREE_FILE_NAME, DiskCache.temporaryDiskCache()); //Delete on exit
@@ -72,6 +73,10 @@ public class Tree implements Closeable, Serializable, ObjectInputValidation {
         //    throw new IOException("Invalid Node ID: Attempting to read page ID of free'd page/node");
         //}
         return nodeKeeper.getNode(id);
+    }
+
+    public Node getNode(PageCursor cursor) throws IOException {
+        return nodeKeeper.getNode(cursor);
     }
 
     private void updateLogger(Long id){
@@ -201,17 +206,25 @@ public class Tree implements Closeable, Serializable, ObjectInputValidation {
     }
 
     public void proxyInsertion(long[] key) throws IOException{
-        SplitResult result = proxy.insert(key);
+        SplitResult result = NodeInsertion.insert(key);
 
         if(result != null){
             InternalNode newRoot = createInternalNode();
-            proxy.rootNodeId = newRoot.id;
-            proxy.newRoot(result.left, result.right, result.primkey);
+            NodeTree.rootNodeId = newRoot.id;
+            NodeTree.newRoot(result.left, result.right, result.primkey);
         }
     }
 
     public ProxyCursor proxyFind(long[] key) throws IOException{
-        return proxy.find(key);
+        return NodeSearch.find(key);
+    }
+
+    public void proxyRemove(long[] key) throws IOException{
+        RemoveResultProxy result = NodeDeletion.remove(key);
+        if(result != null){
+            LeafNode newRoot = createLeafNode();
+            NodeTree.rootNodeId = newRoot.id;
+        }
     }
 
     public int getCountOfMatchingKeys(Long[] search_key) throws IOException {

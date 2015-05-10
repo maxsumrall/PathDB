@@ -1,7 +1,9 @@
 package Benchmark;
 
 import bptree.Index;
-import bptree.impl.NodeProxy;
+import bptree.impl.NodeInsertion;
+import bptree.impl.NodeSearch;
+import bptree.impl.NodeTree;
 import bptree.impl.PathIndexImpl;
 
 import java.io.BufferedWriter;
@@ -20,7 +22,7 @@ public class Benchmark {
     public static Index index;
     public static LinkedList<Long[]> labelPaths;
     public static PathIndexImpl pindex;
-    public static NodeProxy proxy;
+    public static NodeTree proxy;
 
     public static void main(String[] args) throws IOException {
 
@@ -33,17 +35,17 @@ public class Benchmark {
         //System.out.println("------ 100000 -------");
         //runExperiment(100000);
 
-        //System.out.println("------ 1000000 -------");
-        //runExperiment(1000000);
+        System.out.println("------ 1000000 -------");
+        runExperiment(1000000);
 
-        System.out.println("------ 10,000,000 -------");
-        runExperiment(10000000);
+        //System.out.println("------ 10,000,000 -------");
+        //runExperiment(10000000);
 
-        System.out.println("------ 100,000,000 -------");
-        runExperiment(100000000);
+        //System.out.println("------ 100,000,000 -------");
+        //runExperiment(100000000);
 
-        System.out.println("------ 1,000,000,000 -------");
-        runExperiment(1000000000);
+       // System.out.println("------ 1,000,000,000 -------");
+       // runExperiment(1000000000);
 
 
         System.out.println("Benchmarking completed.");
@@ -57,7 +59,7 @@ public class Benchmark {
                 .setSignaturesToDefault();
 
         pindex = ((PathIndexImpl) index);
-        proxy = new NodeProxy(pindex.tree.rootNodePageID, pindex.tree.nodeKeeper.diskCache.pagedFile);
+        proxy = new NodeTree(pindex.tree.rootNodePageID, pindex.tree.nodeKeeper.diskCache.pagedFile);
 
         int number_of_paths = 10000;
 
@@ -92,7 +94,7 @@ public class Benchmark {
         logToFile(strBuilder.toString());
     }
 
-    public static double performInsertionExperiment(NodeProxy index, int items_to_insert, int number_of_paths){
+    public static double performInsertionExperiment(NodeTree index, int items_to_insert, int number_of_paths){
         double totalSum = 0;
         long[] key = new long[4];
         for (int i = 0; i < items_to_insert; i++) {
@@ -103,7 +105,7 @@ public class Benchmark {
             long startTime = System.nanoTime();
             //Do timed operation here
 
-            index.insert(key);
+            NodeInsertion.insert(key);
 
             long endTime = System.nanoTime();
 
@@ -113,7 +115,7 @@ public class Benchmark {
         return totalSum;
     }
 
-    public static double performSearchExperiment(NodeProxy index, int items_to_insert, int number_of_paths){
+    public static double performSearchExperiment(NodeTree index, int items_to_insert, int number_of_paths){
         double totalSum = 0;
         long[] key = new long[4];
         for (int i = 0; i < items_to_insert; i++) {
@@ -124,7 +126,7 @@ public class Benchmark {
             long startTime = System.nanoTime();
             //Do timed operation here
 
-            index.find(key);
+            NodeSearch.find(key);
 
             long endTime = System.nanoTime();
 
@@ -134,7 +136,7 @@ public class Benchmark {
         return totalSum;
     }
 
-    public static double performDeletionExperiment(NodeProxy index, int items_to_insert, int number_of_paths){
+    public static double performDeletionExperiment(NodeTree index, int items_to_insert, int number_of_paths){
         double totalSum = 0;
         long[] key = new long[4];
         for (int i = 0; i < items_to_insert; i++) {
