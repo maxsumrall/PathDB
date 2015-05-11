@@ -2,7 +2,7 @@ package bptree;
 
 import bptree.impl.NodeTree;
 import bptree.impl.PathIndexImpl;
-import bptree.impl.ProxyCursor;
+import bptree.impl.SearchCursor;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -53,7 +53,7 @@ public class NodeProxyTreeTest {
             keys[i][3] = (long)i;
             pindex.tree.proxyInsertion(keys[i]);
         }
-        ProxyCursor cursor;
+        SearchCursor cursor;
         long[] foundKey;
         for(long[] key : keys){
             cursor = pindex.tree.proxyFind(key);

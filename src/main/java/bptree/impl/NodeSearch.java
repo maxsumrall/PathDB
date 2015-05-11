@@ -13,9 +13,9 @@ import java.nio.LongBuffer;
 public class NodeSearch {
     private static PrimitiveLongArray arrayUtil = new PrimitiveLongArray();
 
-    public static ProxyCursor find(long[] key){
+    public static SearchCursor find(long[] key){
         long[] entry = null;
-        ProxyCursor resultsCursor = null;
+        SearchCursor resultsCursor = null;
         int[] searchResult;
         try (PageCursor cursor = NodeTree.pagedFile.io(NodeTree.rootNodeId, PagedFile.PF_SHARED_LOCK)) {
             if (cursor.next()) {
@@ -32,7 +32,7 @@ public class NodeSearch {
                     cursor.setOffset(NodeHeader.NODE_HEADER_LENGTH);
                     cursor.getBytes(keys);
                     LongBuffer keysLB = ByteBuffer.wrap(keys).asLongBuffer();
-                    resultsCursor = new ProxyCursor(NodeHeader.getSiblingID(cursor), searchResult[0], keysLB, key, NodeHeader.getKeyLength(cursor));
+                    resultsCursor = new SearchCursor(NodeHeader.getSiblingID(cursor), searchResult[0], keysLB, key, NodeHeader.getKeyLength(cursor));
                 }
                 while (cursor.shouldRetry());
             }

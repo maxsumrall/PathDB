@@ -121,11 +121,12 @@ public class NodeBulkLoader {
         long nextNode = NodeHeader.getSiblingID(cursor);
 
         while(nextNode != -1l){
-            addLeafToParent(cursor, currentNode);
+            copyUpLeafToParent(cursor, currentNode);
             currentNode = nextNode;
             cursor.next(nextNode);
             nextNode = NodeHeader.getSiblingID(cursor);
         }
+        copyUpLeafToParent(cursor, currentNode);
         cursor.next(currentParent);
         cursor.setOffset(NodeHeader.NODE_HEADER_LENGTH);
         cursor.putBytes(parentWriter.getChildren());
@@ -141,6 +142,44 @@ public class NodeBulkLoader {
             return firstParent;
         }
     }
+
+    private void copyUpLeafToParent(PageCursor cursor, long leaf) throws IOException {
+        if(currentPair > MAX_PAIRS){
+            cursor.next(this.currentParent);
+            cursor.setOffset(NodeHeader.NODE_HEADER_LENGTH);
+            cursor.putBytes(parentWriter.getChildren());
+            cursor.putBytes(parentWriter.getKeys());
+            NodeHeader.setNumberOfKeys(cursor, MAX_PAIRS);
+            long newParent = NodeTree.acquireNewInternalNode(cursor);
+            cursor.next(newParent);
+            NodeHeader.setKeyLength(cursor, KEY_LENGTH);
+            NodeTree.updateSiblingAndFollowingIdsInsertion(cursor, this.currentParent, newParent);
+            this.currentParent = newParent;
+            this.currentOffset = 0;
+            this.currentPair = 0;
+        }
+        if(this.currentOffset == 0){
+            parentWriter.addChild(leaf);
+        }
+        else{
+            cursor.next(leaf);
+            parentWriter.addChild(leaf);
+            parentWriter.addKey(traverseToFindFirstKeyInLeafAsBytes(cursor));
+        }
+        this.currentPair++;
+        this.currentOffset+=8;
+    }
+    public static byte[] traverseToFindFirstKeyInLeafAsBytes(PageCursor cursor) throws IOException {
+        if(NodeHeader.isLeafNode(cursor)){
+            return NodeInsertion.getFirstKeyInNodeAsBytes(cursor);
+        }
+        else{
+            long leftMostChild = NodeTree.getChildIdAtIndex(cursor, 0);
+            cursor.next(leftMostChild);
+            return traverseToFindFirstKeyInLeafAsBytes(cursor);
+        }
+    }
+
 
     private class ParentBufferWriter {
         byte[] children = new byte[RESERVED_CHILDREN_SPACE];

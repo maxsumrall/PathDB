@@ -44,6 +44,20 @@ public class NodeTree {
     }
 
 
+    public SearchCursor find(long[] key){
+        return NodeSearch.find(key);
+    }
+
+    public void insert(long[] key){
+        NodeInsertion.insert(key);
+    }
+
+    public void remove(long[] key){
+        NodeDeletion.remove(key);
+    }
+
+
+
     public static void setPrecedingId(long nodeId, long newPrecedingId){
         try (PageCursor cursor = pagedFile.io(nodeId, PagedFile.PF_EXCLUSIVE_LOCK)) {
             if (cursor.next()) {
@@ -163,7 +177,7 @@ public class NodeTree {
         AvailablePageIdPool.releaseId(nodeId);
     }
 
-    private static void removeFirstKeyInInternalNode(PageCursor cursor){
+    public static void removeFirstKeyInInternalNode(PageCursor cursor){
         byte[] compactionBytes = new byte[DiskCache.PAGE_SIZE - NodeHeader.NODE_HEADER_LENGTH - 8]; //removing child
         cursor.setOffset(NodeHeader.NODE_HEADER_LENGTH + 8);
         cursor.getBytes(compactionBytes);

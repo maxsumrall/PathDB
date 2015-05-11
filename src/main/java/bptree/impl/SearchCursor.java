@@ -10,7 +10,7 @@ import java.nio.LongBuffer;
 /**
  * Created by max on 5/6/15.
  */
-public class ProxyCursor {
+public class SearchCursor {
     long siblingNode;
     int position;
     LongBuffer keys;
@@ -19,7 +19,7 @@ public class ProxyCursor {
     long[] searchKey;
     NodeTree proxy;
 
-    public ProxyCursor(long siblingNode, int position, LongBuffer keys, long[] searchKey, int keyLength){
+    public SearchCursor(long siblingNode, int position, LongBuffer keys, long[] searchKey, int keyLength){
         this.siblingNode = siblingNode;
         this.keys = keys;
         this.searchKey = searchKey;

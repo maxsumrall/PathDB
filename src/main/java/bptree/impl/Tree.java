@@ -215,7 +215,7 @@ public class Tree implements Closeable, Serializable, ObjectInputValidation {
         }
     }
 
-    public ProxyCursor proxyFind(long[] key) throws IOException{
+    public SearchCursor proxyFind(long[] key) throws IOException{
         return NodeSearch.find(key);
     }
 

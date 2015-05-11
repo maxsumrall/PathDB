@@ -282,6 +282,34 @@ public class NodeInsertion {
         }
         return firstKey;
     }
+
+    public static byte[] popFirstKeyInNodeAsBytes(PageCursor cursor){
+        byte[] firstKey;
+        if(NodeHeader.isLeafNode(cursor)){
+            cursor.setOffset(NodeHeader.NODE_HEADER_LENGTH);
+        }
+        else{
+            int children = NodeHeader.getNumberOfKeys(cursor) + 1;
+            cursor.setOffset(NodeHeader.NODE_HEADER_LENGTH + children * 8);
+        }
+
+        if(NodeHeader.isNodeWithSameLengthKeys(cursor)){
+            int keyLength = NodeHeader.getKeyLength(cursor);
+            firstKey = new byte[keyLength * 8];
+            cursor.getBytes(firstKey);
+        }
+        else{
+            long currKey = cursor.getLong();
+            while(currKey != Node.KEY_DELIMITER) {
+                arrayUtil.put(currKey);
+                currKey = cursor.getLong();
+            }
+            firstKey = arrayUtil.getAsBytes();
+        }
+
+        return firstKey;
+    }
+
     private static void insertKeyAtIndex(PageCursor cursor, int offset, long[] key){
         byte[] tmp_bytes;
         if(NodeHeader.isNodeWithSameLengthKeys(cursor)) {
