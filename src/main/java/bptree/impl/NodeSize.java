@@ -1,6 +1,6 @@
 package bptree.impl;
 
-import org.neo4j.io.pagecache.PageCursor;
+import bptree.PageProxyCursor;
 import org.neo4j.io.pagecache.PagedFile;
 
 import java.io.IOException;
@@ -10,30 +10,27 @@ import java.io.IOException;
  */
 public class NodeSize {
 
+    public static PageProxyCursor cursor;
+
     public static boolean leafNodeContainsSpaceForNewKey(long nodeId, long[] newKey){
         return leafNodeByteSize(nodeId, newKey) < DiskCache.PAGE_SIZE;
     }
 
-    public static boolean leafNodeContainsSpaceForNewKey(PageCursor cursor, long[] newKey){
+    public static boolean leafNodeContainsSpaceForNewKey(PageProxyCursor cursor, long[] newKey){
         return leafNodeByteSize(cursor, newKey) < DiskCache.PAGE_SIZE;
     }
 
     public static int leafNodeByteSize(long nodeId, long[] newKey){
         int size = 0;
-        try (PageCursor cursor = NodeTree.pagedFile.io(nodeId, PagedFile.PF_EXCLUSIVE_LOCK)) {
-            if (cursor.next()) {
-                do {
+        try (PageProxyCursor cursor = DiskCache.getCursor(nodeId, PagedFile.PF_EXCLUSIVE_LOCK)) {
                     size = leafNodeByteSize(cursor, newKey);
-                }
-                while (cursor.shouldRetry());
-            }
         } catch (IOException e) {
             e.printStackTrace();
         }
         return size;
     }
 
-    public static int leafNodeByteSize(PageCursor cursor, long[] newKey){
+    public static int leafNodeByteSize(PageProxyCursor cursor, long[] newKey){
         int byteSize = 0;
         int numberOfKeys = NodeHeader.getNumberOfKeys(cursor);
         byteSize += NodeHeader.NODE_HEADER_LENGTH;
@@ -61,26 +58,21 @@ public class NodeSize {
         return internalNodeByteSize(nodeId, newKey) < DiskCache.PAGE_SIZE;
     }
 
-    public static boolean internalNodeContainsSpaceForNewKeyAndChild(PageCursor cursor, long[] newKey){
+    public static boolean internalNodeContainsSpaceForNewKeyAndChild(PageProxyCursor cursor, long[] newKey){
         return internalNodeByteSize(cursor, newKey) < DiskCache.PAGE_SIZE;
     }
 
     public static int internalNodeByteSize(long nodeId, long[] newKey){
         int size = 0;
-        try (PageCursor cursor = NodeTree.pagedFile.io(nodeId, PagedFile.PF_EXCLUSIVE_LOCK)) {
-            if (cursor.next()) {
-                do {
+        try (PageProxyCursor cursor = DiskCache.getCursor(nodeId, PagedFile.PF_EXCLUSIVE_LOCK)) {
                     size = internalNodeByteSize(cursor, newKey);
-                }
-                while (cursor.shouldRetry());
-            }
         } catch (IOException e) {
             e.printStackTrace();
         }
         return size;
     }
 
-    public static int internalNodeByteSize(PageCursor cursor, long[] newKey){
+    public static int internalNodeByteSize(PageProxyCursor cursor, long[] newKey){
         int byteSize = 0;
         int numberOfKeys = NodeHeader.getNumberOfKeys(cursor);
         byteSize += NodeHeader.NODE_HEADER_LENGTH;

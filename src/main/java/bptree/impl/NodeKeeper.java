@@ -1,7 +1,7 @@
 package bptree.impl;
 
 
-import org.neo4j.io.pagecache.PageCursor;
+import bptree.PageProxyCursor;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -40,7 +40,7 @@ public class NodeKeeper {
             return node;
         }
     }
-    public Node getNode(PageCursor cursor) throws IOException {
+    public Node getNode(PageProxyCursor cursor) throws IOException {
         Node node;
         ByteBuffer buffer = this.diskCache.readPage(cursor);
         long id = cursor.getCurrentPageId();

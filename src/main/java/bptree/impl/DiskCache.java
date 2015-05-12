@@ -1,7 +1,7 @@
 package bptree.impl;
 
+import bptree.PageProxyCursor;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
-import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.PagedFile;
 import org.neo4j.io.pagecache.impl.muninn.MuninnPageCache;
 import org.neo4j.io.pagecache.monitoring.PageCacheMonitor;
@@ -27,7 +27,7 @@ public class DiskCache {
     protected transient MuninnPageCache pageCache;
     public static transient PagedFile pagedFile;
     public File cache_file;
-
+    public static DiskCache singleInstance;
 
     private DiskCache(File cache_file) {
         try {
@@ -38,23 +38,31 @@ public class DiskCache {
             e.printStackTrace();
         }
     }
+    public static PageProxyCursor getCursor(long id, int lockType) throws IOException {
+        return new BasicPageCursor(singleInstance, id, lockType);
+        //return new ZLIBPageCursor(singleInstance, id, lockType);
+    }
 
     public static DiskCache temporaryDiskCache(){
-        return temporaryDiskCache(DEFAULT_CACHE_FILE_NAME);
+        singleInstance = temporaryDiskCache(DEFAULT_CACHE_FILE_NAME);
+        return singleInstance;
     }
 
     public static DiskCache temporaryDiskCache(String filename){
         File cache_file = new File(filename);
         cache_file.deleteOnExit();
-        return new DiskCache(cache_file);
+        singleInstance = new DiskCache(cache_file);
+        return singleInstance;
     }
 
     public static DiskCache persistentDiskCache(){
-        return persistentDiskCache(DEFAULT_CACHE_FILE_NAME);
+        singleInstance =  persistentDiskCache(DEFAULT_CACHE_FILE_NAME);
+        return singleInstance;
     }
 
     public static DiskCache persistentDiskCache(String filename){
-        return new DiskCache(new File(filename));
+        singleInstance = new DiskCache(new File(filename));
+        return singleInstance;
     }
 
     private void initializePageCache(File page_cache_file) throws IOException {
@@ -65,37 +73,27 @@ public class DiskCache {
 
     public ByteBuffer readPage(long id) {
         byte[] byteArray = new byte[0];
-        //try (PageCursor cursor = pagedFile.io(id, PagedFile.PF_EXCLUSIVE_LOCK)) {
-        try (PageCursor cursor = pagedFile.io(id, PagedFile.PF_SHARED_LOCK)) {
-            if (cursor.next()) {
-                do {
-                    byteArray = new byte[PAGE_SIZE];
+        try (PageProxyCursor cursor = DiskCache.getCursor(NodeTree.rootNodeId, PagedFile.PF_EXCLUSIVE_LOCK)) {
+                    byteArray = new byte[cursor.getSize()];
                     cursor.getBytes(byteArray);
-                }
-                while (cursor.shouldRetry());
-            }
+
         } catch (IOException e) {
             e.printStackTrace();
         }
         return ByteBuffer.wrap(byteArray);
     }
-    public ByteBuffer readPage(PageCursor cursor) {
+    public ByteBuffer readPage(PageProxyCursor cursor) {
         cursor.setOffset(0);
         byte[] byteArray = new byte[0];
-        byteArray = new byte[PAGE_SIZE];
+        byteArray = new byte[cursor.getSize()];
         cursor.getBytes(byteArray);
         return ByteBuffer.wrap(byteArray);
     }
 
     public void writePage(long id, byte[] bytes) {
-        try (PageCursor cursor = pagedFile.io(id, PagedFile.PF_EXCLUSIVE_LOCK)) {
-            if (cursor.next()) {
-                do {
+        try (PageProxyCursor cursor = DiskCache.getCursor(id, PagedFile.PF_EXCLUSIVE_LOCK)) {
                     // perform read or write operations on the page
                     cursor.putBytes(bytes);
-                }
-                while (cursor.shouldRetry());
-            }
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -110,7 +108,7 @@ public class DiskCache {
     }
 
     public PagedFile getPagedFile(){
-        return this.pagedFile;
+        return pagedFile;
     }
     public void shutdown() throws IOException {
         pagedFile.close();

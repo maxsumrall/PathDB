@@ -1,8 +1,8 @@
 package bptree.impl;
 
 import bptree.Cursor;
+import bptree.PageProxyCursor;
 import bptree.RemoveResult;
-import org.neo4j.io.pagecache.PageCursor;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -75,7 +75,7 @@ public class Tree implements Closeable, Serializable, ObjectInputValidation {
         return nodeKeeper.getNode(id);
     }
 
-    public Node getNode(PageCursor cursor) throws IOException {
+    public Node getNode(PageProxyCursor cursor) throws IOException {
         return nodeKeeper.getNode(cursor);
     }
 

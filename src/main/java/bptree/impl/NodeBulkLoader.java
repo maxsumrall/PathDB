@@ -1,7 +1,7 @@
 package bptree.impl;
 
 import bptree.BulkLoadDataSource;
-import org.neo4j.io.pagecache.PageCursor;
+import bptree.PageProxyCursor;
 import org.neo4j.io.pagecache.PagedFile;
 
 import java.io.IOException;
@@ -23,7 +23,7 @@ public class NodeBulkLoader {
     private int currentOffset = 0;
     private long previousLeaf = -1;
     private ParentBufferWriter parentWriter = new ParentBufferWriter();
-
+    public static PageProxyCursor cursor;
 
     public NodeBulkLoader(BulkLoadDataSource data, PagedFile pagedFile){
         this.data = data;
@@ -32,10 +32,7 @@ public class NodeBulkLoader {
 
     public long run(){
         long root = -1;
-        try (PageCursor cursor = NodeTree.pagedFile.io(0, PagedFile.PF_EXCLUSIVE_LOCK)) {
-            if (cursor.next()) {
-                do {
-
+        try (PageProxyCursor cursor = DiskCache.getCursor(NodeTree.rootNodeId, PagedFile.PF_EXCLUSIVE_LOCK)) {
                     long firstInternalNode = NodeTree.acquireNewInternalNode(cursor);
                     cursor.next(firstInternalNode);
                     NodeHeader.setKeyLength(cursor, KEY_LENGTH);
@@ -53,16 +50,13 @@ public class NodeBulkLoader {
                     //Build tree above internal nodes.
                     root = buildUpperLeaves(cursor, firstInternalNode);
 
-                }
-                while (cursor.shouldRetry());
-            }
         } catch (IOException e) {
             e.printStackTrace();
         }
         return root;
     }
 
-    private void insertKeys(PageCursor cursor, byte[] keyBytes) throws IOException {
+    private void insertKeys(PageProxyCursor cursor, byte[] keyBytes) throws IOException {
         long newLeaf = NodeTree.acquireNewLeafNode(cursor);
         cursor.next(newLeaf);
         NodeHeader.setKeyLength(cursor, KEY_LENGTH);
@@ -75,13 +69,13 @@ public class NodeBulkLoader {
         this.previousLeaf = newLeaf;
     }
 
-    private void writeBytesToLeaf(PageCursor cursor, long leaf, byte[] bytes) throws IOException {
+    private void writeBytesToLeaf(PageProxyCursor cursor, long leaf, byte[] bytes) throws IOException {
         cursor.next(leaf);
         cursor.setOffset(NodeHeader.NODE_HEADER_LENGTH);
         cursor.putBytes(bytes);
     }
 
-    private void addLeafToParent(PageCursor cursor, long leaf) throws IOException {
+    private void addLeafToParent(PageProxyCursor cursor, long leaf) throws IOException {
         if(currentPair > MAX_PAIRS){
             cursor.next(this.currentParent);
             cursor.setOffset(NodeHeader.NODE_HEADER_LENGTH);
@@ -109,7 +103,7 @@ public class NodeBulkLoader {
 
     }
 
-    private long buildUpperLeaves(PageCursor cursor, long leftMostNode) throws IOException {
+    private long buildUpperLeaves(PageProxyCursor cursor, long leftMostNode) throws IOException {
         long firstParent = NodeTree.acquireNewInternalNode(cursor);
         cursor.next(firstParent);
         NodeHeader.setKeyLength(cursor, KEY_LENGTH);
@@ -143,7 +137,7 @@ public class NodeBulkLoader {
         }
     }
 
-    private void copyUpLeafToParent(PageCursor cursor, long leaf) throws IOException {
+    private void copyUpLeafToParent(PageProxyCursor cursor, long leaf) throws IOException {
         if(currentPair > MAX_PAIRS){
             cursor.next(this.currentParent);
             cursor.setOffset(NodeHeader.NODE_HEADER_LENGTH);
@@ -169,7 +163,7 @@ public class NodeBulkLoader {
         this.currentPair++;
         this.currentOffset+=8;
     }
-    public static byte[] traverseToFindFirstKeyInLeafAsBytes(PageCursor cursor) throws IOException {
+    public static byte[] traverseToFindFirstKeyInLeafAsBytes(PageProxyCursor cursor) throws IOException {
         if(NodeHeader.isLeafNode(cursor)){
             return NodeInsertion.getFirstKeyInNodeAsBytes(cursor);
         }

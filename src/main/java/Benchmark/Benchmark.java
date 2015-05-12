@@ -1,10 +1,9 @@
 package Benchmark;
 
-import bptree.Index;
+import bptree.impl.DiskCache;
 import bptree.impl.NodeInsertion;
 import bptree.impl.NodeSearch;
 import bptree.impl.NodeTree;
-import bptree.impl.PathIndexImpl;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;
@@ -19,9 +18,7 @@ import java.util.Random;
 public class Benchmark {
 
     public static Random random;
-    public static Index index;
-    public static LinkedList<Long[]> labelPaths;
-    public static PathIndexImpl pindex;
+
     public static NodeTree proxy;
 
     public static void main(String[] args) throws IOException {
@@ -35,11 +32,11 @@ public class Benchmark {
         //System.out.println("------ 100000 -------");
         //runExperiment(100000);
 
-        System.out.println("------ 1000000 -------");
+        System.out.println("------ 1,000,000 -------");
         runExperiment(1000000);
 
-        //System.out.println("------ 10,000,000 -------");
-        //runExperiment(10000000);
+        System.out.println("------ 10,000,000 -------");
+        runExperiment(10000000);
 
         //System.out.println("------ 100,000,000 -------");
         //runExperiment(100000000);
@@ -52,14 +49,15 @@ public class Benchmark {
     }
 
     public static void runExperiment(int items_to_insert) throws IOException {
-        labelPaths = exampleLabelPaths(2, 2);
-        index = PathIndexImpl.getTemporaryPathIndex()
+        //labelPaths = exampleLabelPaths(2, 2);
+        /*index = PathIndexImpl.getTemporaryPathIndex()
                 .setRangeOfPathLengths(2, 2)
                 .setLabelPaths(labelPaths)
                 .setSignaturesToDefault();
-
-        pindex = ((PathIndexImpl) index);
-        proxy = new NodeTree(pindex.tree.rootNodePageID, pindex.tree.nodeKeeper.diskCache.pagedFile);
+*/
+        //pindex = ((PathIndexImpl) index);
+        DiskCache disk = DiskCache.persistentDiskCache();
+        proxy = new NodeTree(disk.getPagedFile());
 
         int number_of_paths = 10000;
 
@@ -75,16 +73,16 @@ public class Benchmark {
         int disk_size = 0;
 
         double totalSumInsert = performInsertionExperiment(proxy, items_to_insert, number_of_paths);
-        disk_size = index.indexSize();
-        int depth = index.getDepthOfTree();
+        //disk_size = index.indexSize();
+        //int depth = index.getDepthOfTree();
         double totalSumSearch = performSearchExperiment(proxy, items_to_insert, number_of_paths);
         //double totalSumDelete = performDeletionExperiment(proxy, keys, items_to_insert, number_of_paths);
-        index.shutdown();
+        //index.shutdown();
 
 
         StringBuilder strBuilder = new StringBuilder();
         strBuilder.append("\n -------").append(items_to_insert).append("-------").append((new Date().toString()));
-        strBuilder.append("\n Depth of tree ").append(depth);
+        //strBuilder.append("\n Depth of tree ").append(depth);
         strBuilder.append("\n Sum Insertion time(minutes): ").append(totalSumInsert / 60000000000d);
         strBuilder.append("\n Average Insertion time(micro seconds): ").append(totalSumInsert / items_to_insert);
         strBuilder.append("\n Average Search time(micro seconds): ").append(totalSumSearch / items_to_insert);
@@ -187,6 +185,7 @@ public class Benchmark {
     public static void logToFile(String text){
         try(PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter("benchmarking_results.txt", true)))) {
             out.println(text);
+            System.out.println(text);
         }catch (IOException e) {
             //exception handling left as an exercise for the reader
         }

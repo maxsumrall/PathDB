@@ -1,26 +1,23 @@
 package bptree.impl;
 
-import org.neo4j.io.pagecache.PageCursor;
+import bptree.PageProxyCursor;
 import org.neo4j.io.pagecache.PagedFile;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.LongBuffer;
 
-/**
- * Created by max on 5/8/15.
- */
+
 public class NodeInsertion {
 
     private static PrimitiveLongArray arrayUtil = new PrimitiveLongArray();
+    public static PageProxyCursor cursor;
 
     public static SplitResult insert(long[] key){
         SplitResult result = null;
-        try (PageCursor cursor = NodeTree.pagedFile.io(NodeTree.rootNodeId, PagedFile.PF_EXCLUSIVE_LOCK)) {
-            if (cursor.next()) {
-                do {
+        try (PageProxyCursor cursor = DiskCache.getCursor(NodeTree.rootNodeId, PagedFile.PF_EXCLUSIVE_LOCK)) {
                     if(NodeHeader.isLeafNode(cursor)){
-                        result = addKeyToLeafNode(cursor, cursor.getCurrentPageId(), key);
+                        result = addKeyToLeafNode(cursor, key);
                     } else{
                         int index = NodeSearch.search(cursor, key)[0];
                         long child = NodeTree.getChildIdAtIndex(cursor, index);
@@ -32,18 +29,15 @@ public class NodeInsertion {
                             result = addKeyAndChildToInternalNode(cursor, id, result.primkey, result.right);
                         }
                     }
-                }
-                while (cursor.shouldRetry());
-            }
         } catch (IOException e) {
             e.printStackTrace();
         }
         return result;
     }
-    private static SplitResult insert(PageCursor cursor, long[] key) throws IOException {
+    private static SplitResult insert(PageProxyCursor cursor, long[] key) throws IOException {
         SplitResult result = null;
         if(NodeHeader.isLeafNode(cursor)){
-            result = addKeyToLeafNode(cursor, cursor.getCurrentPageId(), key);
+            result = addKeyToLeafNode(cursor, key);
         }
         else{
             int index = NodeSearch.search(cursor, key)[0];
@@ -60,22 +54,17 @@ public class NodeInsertion {
     }
     public static SplitResult addKeyAndChildToInternalNode(long nodeId, long[] key, long child){
         SplitResult result = null;
-        try (PageCursor cursor = NodeTree.pagedFile.io(nodeId, PagedFile.PF_EXCLUSIVE_LOCK)) {
-            if (cursor.next()) {
-                do {
+        try (PageProxyCursor cursor = DiskCache.getCursor(nodeId, PagedFile.PF_EXCLUSIVE_LOCK)) {
                     result = addKeyAndChildToInternalNode(cursor, nodeId, key, child);
-                }
-                while (cursor.shouldRetry());
-            }
         } catch (IOException e) {
             e.printStackTrace();
         }
         return result;
     }
 
-    public static SplitResult addKeyAndChildToInternalNode(PageCursor cursor, long nodeId, long[] key, long child) throws IOException {
+    public static SplitResult addKeyAndChildToInternalNode(PageProxyCursor cursor, long nodeId, long[] key, long child) throws IOException {
         SplitResult result = null;
-        if(!NodeSize.internalNodeContainsSpaceForNewKeyAndChild(cursor, key)){
+        if(!cursor.internalNodeContainsSpaceForNewKeyAndChild(key)){
             long newInternalNodeId = NodeTree.acquireNewInternalNode(cursor);
             result = new SplitResult();
             result.left = nodeId;
@@ -98,28 +87,24 @@ public class NodeInsertion {
 
     public static SplitResult addKeyToLeafNode(long nodeId, long[] key){
         SplitResult result = null;
-        try (PageCursor cursor = NodeTree.pagedFile.io(nodeId, PagedFile.PF_EXCLUSIVE_LOCK)) {
-            if (cursor.next()) {
-                do {
-                    result = addKeyToLeafNode(cursor, nodeId, key);
-                }
-                while (cursor.shouldRetry());
-            }
+        try (PageProxyCursor cursor = DiskCache.getCursor(nodeId, PagedFile.PF_EXCLUSIVE_LOCK)) {
+                    result = addKeyToLeafNode(cursor, key);
+
         } catch (IOException e) {
             e.printStackTrace();
         }
         return result;
     }
 
-    public static SplitResult addKeyToLeafNode(PageCursor cursor, long nodeId, long[] key) throws IOException {
+    public static SplitResult addKeyToLeafNode(PageProxyCursor cursor, long[] key) throws IOException {
         SplitResult result = null;
-        if(!NodeSize.leafNodeContainsSpaceForNewKey(cursor, key)){
-            long newLeafNodeId = NodeTree.acquireNewLeafNode(cursor);
+        if(!cursor.leafNodeContainsSpaceForNewKey(key)){
             result = new SplitResult();
-            result.left = nodeId;
+            result.left = cursor.getCurrentPageId();
+            long newLeafNodeId = NodeTree.acquireNewLeafNode(cursor);
             result.right = newLeafNodeId;
-            NodeTree.updateSiblingAndFollowingIdsInsertion(cursor, nodeId, newLeafNodeId);
-            result.primkey = insertAndBalanceKeysBetweenLeafNodes(cursor, nodeId, newLeafNodeId, key);
+            NodeTree.updateSiblingAndFollowingIdsInsertion(cursor, result.left, newLeafNodeId);
+            result.primkey = insertAndBalanceKeysBetweenLeafNodes(cursor, result.left, result.right, key);
         }
         else{
             checkIfNodeRequiresDifferentLengthConversion(cursor, key);
@@ -129,7 +114,7 @@ public class NodeInsertion {
         }
         return result;
     }
-    private static long[] insertAndBalanceKeysBetweenLeafNodes(PageCursor cursor, long fullNode, long emptyNode, long[] newKey) throws IOException {
+    private static long[] insertAndBalanceKeysBetweenLeafNodes(PageProxyCursor cursor, long fullNode, long emptyNode, long[] newKey) throws IOException {
         //grab half of the keys from the first node, dump into the new node.
         cursor.next(fullNode);
         long[] returnedKey = null;
@@ -170,7 +155,7 @@ public class NodeInsertion {
         return returnedKey;
     }
 
-    private static long[] insertAndBalanceKeysBetweenInternalNodes(PageCursor cursor, long fullNode, long emptyNode, long[] newKey, long newChild) throws IOException {
+    private static long[] insertAndBalanceKeysBetweenInternalNodes(PageProxyCursor cursor, long fullNode, long emptyNode, long[] newKey, long newChild) throws IOException {
         //grab half of the keys from the first node, dump into the new node.
         cursor.next(fullNode);
         long[] returnedKey = null;
@@ -226,11 +211,11 @@ public class NodeInsertion {
         return returnedKey;
     }
 
-    private static boolean newKeyBelongsInNewNode(PageCursor cursor, long[] newKey){
+    private static boolean newKeyBelongsInNewNode(PageProxyCursor cursor, long[] newKey){
         return NodeTree.comparator.prefixCompare(newKey, getFirstKeyInNode(cursor)) > 0;
 
     }
-    public static long[] getFirstKeyInNode(PageCursor cursor){
+    public static long[] getFirstKeyInNode(PageProxyCursor cursor){
         long[] firstKey;
         if(NodeHeader.isLeafNode(cursor)){
             cursor.setOffset(NodeHeader.NODE_HEADER_LENGTH);
@@ -257,7 +242,7 @@ public class NodeInsertion {
         }
         return firstKey;
     }
-    public static byte[] getFirstKeyInNodeAsBytes(PageCursor cursor){
+    public static byte[] getFirstKeyInNodeAsBytes(PageProxyCursor cursor){
         byte[] firstKey;
         if(NodeHeader.isLeafNode(cursor)){
             cursor.setOffset(NodeHeader.NODE_HEADER_LENGTH);
@@ -283,7 +268,7 @@ public class NodeInsertion {
         return firstKey;
     }
 
-    public static byte[] popFirstKeyInNodeAsBytes(PageCursor cursor){
+    public static byte[] popFirstKeyInNodeAsBytes(PageProxyCursor cursor){
         byte[] firstKey;
         if(NodeHeader.isLeafNode(cursor)){
             cursor.setOffset(NodeHeader.NODE_HEADER_LENGTH);
@@ -310,10 +295,10 @@ public class NodeInsertion {
         return firstKey;
     }
 
-    private static void insertKeyAtIndex(PageCursor cursor, int offset, long[] key){
+    private static void insertKeyAtIndex(PageProxyCursor cursor, int offset, long[] key){
         byte[] tmp_bytes;
         if(NodeHeader.isNodeWithSameLengthKeys(cursor)) {
-            tmp_bytes = new byte[DiskCache.PAGE_SIZE - offset - key.length * 8];
+            tmp_bytes = new byte[cursor.capacity() - offset - key.length * 8];
         }
         else{
             tmp_bytes = new byte[DiskCache.PAGE_SIZE - offset - (key.length + 1) * 8];
@@ -333,7 +318,7 @@ public class NodeInsertion {
 
     }
 
-    private static void insertChildAtIndex(PageCursor cursor, int index, long child){
+    private static void insertChildAtIndex(PageProxyCursor cursor, int index, long child){
         int childInsertionOffset = NodeHeader.NODE_HEADER_LENGTH + (index * 8);
         byte[] shiftDownBytes = new byte[DiskCache.PAGE_SIZE - childInsertionOffset - 8];
         cursor.setOffset(childInsertionOffset);
@@ -383,7 +368,7 @@ public class NodeInsertion {
         return updatedChildrenBB.array();
     }
 
-    private static void updateHeader(PageCursor cursor, long[] key){
+    private static void updateHeader(PageProxyCursor cursor, long[] key){
         if(NodeHeader.isNodeWithSameLengthKeys(cursor)){
             if(NodeHeader.getNumberOfKeys(cursor) > 1 && NodeHeader.getKeyLength(cursor) != key.length){
                 NodeHeader.setKeyLength(cursor, -1);
@@ -394,7 +379,7 @@ public class NodeInsertion {
         }
     }
 
-    private static void checkIfNodeRequiresDifferentLengthConversion(PageCursor cursor, long[] key){
+    private static void checkIfNodeRequiresDifferentLengthConversion(PageProxyCursor cursor, long[] key){
         if(NodeHeader.isNodeWithSameLengthKeys(cursor) && NodeHeader.getNumberOfKeys(cursor) > 0 && NodeHeader.getKeyLength(cursor) != key.length){
             //Rewrite all the keys with delimiters there.
             int numberOfKeys = NodeHeader.getNumberOfKeys(cursor);
@@ -414,7 +399,7 @@ public class NodeInsertion {
         }
     }
 
-    private static void alignCursorToKeys(PageCursor cursor){
+    private static void alignCursorToKeys(PageProxyCursor cursor){
         if(!NodeHeader.isLeafNode(cursor)){
             cursor.setOffset(NodeHeader.NODE_HEADER_LENGTH + (NodeHeader.getNumberOfKeys(cursor) + 1) * 8);
         }

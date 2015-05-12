@@ -1,6 +1,6 @@
 package bptree.impl;
 
-import org.neo4j.io.pagecache.PageCursor;
+import bptree.PageProxyCursor;
 import org.neo4j.io.pagecache.PagedFile;
 
 import java.io.IOException;
@@ -18,6 +18,7 @@ public class SearchCursor {
     int keyLength;
     long[] searchKey;
     NodeTree proxy;
+    public static PageProxyCursor cursor;
 
     public SearchCursor(long siblingNode, int position, LongBuffer keys, long[] searchKey, int keyLength){
         this.siblingNode = siblingNode;
@@ -65,9 +66,7 @@ public class SearchCursor {
 
 
     private void loadSiblingNode(){
-        try (PageCursor cursor = DiskCache.pagedFile.io(siblingNode, PagedFile.PF_SHARED_LOCK)) {
-            if (cursor.next()) {
-                do {
+        try (PageProxyCursor cursor = DiskCache.getCursor(this.siblingNode, PagedFile.PF_EXCLUSIVE_LOCK)) {
                     this.siblingNode = NodeHeader.getSiblingID(cursor);
                     this.position = NodeSearch.search(cursor, searchKey)[0];
                     byte[] keysB = new byte[NodeHeader.getNumberOfKeys(cursor) * keyLength *  8];
@@ -75,9 +74,6 @@ public class SearchCursor {
                     cursor.getBytes(keysB);
                     this.keys = ByteBuffer.wrap(keysB).asLongBuffer();
                     this.capacity = keys.capacity();
-                }
-                while (cursor.shouldRetry());
-            }
         } catch (IOException e) {
             e.printStackTrace();
         }

@@ -1,25 +1,22 @@
 package bptree.impl;
 
-import org.neo4j.io.pagecache.PageCursor;
+import bptree.PageProxyCursor;
 import org.neo4j.io.pagecache.PagedFile;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.LongBuffer;
 
-/**
- * Created by max on 5/8/15.
- */
+
 public class NodeSearch {
     private static PrimitiveLongArray arrayUtil = new PrimitiveLongArray();
+    public static PageProxyCursor cursor;
 
     public static SearchCursor find(long[] key){
         long[] entry = null;
         SearchCursor resultsCursor = null;
         int[] searchResult;
-        try (PageCursor cursor = NodeTree.pagedFile.io(NodeTree.rootNodeId, PagedFile.PF_SHARED_LOCK)) {
-            if (cursor.next()) {
-                do {
+        try (PageProxyCursor cursor = DiskCache.getCursor(NodeTree.rootNodeId, PagedFile.PF_EXCLUSIVE_LOCK)) {
                     searchResult = find(cursor, key);
                     long currentNode = cursor.getCurrentPageId();
                     if(searchResult[0] == 0) {
@@ -33,16 +30,13 @@ public class NodeSearch {
                     cursor.getBytes(keys);
                     LongBuffer keysLB = ByteBuffer.wrap(keys).asLongBuffer();
                     resultsCursor = new SearchCursor(NodeHeader.getSiblingID(cursor), searchResult[0], keysLB, key, NodeHeader.getKeyLength(cursor));
-                }
-                while (cursor.shouldRetry());
-            }
         } catch (IOException e) {
             e.printStackTrace();
         }
         return resultsCursor;
     }
 
-    public static int[] find(PageCursor cursor, long[] key) throws IOException {
+    public static int[] find(PageProxyCursor cursor, long[] key) throws IOException {
         int[] searchResult;
         if(NodeHeader.isLeafNode(cursor)){
             searchResult = search(cursor, key);
@@ -58,13 +52,9 @@ public class NodeSearch {
 
     public static int[] search(long nodeId, long[] key) {
         int[] result = new int[]{-1, -1};
-        try (PageCursor cursor = NodeTree.pagedFile.io(nodeId, PagedFile.PF_SHARED_LOCK)) {
-            if (cursor.next()) {
-                do {
+        try (PageProxyCursor cursor = DiskCache.getCursor(nodeId, PagedFile.PF_EXCLUSIVE_LOCK)) {
                     result = search(cursor, key);
-                }
-                while (cursor.shouldRetry());
-            }
+
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -72,7 +62,7 @@ public class NodeSearch {
     }
 
 
-    public static int[] search(PageCursor cursor, long[] key){
+    public static int[] search(PageProxyCursor cursor, long[] key){
         if(NodeHeader.isLeafNode(cursor)){
             if(NodeHeader.isNodeWithSameLengthKeys(cursor)){
                 return searchLeafNodeSameLengthKeys(cursor, key);
@@ -92,7 +82,7 @@ public class NodeSearch {
         }
     }
 
-    private static int[] searchInternalNodeSameLengthKeys(PageCursor cursor, long[] key){
+    private static int[] searchInternalNodeSameLengthKeys(PageProxyCursor cursor, long[] key){
         int index = -1;
         int offset = -1;
         int numberOfKeys = NodeHeader.getNumberOfKeys(cursor);
@@ -118,7 +108,7 @@ public class NodeSearch {
         }
         return new int[]{index, offset};
     }
-    private static int[] searchInternalNodeDifferentLengthKeys(PageCursor cursor, long[] key){
+    private static int[] searchInternalNodeDifferentLengthKeys(PageProxyCursor cursor, long[] key){
         int index = -1;
         int offset = -1;
         int numberOfKeys = NodeHeader.getNumberOfKeys(cursor);
@@ -147,7 +137,7 @@ public class NodeSearch {
         return new int[]{index, offset};
     }
 
-    private static int[] searchLeafNodeSameLengthKeys(PageCursor cursor, long[] key){
+    private static int[] searchLeafNodeSameLengthKeys(PageProxyCursor cursor, long[] key){
         int index = -1;
         int offset = -1;
         int numberOfKeys = cursor.getInt(NodeHeader.BYTE_POSITION_KEY_COUNT);
@@ -171,7 +161,7 @@ public class NodeSearch {
         return new int[]{index, offset};
     }
 
-    private static int[] searchLeafNodeDifferentLengthKeys(PageCursor cursor, long[] key){
+    private static int[] searchLeafNodeDifferentLengthKeys(PageProxyCursor cursor, long[] key){
         int index = -1;
         int offset = -1;
         int numberOfKeys = NodeHeader.getNumberOfKeys(cursor);
@@ -199,7 +189,7 @@ public class NodeSearch {
         return new int[]{index, offset};
     }
 
-    private static int[] moveCursorBackIfPreviousNodeContainsValidKeys(PageCursor cursor, long[] key) throws IOException {
+    private static int[] moveCursorBackIfPreviousNodeContainsValidKeys(PageProxyCursor cursor, long[] key) throws IOException {
         long currentNode = cursor.getCurrentPageId();
         long previousNode = NodeHeader.getPrecedingID(cursor);
         if(previousNode != -1){

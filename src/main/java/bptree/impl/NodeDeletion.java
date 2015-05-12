@@ -1,7 +1,7 @@
 package bptree.impl;
 
 
-import org.neo4j.io.pagecache.PageCursor;
+import bptree.PageProxyCursor;
 import org.neo4j.io.pagecache.PagedFile;
 
 import java.io.IOException;
@@ -10,34 +10,30 @@ import java.io.IOException;
  * Created by max on 5/8/15.
  */
 public class NodeDeletion {
+    public static PageProxyCursor cursor;
 
     public static RemoveResultProxy remove(long[] key){
         RemoveResultProxy result = null;
-        try (PageCursor cursor = NodeTree.pagedFile.io(NodeTree.rootNodeId, PagedFile.PF_EXCLUSIVE_LOCK)) {
-            if (cursor.next()) {
-                do {
+        try (PageProxyCursor cursor = DiskCache.getCursor(NodeTree.rootNodeId, PagedFile.PF_EXCLUSIVE_LOCK)) {
                     if(NodeHeader.isLeafNode(cursor)){
                         result = removeKeyFromLeafNode(cursor, cursor.getCurrentPageId(), key);
-                    } else{
+                    } else {
                         int index = NodeSearch.search(cursor, key)[0];
                         long child = NodeTree.getChildIdAtIndex(cursor, index);
                         long id = cursor.getCurrentPageId();
                         cursor.next(child);
                         result = remove(cursor, key);
-                        if(result != null){
+                        if (result != null) {
                             cursor.next(id);
                             result = handleRemovedChildren(cursor, id, result);
                         }
                     }
-                }
-                while (cursor.shouldRetry());
-            }
         } catch (IOException e) {
             e.printStackTrace();
         }
         return result;
     }
-    private static RemoveResultProxy remove(PageCursor cursor, long[] key) throws IOException {
+    private static RemoveResultProxy remove(PageProxyCursor cursor, long[] key) throws IOException {
         RemoveResultProxy result = null;
         if(NodeHeader.isLeafNode(cursor)){
             result = removeKeyFromLeafNode(cursor, cursor.getCurrentPageId(), key);
@@ -56,7 +52,7 @@ public class NodeDeletion {
         return result;
     }
 
-    public static RemoveResultProxy handleRemovedChildren(PageCursor cursor, long id, RemoveResultProxy result){
+    public static RemoveResultProxy handleRemovedChildren(PageProxyCursor cursor, long id, RemoveResultProxy result){
         int index = NodeTree.getIndexOfChild(cursor, result.removedNodeId);
         int numberOfKeys = NodeHeader.getNumberOfKeys(cursor);
         int numberOfChildren = numberOfKeys + 1;
@@ -93,7 +89,7 @@ public class NodeDeletion {
         return result;
     }
 
-    public static RemoveResultProxy removeKeyAndChildFromInternalNode(PageCursor cursor, long nodeId, long[] key, long child) throws IOException {
+    public static RemoveResultProxy removeKeyAndChildFromInternalNode(PageProxyCursor cursor, long nodeId, long[] key, long child) throws IOException {
         RemoveResultProxy result = null;
         if(NodeHeader.getNumberOfKeys(cursor) == 1){
             result = new RemoveResultProxy(cursor.getCurrentPageId(), NodeHeader.getSiblingID(cursor), true);
@@ -109,20 +105,16 @@ public class NodeDeletion {
 
     public static RemoveResultProxy removeKeyFromLeafNode(long nodeId, long[] key){
         RemoveResultProxy result = null;
-        try (PageCursor cursor = NodeTree.pagedFile.io(nodeId, PagedFile.PF_EXCLUSIVE_LOCK)) {
-            if (cursor.next()) {
-                do {
+        try (PageProxyCursor cursor = DiskCache.getCursor(nodeId, PagedFile.PF_EXCLUSIVE_LOCK)) {
                     result = removeKeyFromLeafNode(cursor, nodeId, key);
-                }
-                while (cursor.shouldRetry());
-            }
+
         } catch (IOException e) {
             e.printStackTrace();
         }
         return result;
     }
 
-    public static RemoveResultProxy removeKeyFromLeafNode(PageCursor cursor, long nodeId, long[] key) throws IOException {
+    public static RemoveResultProxy removeKeyFromLeafNode(PageProxyCursor cursor, long nodeId, long[] key) throws IOException {
         RemoveResultProxy result = null;
         if(NodeHeader.getNumberOfKeys(cursor) == 1){
             result = new RemoveResultProxy(cursor.getCurrentPageId(), NodeHeader.getSiblingID(cursor), true);
@@ -135,7 +127,7 @@ public class NodeDeletion {
         return result;
     }
 
-    private static void removeKeyAtOffset(PageCursor cursor, int offset, long[] key){
+    private static void removeKeyAtOffset(PageProxyCursor cursor, int offset, long[] key){
         byte[] tmp_bytes;
         if(NodeHeader.isNodeWithSameLengthKeys(cursor)) {
             tmp_bytes = new byte[DiskCache.PAGE_SIZE - offset - key.length * 8];
@@ -159,7 +151,7 @@ public class NodeDeletion {
 
     }
 
-    private static void removeKeyAtIndex(PageCursor cursor, int index){
+    private static void removeKeyAtIndex(PageProxyCursor cursor, int index){
         byte[] tmp_bytes;
         int offset;
         int nodeHeaderOffset = NodeHeader.NODE_HEADER_LENGTH + (NodeHeader.isLeafNode(cursor) ? 0 : (NodeHeader.getNumberOfKeys(cursor) + 1) * 8);
@@ -194,7 +186,7 @@ public class NodeDeletion {
 
     }
 
-    public static void removeChildAtIndex(PageCursor cursor, int index){
+    public static void removeChildAtIndex(PageProxyCursor cursor, int index){
         byte[] tmp_bytes;
         int offset = NodeHeader.NODE_HEADER_LENGTH + (index * 8);
         tmp_bytes = new byte[DiskCache.PAGE_SIZE - offset - 8];

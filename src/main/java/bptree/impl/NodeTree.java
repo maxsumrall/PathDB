@@ -1,6 +1,6 @@
 package bptree.impl;
 
-import org.neo4j.io.pagecache.PageCursor;
+import bptree.PageProxyCursor;
 import org.neo4j.io.pagecache.PagedFile;
 
 import java.io.IOException;
@@ -13,10 +13,16 @@ public class NodeTree {
     public static PagedFile pagedFile;
     public static KeyImpl comparator = new KeyImpl();
     public static long rootNodeId = 0;
+    public static PageProxyCursor cursor;
 
     public NodeTree(long rootNodeId, PagedFile pagedFile){
         NodeTree.rootNodeId = rootNodeId;
         NodeTree.pagedFile = pagedFile;
+    }
+
+    public NodeTree(PagedFile pagedFile) throws IOException {
+        NodeTree.pagedFile = pagedFile;
+        NodeTree.rootNodeId = acquireNewLeafNode();
     }
 
     public static void setPagedFile(PagedFile pagedFile){
@@ -24,20 +30,15 @@ public class NodeTree {
     }
 
     public static void newRoot(long childA, long childB, long[] key){
-        try (PageCursor cursor = pagedFile.io(rootNodeId, PagedFile.PF_EXCLUSIVE_LOCK)) {
-            if (cursor.next()) {
-                do {
-                    cursor.setOffset(NodeHeader.NODE_HEADER_LENGTH);
-                    cursor.putLong(childA);
-                    cursor.putLong(childB);
-                    for(int i = 0; i < key.length; i++){
-                        cursor.putLong(key[i]);
-                    }
-                    NodeHeader.setKeyLength(cursor, key.length);
-                    NodeHeader.setNumberOfKeys(cursor, 1);
-                }
-                while (cursor.shouldRetry());
+        try (PageProxyCursor cursor = DiskCache.getCursor(rootNodeId, PagedFile.PF_EXCLUSIVE_LOCK)) {
+            cursor.setOffset(NodeHeader.NODE_HEADER_LENGTH);
+            cursor.putLong(childA);
+            cursor.putLong(childB);
+            for(int i = 0; i < key.length; i++){
+                cursor.putLong(key[i]);
             }
+            NodeHeader.setKeyLength(cursor, key.length);
+            NodeHeader.setNumberOfKeys(cursor, 1);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -59,32 +60,23 @@ public class NodeTree {
 
 
     public static void setPrecedingId(long nodeId, long newPrecedingId){
-        try (PageCursor cursor = pagedFile.io(nodeId, PagedFile.PF_EXCLUSIVE_LOCK)) {
-            if (cursor.next()) {
-                do {
-                    NodeHeader.setPrecedingId(cursor, newPrecedingId);
-                }
-                while (cursor.shouldRetry());
-            }
+        try (PageProxyCursor cursor = DiskCache.getCursor(rootNodeId, PagedFile.PF_EXCLUSIVE_LOCK)) {
+                NodeHeader.setPrecedingId(cursor, newPrecedingId);
+
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
     public static void setFollowingId(long nodeId, long newFollowingId){
-        try (PageCursor cursor = pagedFile.io(nodeId, PagedFile.PF_EXCLUSIVE_LOCK)) {
-            if (cursor.next()) {
-                do {
+        try (PageProxyCursor cursor = DiskCache.getCursor(rootNodeId, PagedFile.PF_EXCLUSIVE_LOCK)) {
                     NodeHeader.setFollowingID(cursor, newFollowingId);
-                }
-                while (cursor.shouldRetry());
-            }
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    public static long getChildIdAtIndex(PageCursor cursor, int indexOfChild){
+    public static long getChildIdAtIndex(PageProxyCursor cursor, int indexOfChild){
         long childId = 0;
         childId = cursor.getLong(NodeHeader.NODE_HEADER_LENGTH + indexOfChild * 8);
         return childId;
@@ -92,13 +84,8 @@ public class NodeTree {
 
     public static long getChildIdAtIndex(long nodeId, int indexOfChild){
         long childId = 0;
-        try (PageCursor cursor = pagedFile.io(nodeId, PagedFile.PF_SHARED_LOCK)) {
-            if (cursor.next()) {
-                do {
+        try (PageProxyCursor cursor = DiskCache.getCursor(rootNodeId, PagedFile.PF_EXCLUSIVE_LOCK)) {
                     childId = getChildIdAtIndex(cursor, indexOfChild);
-                }
-                while (cursor.shouldRetry());
-            }
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -108,20 +95,16 @@ public class NodeTree {
 
     public static int getIndexOfChild(long nodeId, long childId){
         int childIndex = -1;
-        try (PageCursor cursor = pagedFile.io(nodeId, PagedFile.PF_SHARED_LOCK)) {
-            if (cursor.next()) {
-                do {
+        try (PageProxyCursor cursor = DiskCache.getCursor(rootNodeId, PagedFile.PF_EXCLUSIVE_LOCK)) {
                     childIndex = getIndexOfChild(cursor, childId);
-                }
-                while (cursor.shouldRetry());
-            }
+
         } catch (IOException e) {
             e.printStackTrace();
         }
         return childIndex;
     }
 
-    public static int getIndexOfChild(PageCursor cursor, long childId){
+    public static int getIndexOfChild(PageProxyCursor cursor, long childId){
         int childIndex = 0;
         cursor.setOffset(NodeHeader.NODE_HEADER_LENGTH);
         long child = cursor.getLong();
@@ -133,7 +116,7 @@ public class NodeTree {
     }
 
 
-    public static void updateSiblingAndFollowingIdsInsertion(PageCursor cursor, long nodeId, long newNodeId) throws IOException {
+    public static void updateSiblingAndFollowingIdsInsertion(PageProxyCursor cursor, long nodeId, long newNodeId) throws IOException {
         cursor.next(nodeId);
         long oldFollowing = NodeHeader.getSiblingID(cursor);
         NodeHeader.setFollowingID(cursor, newNodeId);
@@ -145,7 +128,7 @@ public class NodeTree {
         NodeHeader.setFollowingID(cursor, oldFollowing);
         NodeHeader.setPrecedingId(cursor, nodeId);
     }
-    public static void updateSiblingAndFollowingIdsDeletion(PageCursor cursor, long nodeId) throws IOException {
+    public static void updateSiblingAndFollowingIdsDeletion(PageProxyCursor cursor, long nodeId) throws IOException {
         cursor.next(nodeId);
         long following = NodeHeader.getSiblingID(cursor);
         long preceding = NodeHeader.getPrecedingID(cursor);
@@ -159,14 +142,24 @@ public class NodeTree {
         }
     }
 
-    public static long acquireNewLeafNode(PageCursor cursor) throws IOException {
+    public static long acquireNewLeafNode(PageProxyCursor cursor) throws IOException {
         long newNodeId = AvailablePageIdPool.acquireId();
         cursor.next(newNodeId);
         NodeHeader.initializeLeafNode(cursor);
         return newNodeId;
     }
+    public static long acquireNewLeafNode() throws IOException {
+        long newNodeId = AvailablePageIdPool.acquireId();
+        try(PageProxyCursor cursor = DiskCache.getCursor(newNodeId, PagedFile.PF_EXCLUSIVE_LOCK)) {
+            NodeHeader.initializeLeafNode(cursor);
+        }
+        catch(Exception e ){
 
-    public static long acquireNewInternalNode(PageCursor cursor) throws IOException {
+        }
+        return newNodeId;
+    }
+
+    public static long acquireNewInternalNode(PageProxyCursor cursor) throws IOException {
         long newNodeId = AvailablePageIdPool.acquireId();
         cursor.next(newNodeId);
         NodeHeader.initializeInternalNode(cursor);
@@ -177,7 +170,7 @@ public class NodeTree {
         AvailablePageIdPool.releaseId(nodeId);
     }
 
-    public static void removeFirstKeyInInternalNode(PageCursor cursor){
+    public static void removeFirstKeyInInternalNode(PageProxyCursor cursor){
         byte[] compactionBytes = new byte[DiskCache.PAGE_SIZE - NodeHeader.NODE_HEADER_LENGTH - 8]; //removing child
         cursor.setOffset(NodeHeader.NODE_HEADER_LENGTH + 8);
         cursor.getBytes(compactionBytes);
