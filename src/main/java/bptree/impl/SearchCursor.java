@@ -1,7 +1,6 @@
 package bptree.impl;
 
 import bptree.PageProxyCursor;
-import org.neo4j.io.pagecache.PagedFile;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -18,19 +17,20 @@ public class SearchCursor {
     int keyLength;
     long[] searchKey;
     NodeTree proxy;
-    public static PageProxyCursor cursor;
+    public long pageID;
 
-    public SearchCursor(long siblingNode, int position, LongBuffer keys, long[] searchKey, int keyLength){
+    public SearchCursor(long pageID, long siblingNode, int position, LongBuffer keys, long[] searchKey, int keyLength){
         this.siblingNode = siblingNode;
         this.keys = keys;
         this.searchKey = searchKey;
         this.keyLength = keyLength;
         this.position = position * keyLength;
         this.capacity = keys.capacity();
+        this.pageID = pageID;
     }
 
-    public long[] next(){
-        long[] next = getNext();
+    public long[] next(PageProxyCursor cursor) throws IOException {
+        long[] next = getNext(cursor);
         if(next != null){
             position += keyLength;
         }
@@ -38,7 +38,7 @@ public class SearchCursor {
 
     }
 
-    private long[] getNext(){
+    private long[] getNext(PageProxyCursor cursor) throws IOException {
         long[] currentKey = new long[keyLength];
         if(position < capacity){
             for(int i = 0; i < keyLength; i++){
@@ -47,8 +47,8 @@ public class SearchCursor {
         }
         else{
             if(siblingNode != -1) {
-                loadSiblingNode();
-                return getNext();
+                loadSiblingNode(cursor);
+                return getNext(cursor);
             }
             else{
                 return null;
@@ -60,22 +60,20 @@ public class SearchCursor {
         return null;
     }
 
-    public boolean hasNext(){
-        return getNext() != null;
+    public boolean hasNext(PageProxyCursor cursor) throws IOException {
+        return getNext(cursor) != null;
     }
 
 
-    private void loadSiblingNode(){
-        try (PageProxyCursor cursor = DiskCache.getCursor(this.siblingNode, PagedFile.PF_EXCLUSIVE_LOCK)) {
-                    this.siblingNode = NodeHeader.getSiblingID(cursor);
-                    this.position = NodeSearch.search(cursor, searchKey)[0];
-                    byte[] keysB = new byte[NodeHeader.getNumberOfKeys(cursor) * keyLength *  8];
-                    cursor.setOffset(NodeHeader.NODE_HEADER_LENGTH);
-                    cursor.getBytes(keysB);
-                    this.keys = ByteBuffer.wrap(keysB).asLongBuffer();
-                    this.capacity = keys.capacity();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+    private void loadSiblingNode(PageProxyCursor cursor) throws IOException {
+        cursor.next(siblingNode);
+        this.siblingNode = NodeHeader.getSiblingID(cursor);
+        this.position = 0;
+        //this.position = NodeSearch.search(cursor, searchKey)[0];//TODO this is likely not necessary, keys will always be at beginning.
+        byte[] keysB = new byte[NodeHeader.getNumberOfKeys(cursor) * keyLength *  8];
+        cursor.setOffset(NodeHeader.NODE_HEADER_LENGTH);
+        cursor.getBytes(keysB);
+        this.keys = ByteBuffer.wrap(keysB).asLongBuffer();
+        this.capacity = keys.capacity();
     }
 }
