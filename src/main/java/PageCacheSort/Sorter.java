@@ -57,7 +57,7 @@ public class Sorter {
         swapPageSets();
         PageSet setA;
         PageSet setB;
-        setIteratorCursor = readFromDisk.getCursor(0, PagedFile.PF_EXCLUSIVE_LOCK);
+        setIteratorCursor = readFromDisk.getCursor(0, PagedFile.PF_SHARED_LOCK);
         writeToCursor = writeToDisk.getCursor(0, PagedFile.PF_EXCLUSIVE_LOCK);
         while(!readPageSets.isEmpty()){
             //get two read cursors, read and sort, push sets to other stack
@@ -90,8 +90,7 @@ public class Sorter {
     }
     private SetIterator getFinalIterator(DiskCache sortedNumbersDisk) throws IOException {
         readFromDisk = sortedNumbersDisk;
-        PageSet a = writePageSets.pop();
-        SetIterator itr = new SetIteratorImpl(a);
+        SetIterator itr = new SetIteratorImpl(postSortSet);
         return itr;
     }
 
@@ -143,34 +142,52 @@ public class Sorter {
 
     private void sortEachPage() throws IOException {
         long lastPage = writePageSets.getLast().peek();
+        writePageSets.clear();
+        int pages_per_round = 8;
         try(PageProxyCursor cursor = writeToDisk.getCursor(0, PagedFile.PF_EXCLUSIVE_LOCK)){
-            for(long i = 0; i <= lastPage; i++){
+            for(long i = 0; i <= lastPage; i+= Math.min(pages_per_round, ((i + pages_per_round) % lastPage))){
                 cursor.next(i);
-                sortKeysOfPage(cursor);
+                sortKeysOfPage(cursor, pages_per_round);
             }
         }
     }
 
-    private void sortKeysOfPage(PageProxyCursor cursor){
+    private void sortKeysOfPage(PageProxyCursor cursor, int pages_per_round) throws IOException {
+        PageSet pageSet = new PageSet();
         ArrayList<Long[]> list = new ArrayList<>();
         cursor.setOffset(0);
-        while(cursor.getOffset() + 8 < DiskCache.PAGE_SIZE){
-            Long[] key = new Long[keySize];
-            for(int i = 0; i < keySize; i++){
-                key[i] = cursor.getLong();
-            }
-            if(key[0] != 0){
-                list.add(key);
+        long firstPage = cursor.getCurrentPageId();
+        for(int page = 0; page < pages_per_round; page++) {
+            cursor.next(firstPage + page);
+            while(!pageIsFull(cursor)){
+                Long[] key = new Long[keySize];
+                for (int i = 0; i < keySize; i++) {
+                    key[i] = cursor.getLong();
+                }
+                if (key[0] != 0) {
+                    list.add(key);
+                }
             }
         }
         Collections.sort(list, KeyImpl.getComparator());
 
-        cursor.setOffset(0);
-        for(Long[] key : list){
-            for(Long val : key){
+        cursor.next(firstPage);
+
+        int currKey = 0;
+        long currentPage = firstPage;
+        while(currKey < list.size()){
+            if(pageIsFull(cursor)){
+                pageSet.add(currentPage);
+                cursor.next(++currentPage);
+                cursor.setOffset(0);
+            }
+            Long[] key = list.get(currKey++);
+            for (Long val : key) {
                 cursor.putLong(val);
             }
         }
+        pageSet.add(currentPage);
+        writePageSets.add(pageSet);
     }
 
     public void addUnsortedKey(long[] key) throws IOException {
@@ -183,6 +200,7 @@ public class Sorter {
     }
 
     public void addSortedKey(long[] key) throws IOException {
+        //System.out.println(Arrays.toString(key));
         if(pageIsFull(writeToCursor)){
             writeToCursor.next(writeToCursor.getCurrentPageId() + 1);
         }
@@ -216,6 +234,7 @@ public class Sorter {
 
         private void fillBuffer(long pageId) throws IOException {
             if(setIteratorCursor != null) {
+                setIteratorCursor.setOffset(0);
                 setIteratorCursor.next(pageId);
                 setIteratorCursor.getBytes(byteRep);
             }
@@ -299,8 +318,8 @@ public class Sorter {
             pagesInSet = new LinkedList<>();
             pagesInSet.addAll(a.getAll());
         }
-        public void push(long pageId){
-            pagesInSet.push(pageId);
+        public void add(long pageId) {
+            pagesInSet.add(pageId);
         }
         public boolean isEmpty(){
             return pagesInSet.isEmpty();
