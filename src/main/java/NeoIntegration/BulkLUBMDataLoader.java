@@ -3,14 +3,11 @@ package NeoIntegration;
 import PageCacheSort.Sorter;
 import bptree.impl.DiskCache;
 import bptree.impl.NodeTree;
-import org.neo4j.graphdb.DynamicLabel;
-import org.neo4j.graphdb.DynamicRelationshipType;
-import org.neo4j.graphdb.Label;
-import org.neo4j.graphdb.RelationshipType;
+import org.neo4j.graphdb.*;
+import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.kernel.impl.store.InvalidRecordException;
 import org.neo4j.unsafe.batchinsert.BatchInserter;
 import org.neo4j.unsafe.batchinsert.BatchInserters;
-import org.neo4j.unsafe.batchinsert.BatchRelationship;
 
 import java.io.*;
 import java.util.*;
@@ -67,7 +64,7 @@ public class BulkLUBMDataLoader {
 
     public void sortKeys() throws IOException {
         try{
-            inserter = BatchInserters.inserter(DB_PATH);
+            //inserter = BatchInserters.inserter(DB_PATH);
             getPaths();
 
             System.out.println("Sorting keys");
@@ -79,7 +76,7 @@ public class BulkLUBMDataLoader {
             //System.out.println("Index root " + NodeTree.rootNodeId);
         }
         finally {
-            inserter.shutdown();
+            //inserter.shutdown();
             this.disk.shutdown();
         }
     }
@@ -155,36 +152,42 @@ private long getOrCreateNode(String label, String uri){
 
 private void getPaths() throws IOException {
     System.out.println(nodes.size());
-    int i = 0;
-    for (Long node1 : nodes.values()) {
-        i++;
-        if(i %100000 == 0){
-            System.out.println(i);
-        }
-        for (BatchRelationship relationship1 : inserter.getRelationships(node1)) {
-            Long node2 = getOtherNode(relationship1, node1);
-            for (BatchRelationship relationship2 : inserter.getRelationships(node2)) {
-                Long node3 = getOtherNode(relationship2, node2);
-                if(relationship1.getId() != relationship2.getId()){
-                    /*if(validPath(relationship1, relationship2)) {
+    GraphDatabaseService db = new GraphDatabaseFactory().newEmbeddedDatabase( DB_PATH );
+    try ( Transaction tx = db.beginTx()) {
+        int i = 0;
+        for (Long nodeA : nodes.values()) {
+            i++;
+            if (i % 100000 == 0) {
+                System.out.println(i);
+            }
+            Node node1 = db.getNodeById(nodeA);
+            for (Relationship relationship1 : node1.getRelationships()) {
+                Node node2 = relationship1.getOtherNode(node1);
+                for (Relationship relationship2 : node2.getRelationships()) {
+                    Node node3 = relationship2.getOtherNode(node2);
+                    if (relationship1.getId() != relationship2.getId()) {
+                        /*
+                        if (validPath(relationship1, relationship2)) {
+                            long pathId = pathIdBuilder(node1, node2, relationship1, relationship2);
+                            //index.insert(new long[]{pathId, node1, node2, node3});
+                            //keys.add(new Long[]{pathId, node1, node2, node3});
+                            sorter.addUnsortedKey(new long[]{pathId, node1.getId(), node2.getId(), node3.getId()});
+                        }
+                        */
                         long pathId = pathIdBuilder(node1, node2, relationship1, relationship2);
-                        //index.insert(new long[]{pathId, node1, node2, node3});
-                        //keys.add(new Long[]{pathId, node1, node2, node3});
-                        sorter.addUnsortedKey(new long[]{pathId, node1, node2, node3});
-                    }*/
-                    long pathId = pathIdBuilder(node1, node2, relationship1, relationship2);
-                    sorter.addUnsortedKey(new long[]{pathId, node1, node2, node3});
+                        sorter.addUnsortedKey(new long[]{pathId, node1.getId(), node2.getId(), node3.getId()});
+                    }
                 }
             }
         }
     }
 }
 
-    private boolean validPath(BatchRelationship relA, BatchRelationship relB){
+    private boolean validPath(Relationship relA, Relationship relB){
         return (relA.getType().name().equals("memberOf") && relB.getType().name().equals("subOrganizationOf"));
     }
 
-private Long pathIdBuilder(Long node1, Long node2, BatchRelationship relationship1, BatchRelationship relationship2){
+private Long pathIdBuilder(Node node1, Node node2, Relationship relationship1, Relationship relationship2){
     StringBuilder pathId = new StringBuilder();
     if(forwardRelationship(node1, relationship1)){
         pathId.append(relationship1.getType().name());
@@ -201,12 +204,12 @@ private Long pathIdBuilder(Long node1, Long node2, BatchRelationship relationshi
     return (long) Math.abs((pathId.toString()).hashCode());
 }
 
-private boolean forwardRelationship(Long node, BatchRelationship relationship){
+private boolean forwardRelationship(Node node, Relationship relationship){
     return node.equals(relationship.getStartNode());
 }
 
-private Long getOtherNode(BatchRelationship relationship, Long thisNode){
-    Long startNode = relationship.getStartNode();
+private Node getOtherNode(Relationship relationship, Node thisNode){
+    Node startNode = relationship.getStartNode();
     if(startNode.equals(thisNode)){
         return relationship.getEndNode();
     }
