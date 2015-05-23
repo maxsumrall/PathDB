@@ -23,9 +23,11 @@ public class BulkLUBMDataLoader {
     public NodeTree index;
     public DiskCache disk;
     public BatchInserter inserter;
-    private final String DB_PATH = "/Users/max/Downloads/neo4j/data/graph.db";
+    //private final String DB_PATH = "/Users/max/Downloads/neo4j/data/graph.db";
+    private final String DB_PATH = "graph.db/";
     //public ArrayList<Long[]> keys;
-    String uriDir = "/Users/max/Desktop/lubm_data/csvData/";
+    //String uriDir = "/Users/max/Desktop/lubm_data/csvData/";
+    String uriDir = "../csvData/";
     File[] owlFiles;
     HashMap<String, Label> labels = new HashMap<>();
     HashMap<String, RelationshipType> relationships = new HashMap<>();
@@ -57,7 +59,6 @@ public class BulkLUBMDataLoader {
                 System.out.println("Importing: " + file.getName());
                 fileParser(file);
             }
-
         }
         finally {
             inserter.shutdown();
