@@ -19,6 +19,8 @@ public class Sorter {
     DiskCache readFromDisk;
     PageProxyCursor writeToCursor;
     KeyImpl comparator = KeyImpl.getComparator();
+    PageSet postSortSet;
+    long finalPage;
     final int keySize;
     final int keyByteSize;
     LinkedList<PageSet> writePageSets = new LinkedList<>();
@@ -38,9 +40,17 @@ public class Sorter {
         writeToCursor.close();
         sortEachPage();
         sortHelper();
-        //print(writeToDisk);
         setIteratorCursor = null;
+        postSortSet = writePageSets.pop();
+        finalPage = postSortSet.pagesInSet.getLast();
         return getFinalIterator(writeToDisk);
+    }
+
+    public DiskCache getSortedDisk(){
+        return writeToDisk;
+    }
+    public long finalPageId(){
+        return finalPage;
     }
 
     private void sortHelper() throws IOException {
@@ -72,8 +82,8 @@ public class Sorter {
 
     public void print(DiskCache sortedNumbersDisk) throws IOException {
         readFromDisk = sortedNumbersDisk;
-        PageSet a = writePageSets.pop();
-        SetIterator itr = new SetIteratorImpl(a);
+
+        SetIterator itr = new SetIteratorImpl(postSortSet);
             while(itr.hasNext()){
                 System.out.println(Arrays.toString(itr.getNext()));
             }

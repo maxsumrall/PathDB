@@ -16,7 +16,7 @@ public class NodeBulkLoaderTest {
     @Test
     public void loadTest() throws IOException {
 
-        DiskCache disk = DiskCache.temporaryDiskCache();//TODO its bad that I make an instance of this but it has static methods. Need to refactor DiskCache.
+        DiskCache disk = DiskCache.temporaryDiskCache();
         tree = Tree.initializeNewTree("tmp_tree_yo.dat", disk); //used for debugging
         int numberOfPages = 1000; //100000 pages should roughly equal 20mil keys;
         SimpleDataGenerator dataGenerator = new SimpleDataGenerator(numberOfPages);

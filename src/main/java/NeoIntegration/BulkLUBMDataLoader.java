@@ -1,10 +1,14 @@
 package NeoIntegration;
 
 import PageCacheSort.Sorter;
+import bptree.BulkLoadDataSource;
+import bptree.PageProxyCursor;
 import bptree.impl.DiskCache;
+import bptree.impl.NodeBulkLoader;
 import bptree.impl.NodeTree;
 import org.neo4j.graphdb.*;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
+import org.neo4j.io.pagecache.PagedFile;
 import org.neo4j.kernel.impl.store.InvalidRecordException;
 import org.neo4j.unsafe.batchinsert.BatchInserter;
 import org.neo4j.unsafe.batchinsert.BatchInserters;
@@ -39,6 +43,8 @@ public class BulkLUBMDataLoader {
 
 
         bulkLUBMDataLoader.sortKeys();
+
+        bulkLUBMDataLoader.buildIndex();
 
     }
 
@@ -80,6 +86,19 @@ public class BulkLUBMDataLoader {
             this.disk.shutdown();
         }
     }
+
+    public void buildIndex() throws IOException {
+        DiskCache sortedDisk = sorter.getSortedDisk();
+
+        DiskCache disk = DiskCache.persistentDiskCache("lubm50Index.db");
+        BulkPageSource sortedDataSource = new BulkPageSource(sortedDisk, sorter.finalPageId());
+
+        NodeBulkLoader bulkLoader = new NodeBulkLoader(sortedDataSource, disk);
+        long root = bulkLoader.run();
+        NodeTree proxy = new NodeTree(root, disk.getPagedFile());
+        System.out.println("Done: " + proxy.rootNodeId);
+    }
+
 
     private void insert(Triple triple){
         long thisNode = getOrCreateNode(triple.subjectType, triple.subjectURI);
@@ -217,6 +236,35 @@ private Node getOtherNode(Relationship relationship, Node thisNode){
         return startNode;
     }
 }
+
+    public class BulkPageSource implements BulkLoadDataSource{
+        DiskCache disk;
+        long finalPage;
+        long currentPage = 0;
+        PageProxyCursor cursor;
+
+        public BulkPageSource(DiskCache disk, long finalPage) throws IOException {
+            this.disk = disk;
+            this.finalPage = finalPage;
+            cursor = disk.getCursor(0, PagedFile.PF_SHARED_LOCK);
+        }
+
+        @Override
+        public byte[] nextPage() throws IOException {
+            cursor.next(currentPage++);
+            byte[] bytes = new byte[DiskCache.PAGE_SIZE];
+            cursor.getBytes(bytes);
+            return bytes;
+        }
+
+        @Override
+        public boolean hasNext() throws IOException {
+            if(currentPage > finalPage){
+                this.cursor.close();
+            }
+            return currentPage < finalPage;
+        }
+    }
 
 public class Triple{
     public String subjectType;
