@@ -12,7 +12,6 @@ import java.nio.ByteBuffer;
 
 
 public class DiskCache {
-    //public static int PAGE_SIZE = bptree.Utils.getIdealBlockSize();
     public static int PAGE_SIZE = 8192;
     protected final static String DEFAULT_CACHE_FILE_NAME = "cache.bin";
     protected int recordSize = 9; //TODO What is this?
@@ -25,9 +24,8 @@ public class DiskCache {
     protected int filePageSize = recordsPerFilePage * recordSize;
     protected transient DefaultFileSystemAbstraction fs;
     protected transient MuninnPageCache pageCache;
-    public static transient PagedFile pagedFile;
+    public transient PagedFile pagedFile;
     public File cache_file;
-    public static DiskCache singleInstance;
 
     private DiskCache(File cache_file) {
         try {
@@ -38,31 +36,33 @@ public class DiskCache {
             e.printStackTrace();
         }
     }
-    public static PageProxyCursor getCursor(long id, int lockType) throws IOException {
-        return new BasicPageCursor(singleInstance, id, lockType);
+    public PageProxyCursor getCursor(long id, int lockType) throws IOException {
+        return new BasicPageCursor(this, id, lockType);
         //return new ZLIBPageCursor(singleInstance, id, lockType);
     }
 
     public static DiskCache temporaryDiskCache(){
-        singleInstance = temporaryDiskCache(DEFAULT_CACHE_FILE_NAME);
-        return singleInstance;
+        return temporaryDiskCache(DEFAULT_CACHE_FILE_NAME);
     }
 
     public static DiskCache temporaryDiskCache(String filename){
         File cache_file = new File(filename);
         cache_file.deleteOnExit();
-        singleInstance = new DiskCache(cache_file);
-        return singleInstance;
+        return new DiskCache(cache_file);
+    }
+
+    public static DiskCache getDiskCacheWithFilename(String filename){
+        File cache_file = new File(filename);
+        cache_file.deleteOnExit();
+        return new DiskCache(cache_file);
     }
 
     public static DiskCache persistentDiskCache(){
-        singleInstance =  persistentDiskCache(DEFAULT_CACHE_FILE_NAME);
-        return singleInstance;
+        return  persistentDiskCache(DEFAULT_CACHE_FILE_NAME);
     }
 
     public static DiskCache persistentDiskCache(String filename){
-        singleInstance = new DiskCache(new File(filename));
-        return singleInstance;
+        return new DiskCache(new File(filename));
     }
 
     private void initializePageCache(File page_cache_file) throws IOException {
@@ -73,7 +73,7 @@ public class DiskCache {
 
     public ByteBuffer readPage(long id) {
         byte[] byteArray = new byte[0];
-        try (PageProxyCursor cursor = DiskCache.getCursor(NodeTree.rootNodeId, PagedFile.PF_EXCLUSIVE_LOCK)) {
+        try (PageProxyCursor cursor = getCursor(NodeTree.rootNodeId, PagedFile.PF_EXCLUSIVE_LOCK)) {
                     byteArray = new byte[cursor.getSize()];
                     cursor.getBytes(byteArray);
 
@@ -91,7 +91,7 @@ public class DiskCache {
     }
 
     public void writePage(long id, byte[] bytes) {
-        try (PageProxyCursor cursor = DiskCache.getCursor(id, PagedFile.PF_EXCLUSIVE_LOCK)) {
+        try (PageProxyCursor cursor = getCursor(id, PagedFile.PF_EXCLUSIVE_LOCK)) {
                     // perform read or write operations on the page
                     cursor.putBytes(bytes);
         } catch (IOException e) {
@@ -110,7 +110,9 @@ public class DiskCache {
     public PagedFile getPagedFile(){
         return pagedFile;
     }
+
     public void shutdown() throws IOException {
+        System.out.println(this.cache_file);
         pagedFile.close();
         pageCache.close();
     }

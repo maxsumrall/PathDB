@@ -57,7 +57,7 @@ public class Benchmark {
 */
         //pindex = ((PathIndexImpl) index);
         DiskCache disk = DiskCache.persistentDiskCache();
-        proxy = new NodeTree(disk.getPagedFile());
+        proxy = new NodeTree(disk);
 
         int number_of_paths = 10000;
 

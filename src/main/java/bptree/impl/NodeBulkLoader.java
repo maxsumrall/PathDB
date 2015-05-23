@@ -15,6 +15,7 @@ public class NodeBulkLoader {
 
     private BulkLoadDataSource data;
     private PagedFile pagedFile;
+    private DiskCache disk;
     public static int KEY_LENGTH = 4;
     public static int MAX_PAIRS = ((DiskCache.PAGE_SIZE - NodeHeader.NODE_HEADER_LENGTH) / ((KEY_LENGTH + 1)*8) ) / 2;
     private static int RESERVED_CHILDREN_SPACE = (MAX_PAIRS + 1) * 8;
@@ -25,14 +26,15 @@ public class NodeBulkLoader {
     private ParentBufferWriter parentWriter = new ParentBufferWriter();
     public static PageProxyCursor cursor;
 
-    public NodeBulkLoader(BulkLoadDataSource data, PagedFile pagedFile){
+    public NodeBulkLoader(BulkLoadDataSource data, DiskCache disk){
         this.data = data;
-        this.pagedFile = pagedFile;
+        this.disk = disk;
+        this.pagedFile = this.disk.pagedFile;
     }
 
     public long run(){
         long root = -1;
-        try (PageProxyCursor cursor = DiskCache.getCursor(NodeTree.rootNodeId, PagedFile.PF_EXCLUSIVE_LOCK)) {
+        try (PageProxyCursor cursor = this.disk.getCursor(NodeTree.rootNodeId, PagedFile.PF_EXCLUSIVE_LOCK)) {
                     long firstInternalNode = NodeTree.acquireNewInternalNode(cursor);
                     cursor.next(firstInternalNode);
                     NodeHeader.setKeyLength(cursor, KEY_LENGTH);

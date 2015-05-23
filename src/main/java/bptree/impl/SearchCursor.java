@@ -3,36 +3,31 @@ package bptree.impl;
 import bptree.PageProxyCursor;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.LongBuffer;
 
 /**
  * Created by max on 5/6/15.
  */
 public class SearchCursor {
     long siblingNode;
-    int position;
-    LongBuffer keys;
-    int capacity;
+    int currentKeyIndex;
     int keyLength;
     long[] searchKey;
-    NodeTree proxy;
     public long pageID;
+    int keysInNode;
 
-    public SearchCursor(long pageID, long siblingNode, int position, LongBuffer keys, long[] searchKey, int keyLength){
+    public SearchCursor(long pageID, long siblingNode, int position, long[] searchKey, int keyLength, int keysInNode){
         this.siblingNode = siblingNode;
-        this.keys = keys;
         this.searchKey = searchKey;
         this.keyLength = keyLength;
-        this.position = position * keyLength;
-        this.capacity = keys.capacity();
+        this.currentKeyIndex = position;
         this.pageID = pageID;
+        this.keysInNode = keysInNode;
     }
 
     public long[] next(PageProxyCursor cursor) throws IOException {
         long[] next = getNext(cursor);
         if(next != null){
-            position += keyLength;
+            currentKeyIndex++;
         }
         return next;
 
@@ -40,9 +35,10 @@ public class SearchCursor {
 
     private long[] getNext(PageProxyCursor cursor) throws IOException {
         long[] currentKey = new long[keyLength];
-        if(position < capacity){
+        if(currentKeyIndex < keysInNode){
             for(int i = 0; i < keyLength; i++){
-                currentKey[i] = keys.get(position + i);
+                int bytePosition = NodeHeader.NODE_HEADER_LENGTH + (currentKeyIndex * keyLength * 8) + (i * 8);
+                currentKey[i] = cursor.getLong(bytePosition);
             }
         }
         else{
@@ -67,13 +63,8 @@ public class SearchCursor {
 
     private void loadSiblingNode(PageProxyCursor cursor) throws IOException {
         cursor.next(siblingNode);
+        this.keysInNode = NodeHeader.getNumberOfKeys(cursor);
+        this.currentKeyIndex = 0;
         this.siblingNode = NodeHeader.getSiblingID(cursor);
-        this.position = 0;
-        //this.position = NodeSearch.search(cursor, searchKey)[0];//TODO this is likely not necessary, keys will always be at beginning.
-        byte[] keysB = new byte[NodeHeader.getNumberOfKeys(cursor) * keyLength *  8];
-        cursor.setOffset(NodeHeader.NODE_HEADER_LENGTH);
-        cursor.getBytes(keysB);
-        this.keys = ByteBuffer.wrap(keysB).asLongBuffer();
-        this.capacity = keys.capacity();
     }
 }

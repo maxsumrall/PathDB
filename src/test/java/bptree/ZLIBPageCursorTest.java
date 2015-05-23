@@ -22,7 +22,7 @@ public class ZLIBPageCursorTest {
         SimpleDataGenerator dataGenerator = new SimpleDataGenerator(numberOfPages);
         //NodeTree proxy = new NodeTree(root, disk.getPagedFile());
 
-        try (PageProxyCursor cursor = DiskCache.getCursor(9, PagedFile.PF_EXCLUSIVE_LOCK)) {
+        try (PageProxyCursor cursor = disk.getCursor(9, PagedFile.PF_EXCLUSIVE_LOCK)) {
                 NodeHeader.initializeLeafNode(cursor);
                 cursor.setOffset(NodeHeader.NODE_HEADER_LENGTH);
                 cursor.putBytes(dataGenerator.nextPage());

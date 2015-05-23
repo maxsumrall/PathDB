@@ -14,6 +14,7 @@ import java.util.*;
  * Main entry into the Sorter.
  */
 public class Sorter {
+    PageProxyCursor setIteratorCursor;
     DiskCache writeToDisk;
     DiskCache readFromDisk;
     PageProxyCursor writeToCursor;
@@ -38,6 +39,7 @@ public class Sorter {
         sortEachPage();
         sortHelper();
         //print(writeToDisk);
+        setIteratorCursor = null;
         return getFinalIterator(writeToDisk);
     }
 
@@ -45,6 +47,7 @@ public class Sorter {
         swapPageSets();
         PageSet setA;
         PageSet setB;
+        setIteratorCursor = readFromDisk.getCursor(0, PagedFile.PF_EXCLUSIVE_LOCK);
         writeToCursor = writeToDisk.getCursor(0, PagedFile.PF_EXCLUSIVE_LOCK);
         while(!readPageSets.isEmpty()){
             //get two read cursors, read and sort, push sets to other stack
@@ -60,6 +63,7 @@ public class Sorter {
 
             }
         }
+        setIteratorCursor.close();
         writeToCursor.close();
         if(writePageSets.size() > 1){
             sortHelper();
@@ -130,27 +134,20 @@ public class Sorter {
     private void sortEachPage() throws IOException {
         long lastPage = writePageSets.getLast().peek();
         try(PageProxyCursor cursor = writeToDisk.getCursor(0, PagedFile.PF_EXCLUSIVE_LOCK)){
-            byte[] byteRep = new byte[DiskCache.PAGE_SIZE];
-            ByteBuffer buffer = ByteBuffer.wrap(byteRep);
             for(long i = 0; i <= lastPage; i++){
                 cursor.next(i);
-                cursor.getBytes(byteRep);
-                sortKeysOfPage(buffer);
-                cursor.setOffset(0);
-                buffer.position(0);
-                buffer.get(byteRep);
-                cursor.putBytes(byteRep);
+                sortKeysOfPage(cursor);
             }
         }
     }
 
-    private void sortKeysOfPage(ByteBuffer buffer){
+    private void sortKeysOfPage(PageProxyCursor cursor){
         ArrayList<Long[]> list = new ArrayList<>();
-        buffer.position(0);
-        while(buffer.position() + 8 < buffer.capacity()){
+        cursor.setOffset(0);
+        while(cursor.getOffset() + 8 < DiskCache.PAGE_SIZE){
             Long[] key = new Long[keySize];
             for(int i = 0; i < keySize; i++){
-                key[i] = buffer.getLong();
+                key[i] = cursor.getLong();
             }
             if(key[0] != 0){
                 list.add(key);
@@ -158,10 +155,10 @@ public class Sorter {
         }
         Collections.sort(list, KeyImpl.getComparator());
 
-        buffer.position(0);
+        cursor.setOffset(0);
         for(Long[] key : list){
             for(Long val : key){
-                buffer.putLong(val);
+                cursor.putLong(val);
             }
         }
     }
@@ -208,11 +205,26 @@ public class Sorter {
         }
 
         private void fillBuffer(long pageId) throws IOException {
+            if(setIteratorCursor != null) {
+                setIteratorCursor.next(pageId);
+                setIteratorCursor.getBytes(byteRep);
+            }
+            else{
+                try(PageProxyCursor cursor = readFromDisk.getCursor(pageId, PagedFile.PF_SHARED_LOCK)){
+                    cursor.getBytes(byteRep);
+                }
+            }
+            buffer.position(0);
+        }
+
+        /*
+        private void fillBuffer(long pageId) throws IOException {
             try(PageProxyCursor cursor = readFromDisk.getCursor(pageId, PagedFile.PF_SHARED_LOCK)){
                 cursor.getBytes(byteRep);
             }
             buffer.position(0);
         }
+        */
 
         public long[] getNext() throws IOException {
             long[] ret = new long[keySize];

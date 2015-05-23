@@ -11,10 +11,11 @@ import java.io.IOException;
  */
 public class NodeDeletion {
     public static PageProxyCursor cursor;
+    public static DiskCache disk;
 
     public static RemoveResultProxy remove(long[] key){
         RemoveResultProxy result = null;
-        try (PageProxyCursor cursor = DiskCache.getCursor(NodeTree.rootNodeId, PagedFile.PF_EXCLUSIVE_LOCK)) {
+        try (PageProxyCursor cursor = NodeTree.disk.getCursor(NodeTree.rootNodeId, PagedFile.PF_EXCLUSIVE_LOCK)) {
                     if(NodeHeader.isLeafNode(cursor)){
                         result = removeKeyFromLeafNode(cursor, cursor.getCurrentPageId(), key);
                     } else {
@@ -105,7 +106,7 @@ public class NodeDeletion {
 
     public static RemoveResultProxy removeKeyFromLeafNode(long nodeId, long[] key){
         RemoveResultProxy result = null;
-        try (PageProxyCursor cursor = DiskCache.getCursor(nodeId, PagedFile.PF_EXCLUSIVE_LOCK)) {
+        try (PageProxyCursor cursor = NodeTree.disk.getCursor(nodeId, PagedFile.PF_EXCLUSIVE_LOCK)) {
                     result = removeKeyFromLeafNode(cursor, nodeId, key);
 
         } catch (IOException e) {

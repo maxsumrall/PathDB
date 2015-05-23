@@ -2,7 +2,6 @@ package bptree.impl;
 
 import bptree.PageProxyCursor;
 import org.neo4j.io.pagecache.PageCursor;
-import org.neo4j.io.pagecache.PagedFile;
 
 import java.io.IOException;
 
@@ -12,12 +11,9 @@ import java.io.IOException;
 public class BasicPageCursor extends PageProxyCursor {
 
     PageCursor cursor;
-    public static PagedFile pagedFile;
-
 
     public BasicPageCursor(DiskCache disk, long pageId, int lock) throws IOException {
-        pagedFile = disk.getPagedFile();
-        this.cursor = pagedFile.io(pageId, lock);
+        this.cursor = disk.pagedFile.io(pageId, lock);
         cursor.next();
     }
 

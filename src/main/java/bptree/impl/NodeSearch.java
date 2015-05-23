@@ -4,8 +4,6 @@ import bptree.PageProxyCursor;
 import org.neo4j.io.pagecache.PagedFile;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.LongBuffer;
 
 
 public class NodeSearch {
@@ -16,7 +14,7 @@ public class NodeSearch {
         long[] entry = null;
         SearchCursor resultsCursor = null;
         int[] searchResult;
-        try (PageProxyCursor cursor = DiskCache.getCursor(NodeTree.rootNodeId, PagedFile.PF_EXCLUSIVE_LOCK)) {
+        try (PageProxyCursor cursor = NodeTree.disk.getCursor(NodeTree.rootNodeId, PagedFile.PF_EXCLUSIVE_LOCK)) {
                     searchResult = find(cursor, key);
                     long currentNode = cursor.getCurrentPageId();
                     if(searchResult[0] == 0) {
@@ -25,11 +23,7 @@ public class NodeSearch {
                             searchResult = altResult;
                         }
                     }
-                    byte[] keys = new byte[NodeHeader.getNumberOfKeys(cursor) * NodeHeader.getKeyLength(cursor) * 8];
-                    cursor.setOffset(NodeHeader.NODE_HEADER_LENGTH);
-                    cursor.getBytes(keys);
-                    LongBuffer keysLB = ByteBuffer.wrap(keys).asLongBuffer();
-                    resultsCursor = new SearchCursor(NodeHeader.getSiblingID(cursor), searchResult[0], keysLB, key, NodeHeader.getKeyLength(cursor));
+                    resultsCursor = new SearchCursor(cursor.getCurrentPageId(), NodeHeader.getSiblingID(cursor), searchResult[0], key, NodeHeader.getKeyLength(cursor), NodeHeader.getNumberOfKeys(cursor));
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -52,7 +46,7 @@ public class NodeSearch {
 
     public static int[] search(long nodeId, long[] key) {
         int[] result = new int[]{-1, -1};
-        try (PageProxyCursor cursor = DiskCache.getCursor(nodeId, PagedFile.PF_EXCLUSIVE_LOCK)) {
+        try (PageProxyCursor cursor = NodeTree.disk.getCursor(nodeId, PagedFile.PF_EXCLUSIVE_LOCK)) {
                     result = search(cursor, key);
 
         } catch (IOException e) {

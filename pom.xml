@@ -51,7 +51,7 @@
                 </executions>
                 <configuration>
                     <executable>java</executable>
-                    <mainClass>Benchmark.Benchmark</mainClass>
+                    <mainClass>NeoIntegration.BulkLUBMDataLoader</mainClass>
                     <arguments>
                         <argument>-XX:+UseFastAccessorMethods</argument>
                         <argument>-XX:+DisableExplicitGC</argument>

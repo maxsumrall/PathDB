@@ -22,6 +22,7 @@ The Header of the block when stored as bytes is:
     public static final int LEAF_FLAG = 1;
     public static final int SAME_LENGTH_KEYS_FLAG = 1;
     public static final int NODE_HEADER_LENGTH = 1 + 4 + 4 + 8 + 8;
+    public static final long KEY_DELIMITER = -1;
 
     protected static boolean isLeafNode(ByteBuffer buffer){
         return buffer.get(BYTE_POSITION_NODE_TYPE) == LEAF_FLAG;

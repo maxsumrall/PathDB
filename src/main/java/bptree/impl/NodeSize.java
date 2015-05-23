@@ -22,7 +22,7 @@ public class NodeSize {
 
     public static int leafNodeByteSize(long nodeId, long[] newKey){
         int size = 0;
-        try (PageProxyCursor cursor = DiskCache.getCursor(nodeId, PagedFile.PF_EXCLUSIVE_LOCK)) {
+        try (PageProxyCursor cursor = NodeTree.disk.getCursor(nodeId, PagedFile.PF_EXCLUSIVE_LOCK)) {
                     size = leafNodeByteSize(cursor, newKey);
         } catch (IOException e) {
             e.printStackTrace();
@@ -64,7 +64,7 @@ public class NodeSize {
 
     public static int internalNodeByteSize(long nodeId, long[] newKey){
         int size = 0;
-        try (PageProxyCursor cursor = DiskCache.getCursor(nodeId, PagedFile.PF_EXCLUSIVE_LOCK)) {
+        try (PageProxyCursor cursor = NodeTree.disk.getCursor(nodeId, PagedFile.PF_EXCLUSIVE_LOCK)) {
                     size = internalNodeByteSize(cursor, newKey);
         } catch (IOException e) {
             e.printStackTrace();

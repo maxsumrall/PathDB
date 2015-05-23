@@ -57,6 +57,18 @@ public class KeyImpl implements Key, Comparator<Long[]> {
         }
         return 0;
     }
+    public int compare(long[] a, long[] b) {
+
+        if(a.length != b.length){ return a.length - b.length; }
+        for (int i = 0; i < a.length; i++) {
+            if (a[i] != b[i]) {
+                return Long.compare(a[i],b[i]);
+            }
+        }
+        return 0;
+    }
+
+
     public int prefixCompare(Long[] search_key, Long[] key) {
         long temp;
         if(search_key.length != key.length){
@@ -81,7 +93,7 @@ public class KeyImpl implements Key, Comparator<Long[]> {
                 return (int) (search_key[i] - (key[i]));
             }
         }
-        return 0;
+        return search_key.length - key.length;
     }
 
     /**
