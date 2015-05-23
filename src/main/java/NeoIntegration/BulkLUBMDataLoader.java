@@ -27,7 +27,7 @@ public class BulkLUBMDataLoader {
     private final String DB_PATH = "graph.db/";
     //public ArrayList<Long[]> keys;
     //String uriDir = "/Users/max/Desktop/lubm_data/csvData/";
-    String uriDir = "../csvData/";
+    String uriDir = "csvData/";
     File[] owlFiles;
     HashMap<String, Label> labels = new HashMap<>();
     HashMap<String, RelationshipType> relationships = new HashMap<>();
