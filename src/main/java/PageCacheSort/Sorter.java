@@ -3,6 +3,7 @@ package PageCacheSort;
 import bptree.PageProxyCursor;
 import bptree.impl.DiskCache;
 import bptree.impl.KeyImpl;
+import bptree.impl.NodeHeader;
 import org.neo4j.io.pagecache.PagedFile;
 
 import java.io.IOException;
@@ -25,6 +26,9 @@ public class Sorter {
     final int keyByteSize;
     LinkedList<PageSet> writePageSets = new LinkedList<>();
     LinkedList<PageSet> readPageSets = new LinkedList<>();
+    Long[][] tmpKeyArray;
+    int tmpKeyArraySize;
+    int tmpArrayIndex = 0;
 
 
     public Sorter(int keySize) throws IOException {
@@ -34,12 +38,17 @@ public class Sorter {
         readFromDisk = DiskCache.getDiskCacheWithFilename("tmp_sortFileB.dat");
         writeToCursor = writeToDisk.getCursor(0, PagedFile.PF_EXCLUSIVE_LOCK);
         writePageSets.push(new PageSet(0));
+        int pagesPerFirstSet = 1;
+        int tmpKeyArraySize = ((DiskCache.PAGE_SIZE - NodeHeader.NODE_HEADER_LENGTH) / (8 * keySize)) * pagesPerFirstSet;
+        tmpKeyArray = new Long[tmpKeyArraySize][keySize];
     }
 
     public SetIterator sort() throws IOException {
         writeToCursor.close();
-        sortEachPage();
+        //sortEachPage();
+        //long startTime = System.nanoTime();
         sortHelper();
+        //System.out.println("Merge Duration: " + ((System.nanoTime() - startTime) / 1000000));
         setIteratorCursor = null;
         postSortSet = writePageSets.pop();
         finalPage = postSortSet.pagesInSet.getLast();
@@ -142,14 +151,19 @@ public class Sorter {
 
     private void sortEachPage() throws IOException {
         long lastPage = writePageSets.getLast().peek();
+        int intLastPage = (int)lastPage;
         writePageSets.clear();
-        int pages_per_round = 8;
-        try(PageProxyCursor cursor = writeToDisk.getCursor(0, PagedFile.PF_EXCLUSIVE_LOCK)){
-            for(long i = 0; i <= lastPage; i+= Math.min(pages_per_round, ((i + pages_per_round) % lastPage))){
+        int pages_per_round = 256;
+        swapPageSets();
+        writeToCursor = writeToDisk.getCursor(0, PagedFile.PF_EXCLUSIVE_LOCK);
+        try(PageProxyCursor cursor = readFromDisk.getCursor(0, PagedFile.PF_SHARED_LOCK)){
+            //for(long i = 0; i <= lastPage; i+= Math.min(pages_per_round, ((i + pages_per_round) % lastPage))){
+            for(long i = 0; i <= lastPage; i+= pages_per_round){
                 cursor.next(i);
-                sortKeysOfPage(cursor, pages_per_round);
+                sortKeysOfPage(cursor, (pages_per_round % intLastPage));
             }
         }
+        writeToCursor.close();
     }
 
     private void sortKeysOfPage(PageProxyCursor cursor, int pages_per_round) throws IOException {
@@ -159,6 +173,7 @@ public class Sorter {
         long firstPage = cursor.getCurrentPageId();
         for(int page = 0; page < pages_per_round; page++) {
             cursor.next(firstPage + page);
+            pageSet.add(cursor.getCurrentPageId());
             while(!pageIsFull(cursor)){
                 Long[] key = new Long[keySize];
                 for (int i = 0; i < keySize; i++) {
@@ -175,7 +190,7 @@ public class Sorter {
 
         int currKey = 0;
         long currentPage = firstPage;
-        while(currKey < list.size()){
+        /*while(currKey < list.size()){
             if(pageIsFull(cursor)){
                 pageSet.add(currentPage);
                 cursor.next(++currentPage);
@@ -187,9 +202,14 @@ public class Sorter {
             }
         }
         pageSet.add(currentPage);
+         */
+        for(Long[] key : list){
+            addSortedKey(key);
+        }
+
         writePageSets.add(pageSet);
     }
-
+    /*
     public void addUnsortedKey(long[] key) throws IOException {
         if(pageIsFull(writeToCursor)){
             incrementCursorToNextPage(writeToCursor);
@@ -198,13 +218,53 @@ public class Sorter {
             writeToCursor.putLong(aKey);
         }
     }
+    */
+    public void addUnsortedKey(Long[] key) throws IOException {
+        if(tmpArrayIsFull()){
+            dumpTmpArrayAndReset();
+        }
+        addKeyToTempArray(key);
+    }
 
+    private boolean tmpArrayIsFull(){
+        return tmpArrayIndex >= tmpKeyArray.length;
+    }
+
+    private void addKeyToTempArray(Long[] key){
+        tmpKeyArray[tmpArrayIndex++] = key;
+    }
+
+    private void dumpTmpArrayAndReset() throws IOException {
+        Arrays.sort(tmpKeyArray, KeyImpl.getComparator());
+
+        for(Long[] key : tmpKeyArray){
+            writeBatchInputToDisk(key);
+        }
+        Arrays.fill(tmpKeyArray, new Long[]{0l,0l,0l,0l});
+        tmpArrayIndex = 0;
+    }
+
+    public void writeBatchInputToDisk(Long[] key) throws IOException {
+        if(pageIsFull(writeToCursor)){
+            incrementCursorToNextPage(writeToCursor);
+        }
+        for (long aKey : key) {
+            writeToCursor.putLong(aKey);
+        }
+    }
     public void addSortedKey(long[] key) throws IOException {
-        //System.out.println(Arrays.toString(key));
         if(pageIsFull(writeToCursor)){
             writeToCursor.next(writeToCursor.getCurrentPageId() + 1);
         }
         for (long aKey : key) {
+            writeToCursor.putLong(aKey);
+        }
+    }
+    public void addSortedKey(Long[] key) throws IOException {
+        if(pageIsFull(writeToCursor)){
+            writeToCursor.next(writeToCursor.getCurrentPageId() + 1);
+        }
+        for (Long aKey : key) {
             writeToCursor.putLong(aKey);
         }
     }
