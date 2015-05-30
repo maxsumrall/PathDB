@@ -43,7 +43,7 @@ public class NodeProxyTreeTest {
 
         pindex = ((PathIndexImpl) index);
         disk = pindex.tree.nodeKeeper.diskCache;
-        proxy = new NodeTree(pindex.tree.rootNodePageID, disk.pagedFile);
+        proxy = new NodeTree(pindex.tree.rootNodePageID, disk);
     }
 
     @Test

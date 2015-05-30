@@ -33,7 +33,7 @@ public class Tree implements Closeable, Serializable, ObjectInputValidation {
         idPool = new AvailablePageIdPool(nodeKeeper.diskCache.getMaxNumberOfPages());
         //Node rootNode = createLeafNode();
         //rootNodePageID = rootNode.id;
-        proxy = new NodeTree(0, diskCache.pagedFile);
+        proxy = new NodeTree(0, diskCache);
     }
     public static Tree initializeTemporaryNewTree() throws IOException {
         return initializeNewTree(DEFAULT_TREE_FILE_NAME, DiskCache.temporaryDiskCache()); //Delete on exit

@@ -16,9 +16,10 @@ public class NodeTree {
     public static long rootNodeId = 0;
     public static PageProxyCursor cursor;
 
-    public NodeTree(long rootNodeId, PagedFile pagedFile){
+    public NodeTree(long rootNodeId, DiskCache disk){
         NodeTree.rootNodeId = rootNodeId;
-        NodeTree.pagedFile = pagedFile;
+        NodeTree.pagedFile = disk.pagedFile;
+        NodeTree.disk = disk;
     }
 
     public NodeTree(DiskCache disk) throws IOException {

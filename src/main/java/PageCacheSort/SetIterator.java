@@ -9,7 +9,7 @@ public interface SetIterator {
 
     long[] getNext() throws IOException;
 
-    public long[] peekNext();
+    public long[] peekNext() throws IOException;
 
-    public boolean hasNext();
+    public boolean hasNext() throws IOException;
 }

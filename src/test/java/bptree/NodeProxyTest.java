@@ -33,7 +33,7 @@ public class NodeProxyTest {
             index.insert(key);
         }
         pindex = ((PathIndexImpl)index);
-        proxy = new NodeTree(pindex.tree.rootNodePageID, pindex.tree.nodeKeeper.diskCache.getPagedFile());
+        proxy = new NodeTree(pindex.tree.rootNodePageID, pindex.tree.nodeKeeper.diskCache);
     }
 
     public long[] toPrimitive(Long[] key){

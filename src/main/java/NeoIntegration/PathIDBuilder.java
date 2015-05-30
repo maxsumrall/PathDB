@@ -6,7 +6,12 @@ import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
 
 public class PathIDBuilder {
-    StringBuilder path = new StringBuilder();
+    public StringBuilder path = new StringBuilder();
+
+    public PathIDBuilder(String relA, String relB){
+        path.append(relA);
+        path.append(relB);
+    }
 
     public PathIDBuilder(Node nodeA, Node nodeB, Relationship relA, Relationship relB){
         addRelationship(nodeA, relA);

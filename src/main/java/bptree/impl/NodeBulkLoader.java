@@ -17,7 +17,8 @@ public class NodeBulkLoader {
     private PagedFile pagedFile;
     private DiskCache disk;
     public static int KEY_LENGTH = 4;
-    public static int MAX_PAIRS = ((DiskCache.PAGE_SIZE - NodeHeader.NODE_HEADER_LENGTH) / ((KEY_LENGTH + 1)*8) ) / 2;
+    //public static int MAX_PAIRS = ((DiskCache.PAGE_SIZE - NodeHeader.NODE_HEADER_LENGTH) / ((KEY_LENGTH + 1)*8) ) / 2; //why did I do this? what is this??
+    public static int MAX_PAIRS = ((DiskCache.PAGE_SIZE - NodeHeader.NODE_HEADER_LENGTH) / ((KEY_LENGTH + 1)*8) ) - 1; //why did I do this? what is this??
     private static int RESERVED_CHILDREN_SPACE = (MAX_PAIRS + 1) * 8;
     private int currentPair = 0;
     private long currentParent;

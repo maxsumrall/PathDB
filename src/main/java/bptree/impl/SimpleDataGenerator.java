@@ -38,6 +38,6 @@ public class SimpleDataGenerator implements BulkLoadDataSource {
 
     @Override
     public boolean hasNext() {
-        return currentPage < numberOfPages;
+        return currentPage <= numberOfPages;
     }
 }

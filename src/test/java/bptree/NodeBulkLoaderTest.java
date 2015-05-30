@@ -18,11 +18,11 @@ public class NodeBulkLoaderTest {
 
         DiskCache disk = DiskCache.temporaryDiskCache();
         tree = Tree.initializeNewTree("tmp_tree_yo.dat", disk); //used for debugging
-        int numberOfPages = 1000; //100000 pages should roughly equal 20mil keys;
+        int numberOfPages = 40000; //100000 pages should roughly equal 20mil keys;
         SimpleDataGenerator dataGenerator = new SimpleDataGenerator(numberOfPages);
         NodeBulkLoader bulkLoader = new NodeBulkLoader(dataGenerator, disk);
         long root = bulkLoader.run();
-        NodeTree proxy = new NodeTree(root, disk.getPagedFile());
+        NodeTree proxy = new NodeTree(root, disk);
         System.out.println("Done: " + root);
         for(long i = 0; i < dataGenerator.currentKey; i++){
             long[] key = new long[4];

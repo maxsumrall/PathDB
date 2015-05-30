@@ -15,20 +15,23 @@ import java.util.*;
  * Main entry into the Sorter.
  */
 public class Sorter {
+    int FAN_IN = 500;
     PageProxyCursor setIteratorCursor;
     DiskCache writeToDisk;
     DiskCache readFromDisk;
     PageProxyCursor writeToCursor;
     KeyImpl comparator = KeyImpl.getComparator();
     PageSet postSortSet;
+    public static final int ALT_MAX_PAGE_SIZE = DiskCache.PAGE_SIZE - NodeHeader.NODE_HEADER_LENGTH;
     long finalPage;
+    int countA = 0; //debugging
+    int countB = 0; //debugging
     final int keySize;
     final int keyByteSize;
     LinkedList<PageSet> writePageSets = new LinkedList<>();
     LinkedList<PageSet> readPageSets = new LinkedList<>();
-    Long[][] tmpKeyArray;
-    int tmpKeyArraySize;
-    int tmpArrayIndex = 0;
+    int byteRepSize = 0;
+    PriorityQueue<Long[]> bulkLoadedKeys = new PriorityQueue<>(KeyImpl.getComparator());
 
 
     public Sorter(int keySize) throws IOException {
@@ -37,15 +40,18 @@ public class Sorter {
         writeToDisk = DiskCache.getDiskCacheWithFilename("tmp_sortFileA.dat");
         readFromDisk = DiskCache.getDiskCacheWithFilename("tmp_sortFileB.dat");
         writeToCursor = writeToDisk.getCursor(0, PagedFile.PF_EXCLUSIVE_LOCK);
-        writePageSets.push(new PageSet(0));
-        int pagesPerFirstSet = 1;
-        int tmpKeyArraySize = ((DiskCache.PAGE_SIZE - NodeHeader.NODE_HEADER_LENGTH) / (8 * keySize)) * pagesPerFirstSet;
-        tmpKeyArray = new Long[tmpKeyArraySize][keySize];
+        //writePageSets.push(new PageSet(0));
     }
 
     public SetIterator sort() throws IOException {
+        flushBulkLoadedKeys(); //check the contents of last page
+        System.out.println("Post-Bulk, countA: " + countA + " countB: " + countB);
+        System.out.println("Final Page ID: " + writeToCursor.getCurrentPageId());
+        countA = 0;
+        countB = 0;
         writeToCursor.close();
         //sortEachPage();
+       // debug_countKeysType();
         //long startTime = System.nanoTime();
         sortHelper();
         //System.out.println("Merge Duration: " + ((System.nanoTime() - startTime) / 1000000));
@@ -55,87 +61,54 @@ public class Sorter {
         return getFinalIterator(writeToDisk);
     }
 
-    public DiskCache getSortedDisk(){
-        return writeToDisk;
-    }
-    public long finalPageId(){
-        return finalPage;
-    }
-
     private void sortHelper() throws IOException {
         swapPageSets();
-        PageSet setA;
-        PageSet setB;
-        setIteratorCursor = readFromDisk.getCursor(0, PagedFile.PF_SHARED_LOCK);
+        setIteratorCursor = readFromDisk.getCursor(0, PagedFile.PF_EXCLUSIVE_LOCK);
         writeToCursor = writeToDisk.getCursor(0, PagedFile.PF_EXCLUSIVE_LOCK);
         while(!readPageSets.isEmpty()){
-            //get two read cursors, read and sort, push sets to other stack
-
+            int modifiedFanOut = Math.min(readPageSets.size(), FAN_IN);
+            LinkedList<PageSet> pageSets = new LinkedList<>();
+            for(int i = 0; i < modifiedFanOut; i++){
+                PageSet nextSet = readPageSets.pop();
+                pageSets.add(nextSet);
+            }
             if(readPageSets.size() == 1){
-                //write single entity down
-                appendOddSet(readPageSets.pop());
+                PageSet nextSet = readPageSets.pop();
+                pageSets.add(nextSet);
             }
-            else{
-                setA = readPageSets.pop();
-                setB = readPageSets.pop();
-                mergeTwoSets(setA, setB);
-
-            }
+            mergeSets(pageSets);
         }
+        flushAfterSortedKey();
+        System.out.println("countA: " + countA + " countB: " + countB);
+        System.out.println("Final Page ID: " + writeToCursor.getCurrentPageId());
+        countA = 0;
+        countB = 0;
         setIteratorCursor.close();
         writeToCursor.close();
         if(writePageSets.size() > 1){
             sortHelper();
         }
+
     }
 
-    public void print(DiskCache sortedNumbersDisk) throws IOException {
-        readFromDisk = sortedNumbersDisk;
-
-        SetIterator itr = new SetIteratorImpl(postSortSet);
-            while(itr.hasNext()){
-                System.out.println(Arrays.toString(itr.getNext()));
-            }
-    }
-    private SetIterator getFinalIterator(DiskCache sortedNumbersDisk) throws IOException {
-        readFromDisk = sortedNumbersDisk;
-        SetIterator itr = new SetIteratorImpl(postSortSet);
-        return itr;
-    }
-
-    private void mergeTwoSets(PageSet setA, PageSet setB) throws IOException {
-        writePageSets.add(new PageSet(setA, setB));
-        SetIterator itrA = new SetIteratorImpl(setA);
-        SetIterator itrB = new SetIteratorImpl(setB);
+    private void mergeSets(LinkedList<PageSet> pageSets) throws IOException {
+        writePageSets.add(new PageSet(pageSets));
+        PriorityQueue<SetIterator> pQueue = new PriorityQueue<>();
+        for(PageSet set : pageSets){
+            pQueue.add(new SetIteratorImpl(set));
+        }
         long[] prev = new long[]{0,0,0,0};
         long[] next;
-        while(itrA.hasNext() && itrB.hasNext()){
-            if(comparator.compare(itrA.peekNext(), itrB.peekNext()) >= 0){
-                addSortedKey(itrB.getNext());
+        SetIterator curr;
+        while(pQueue.size() > 0){
+            curr = pQueue.poll();
+            next = curr.getNext();
+            assert(KeyImpl.getComparator().compare(next, prev) > 0);
+            prev = next;
+            addSortedKey(next);
+            if(curr.hasNext()) {
+                pQueue.add(curr);
             }
-            else{
-                addSortedKey(itrA.getNext());
-            }
-        }
-        while(itrA.hasNext()){
-            addSortedKey(itrA.getNext());
-        }
-        while(itrB.hasNext()){
-            addSortedKey(itrB.getNext());
-        }
-    }
-    private void appendOddSet(PageSet setA) throws IOException {
-        writePageSets.add(new PageSet(setA));
-        SetIterator itrA = new SetIteratorImpl(setA);
-        while(itrA.hasNext()){
-            addSortedKey(itrA.getNext());
-        }
-
-    }
-
-    private void writeKeyToCursor(long[] key, PageProxyCursor cursor){
-        for(long val : key){
-            cursor.putLong(val);
         }
     }
 
@@ -149,213 +122,196 @@ public class Sorter {
         this.readPageSets = tmp;
     }
 
-    private void sortEachPage() throws IOException {
-        long lastPage = writePageSets.getLast().peek();
-        int intLastPage = (int)lastPage;
-        writePageSets.clear();
-        int pages_per_round = 256;
-        swapPageSets();
-        writeToCursor = writeToDisk.getCursor(0, PagedFile.PF_EXCLUSIVE_LOCK);
-        try(PageProxyCursor cursor = readFromDisk.getCursor(0, PagedFile.PF_SHARED_LOCK)){
-            //for(long i = 0; i <= lastPage; i+= Math.min(pages_per_round, ((i + pages_per_round) % lastPage))){
-            for(long i = 0; i <= lastPage; i+= pages_per_round){
-                cursor.next(i);
-                sortKeysOfPage(cursor, (pages_per_round % intLastPage));
-            }
-        }
-        writeToCursor.close();
+    public DiskCache getSortedDisk(){
+        return writeToDisk;
+    }
+    public long finalPageId(){
+        return finalPage;
     }
 
-    private void sortKeysOfPage(PageProxyCursor cursor, int pages_per_round) throws IOException {
-        PageSet pageSet = new PageSet();
-        ArrayList<Long[]> list = new ArrayList<>();
-        cursor.setOffset(0);
-        long firstPage = cursor.getCurrentPageId();
-        for(int page = 0; page < pages_per_round; page++) {
-            cursor.next(firstPage + page);
-            pageSet.add(cursor.getCurrentPageId());
-            while(!pageIsFull(cursor)){
-                Long[] key = new Long[keySize];
-                for (int i = 0; i < keySize; i++) {
-                    key[i] = cursor.getLong();
-                }
-                if (key[0] != 0) {
-                    list.add(key);
-                }
-            }
-        }
-        Collections.sort(list, KeyImpl.getComparator());
+    public void print(DiskCache sortedNumbersDisk) throws IOException {
+        readFromDisk = sortedNumbersDisk;
 
-        cursor.next(firstPage);
-
-        int currKey = 0;
-        long currentPage = firstPage;
-        /*while(currKey < list.size()){
-            if(pageIsFull(cursor)){
-                pageSet.add(currentPage);
-                cursor.next(++currentPage);
-                cursor.setOffset(0);
-            }
-            Long[] key = list.get(currKey++);
-            for (Long val : key) {
-                cursor.putLong(val);
-            }
+        SetIterator itr = new SetIteratorImpl(postSortSet);
+        while(itr.hasNext()){
+            System.out.println(Arrays.toString(itr.getNext()));
         }
-        pageSet.add(currentPage);
-         */
-        for(Long[] key : list){
-            addSortedKey(key);
-        }
-
-        writePageSets.add(pageSet);
     }
-    /*
+    private SetIterator getFinalIterator(DiskCache sortedNumbersDisk) throws IOException {
+        readFromDisk = sortedNumbersDisk;
+        SetIterator itr = new SetIteratorImpl(postSortSet);
+        return itr;
+    }
+
+    private void debug_countKeysType() throws IOException {
+        HashMap<Long, Long> map = new HashMap<>();
+        try(PageProxyCursor cursor = writeToDisk.getCursor(0, PagedFile.PF_EXCLUSIVE_LOCK)){
+            for(PageSet set : writePageSets) {
+                for (long pageId : set.getAll()) {
+                    cursor.next(pageId);
+                    long[] next = new long[4];
+                    next[0] = cursor.getLong();
+                    next[1] = cursor.getLong();
+                    next[2] = cursor.getLong();
+                    next[3] = cursor.getLong();
+                    while (cursor.getOffset() + (4 * 8) < DiskCache.PAGE_SIZE) {
+                        for (int i = 0; i < 4; i++) {
+                            next[i] = cursor.getLong();
+                        }
+                        if (!map.containsKey(next[0])) {
+                            map.put(next[0], 0l);
+                        }
+                        map.put(next[0], map.get(next[0]) + 1);
+
+                    }
+                }
+            }
+        }
+        for(Long key : map.keySet()){
+            System.out.println("Debug - Key: " + key + "Found vals: " + map.get(key));
+        }
+    }
+
     public void addUnsortedKey(long[] key) throws IOException {
-        if(pageIsFull(writeToCursor)){
-            incrementCursorToNextPage(writeToCursor);
+        if(byteRepSize + (keySize * 8) > ALT_MAX_PAGE_SIZE){
+            flushBulkLoadedKeys();
         }
-        for (long aKey : key) {
-            writeToCursor.putLong(aKey);
+        byteRepSize += key.length * 8;
+        Long[] keyObj = new Long[key.length];
+        for(int i = 0; i < key.length; i++){
+            keyObj[i] = key[i];
         }
-    }
-    */
-    public void addUnsortedKey(Long[] key) throws IOException {
-        if(tmpArrayIsFull()){
-            dumpTmpArrayAndReset();
-        }
-        addKeyToTempArray(key);
-    }
-
-    private boolean tmpArrayIsFull(){
-        return tmpArrayIndex >= tmpKeyArray.length;
-    }
-
-    private void addKeyToTempArray(Long[] key){
-        tmpKeyArray[tmpArrayIndex++] = key;
-    }
-
-    private void dumpTmpArrayAndReset() throws IOException {
-        Arrays.sort(tmpKeyArray, KeyImpl.getComparator());
-
-        for(Long[] key : tmpKeyArray){
-            writeBatchInputToDisk(key);
-        }
-        Arrays.fill(tmpKeyArray, new Long[]{0l,0l,0l,0l});
-        tmpArrayIndex = 0;
-    }
-
-    public void writeBatchInputToDisk(Long[] key) throws IOException {
-        if(pageIsFull(writeToCursor)){
-            incrementCursorToNextPage(writeToCursor);
-        }
-        for (long aKey : key) {
-            writeToCursor.putLong(aKey);
-        }
+        bulkLoadedKeys.add(keyObj); //TODO optimize this crap, this primitive -> obj conversion is retarded.
     }
     public void addSortedKey(long[] key) throws IOException {
-        if(pageIsFull(writeToCursor)){
-            writeToCursor.next(writeToCursor.getCurrentPageId() + 1);
+        if(byteRepSize + (keySize * 8) > ALT_MAX_PAGE_SIZE){
+            flushAfterSortedKey();
         }
-        for (long aKey : key) {
-            writeToCursor.putLong(aKey);
+        byteRepSize += key.length * 8;
+        Long[] keyObj = new Long[key.length];
+        for(int i = 0; i < key.length; i++){
+            keyObj[i] = key[i];
         }
-    }
-    public void addSortedKey(Long[] key) throws IOException {
-        if(pageIsFull(writeToCursor)){
-            writeToCursor.next(writeToCursor.getCurrentPageId() + 1);
-        }
-        for (Long aKey : key) {
-            writeToCursor.putLong(aKey);
-        }
+        bulkLoadedKeys.add(keyObj); //TODO optimize this crap, this primitive -> obj conversion is retarded.
     }
 
-    private void incrementCursorToNextPage(PageProxyCursor cursor) throws IOException {
-        long currentPage = cursor.getCurrentPageId();
-        cursor.next(++currentPage);
-        writePageSets.add(new PageSet(currentPage));
+    private void flushBulkLoadedKeys() throws IOException {
+        //dump sorted keys to page,
+        writeToCursor.putInt(byteRepSize);
+        while(bulkLoadedKeys.size() > 0){
+            Long[] sortedKey = bulkLoadedKeys.poll();
+            for (Long val : sortedKey) {
+                writeToCursor.putLong(val);
+            }
+            if(!sortedKey[0].equals(new Long(90603815l))){
+                countA++;
+            }
+            else{
+                countB++;
+            }
+        }
+        bulkLoadedKeys.clear();
+        byteRepSize = 0;
+        writePageSets.add(new PageSet(writeToCursor.getCurrentPageId()));
+        writeToCursor.next(writeToCursor.getCurrentPageId() + 1);
     }
 
-    private boolean pageIsFull(PageProxyCursor cursor){
-        return (cursor.getOffset() + keyByteSize) >= DiskCache.PAGE_SIZE;
+    private void flushAfterSortedKey() throws IOException {
+        writeToCursor.setOffset(0);
+        writeToCursor.putInt(byteRepSize);
+        //dump sorted keys to page,
+        while(bulkLoadedKeys.size() > 0){
+            Long[] sortedKey = bulkLoadedKeys.poll();
+            for (Long val : sortedKey) {
+                writeToCursor.putLong(val);
+            }
+            if(!sortedKey[0].equals(new Long(90603815l))){
+                countA++;
+            }
+            else{
+                countB++;
+            }
+        }
+        writeToCursor.next(writeToCursor.getCurrentPageId() + 1);
+        bulkLoadedKeys.clear();
+        byteRepSize = 0;
     }
 
-    public class SetIteratorImpl implements SetIterator{
+
+    public class SetIteratorImpl implements SetIterator, Comparable<SetIterator>{
         boolean setExhausted = false;
         PageSet set;
-        byte[] byteRep = new byte[DiskCache.PAGE_SIZE];
+        byte[] byteRep = new byte[ALT_MAX_PAGE_SIZE];
         LongBuffer buffer = ByteBuffer.wrap(byteRep).asLongBuffer();
-        long[] next = new long[keySize];
 
         public SetIteratorImpl(PageSet set) throws IOException {
             this.set = set;
             fillBuffer(set.pop());
-            readKey();
         }
 
         private void fillBuffer(long pageId) throws IOException {
             if(setIteratorCursor != null) {
-                setIteratorCursor.setOffset(0);
                 setIteratorCursor.next(pageId);
+                int byteAmount = setIteratorCursor.getInt();
+                if(byteAmount != byteRep.length){
+                    byteRep = new byte[byteAmount];
+                }
                 setIteratorCursor.getBytes(byteRep);
+                buffer = ByteBuffer.wrap(byteRep).asLongBuffer();
             }
             else{
-                try(PageProxyCursor cursor = readFromDisk.getCursor(pageId, PagedFile.PF_SHARED_LOCK)){
+                try(PageProxyCursor cursor = readFromDisk.getCursor(pageId, PagedFile.PF_EXCLUSIVE_LOCK)){
+                    int byteAmount = cursor.getInt();
+                    if(byteAmount != byteRep.length){
+                        byteRep = new byte[byteAmount];
+                    }
                     cursor.getBytes(byteRep);
+                    buffer = ByteBuffer.wrap(byteRep).asLongBuffer();
                 }
             }
             buffer.position(0);
         }
 
-        /*
-        private void fillBuffer(long pageId) throws IOException {
-            try(PageProxyCursor cursor = readFromDisk.getCursor(pageId, PagedFile.PF_SHARED_LOCK)){
-                cursor.getBytes(byteRep);
-            }
-            buffer.position(0);
-        }
-        */
-
         public long[] getNext() throws IOException {
-            long[] ret = new long[keySize];
+            /*long[] ret = new long[keySize];
             System.arraycopy(next, 0, ret, 0, keySize);
             readKey();
             return ret;
-        }
-        public long[] peekNext(){
-            return next;
-        }
+            */
 
-        public boolean hasNext(){
-            if(setExhausted){
-                return false;
-            }
-            return !nextKeyAllZeros();
-        }
-
-        private boolean nextKeyAllZeros(){
-            boolean zeros = false;
-            for(long val : next){
-                zeros = zeros || (val == 0l);
-            }
-            return zeros;
-        }
-
-        private void readKey() throws IOException {
-            if((buffer.position() + keySize) >= buffer.capacity()){
-                if(set.isEmpty()){
-                    setExhausted = true;
-                }
-                else{
-                    fillBuffer(set.pop());
-                    for (int i = 0; i < keySize; i++) {
-                        next[i] = buffer.get();
-                    }
-                }
-            }
-            else {
+            if(hasNext()){
+                long[] next = new long[keySize];
                 for (int i = 0; i < keySize; i++) {
                     next[i] = buffer.get();
                 }
+                return next;
+            }
+            return null;
+        }
+
+        public long[] peekNext() throws IOException {
+            long[] ret = getNext();
+            buffer.position(buffer.position() - keySize);
+            return ret;
+        }
+
+        public boolean hasNext() throws IOException {
+            if((buffer.position()) == buffer.capacity() && set.isEmpty()) {
+                return false;
+            }
+            if((buffer.position()) == buffer.capacity() && !set.isEmpty()){
+                fillBuffer(set.pop());
+            }
+            //return !nextKeyAllZeros();
+            return true;
+        }
+
+        @Override
+        public int compareTo(SetIterator other) {
+            try {
+                return KeyImpl.getComparator().compare(peekNext(), other.peekNext());
+            } catch (IOException e) {
+                return 1;
             }
         }
     }
@@ -373,6 +329,12 @@ public class Sorter {
             pagesInSet = new LinkedList<>();
             pagesInSet.addAll(a.getAll());
             pagesInSet.addAll(b.getAll());
+        }
+        public PageSet(LinkedList<PageSet> sets){
+            pagesInSet = new LinkedList<>();
+            for(PageSet set : sets){
+                pagesInSet.addAll(set.pagesInSet);
+            }
         }
         public PageSet(PageSet a){
             pagesInSet = new LinkedList<>();

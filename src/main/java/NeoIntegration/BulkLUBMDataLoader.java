@@ -1,15 +1,18 @@
 package NeoIntegration;
 
+import PageCacheSort.SetIterator;
 import PageCacheSort.Sorter;
 import bptree.BulkLoadDataSource;
 import bptree.PageProxyCursor;
 import bptree.impl.DiskCache;
+import bptree.impl.KeyImpl;
 import bptree.impl.NodeBulkLoader;
-import bptree.impl.NodeTree;
 import org.neo4j.graphdb.*;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
+import org.neo4j.io.fs.FileUtils;
 import org.neo4j.io.pagecache.PagedFile;
 import org.neo4j.kernel.impl.store.InvalidRecordException;
+import org.neo4j.tooling.GlobalGraphOperations;
 import org.neo4j.unsafe.batchinsert.BatchInserter;
 import org.neo4j.unsafe.batchinsert.BatchInserters;
 
@@ -21,11 +24,10 @@ import java.util.*;
  * This involves converting from RDF Triples to the property graph model.
  */
 public class BulkLUBMDataLoader {
-    public NodeTree index;
-    public DiskCache disk;
     public BatchInserter inserter;
     //private final String DB_PATH = "/Users/max/Downloads/neo4j/data/graph.db";
-    private final String DB_PATH = "graph.db/";
+    public static final String DB_PATH = "graph.db/";
+    public static final String LUBM_INDEX_PATH = "lubm50Index.db";
     //public ArrayList<Long[]> keys;
     //String uriDir = "/Users/max/Desktop/lubm_data/csvData/";
     String uriDir = "csvData/";
@@ -37,9 +39,10 @@ public class BulkLUBMDataLoader {
 
 
     public static void main( String[] args ) throws IOException {
+
         BulkLUBMDataLoader bulkLUBMDataLoader = new BulkLUBMDataLoader();
 
-        bulkLUBMDataLoader.bulkLoad();
+        //bulkLUBMDataLoader.bulkLoad();
 
 
         bulkLUBMDataLoader.sortKeys();
@@ -49,15 +52,20 @@ public class BulkLUBMDataLoader {
     }
 
     public BulkLUBMDataLoader() throws IOException {
+
+        //File deleteGraph = new File(DB_PATH);
+        //FileUtils.deleteRecursively(deleteGraph);
+        File deleteIndex = new File(LUBM_INDEX_PATH);
+        FileUtils.deleteFile(deleteIndex);
         owlFiles = new File(uriDir).listFiles();
-        disk = DiskCache.persistentDiskCache("lmdbBig.dat");
-        index = new NodeTree(disk);
+        //disk = DiskCache.persistentDiskCache("lmdbBig.dat");
+        //index = new NodeTree(disk);
         //keys = new ArrayList<>();
     }
 
     public void bulkLoad(){
+        inserter = BatchInserters.inserter(DB_PATH);
         try{
-            inserter = BatchInserters.inserter(DB_PATH);
             for(File file : owlFiles) {
                 System.out.println("Importing: " + file.getName());
                 fileParser(file);
@@ -69,7 +77,6 @@ public class BulkLUBMDataLoader {
     }
 
     public void sortKeys() throws IOException {
-        try{
             //inserter = BatchInserters.inserter(DB_PATH);
             getPaths();
 
@@ -77,26 +84,39 @@ public class BulkLUBMDataLoader {
             //bulkLUBMDataLoader.keys.sort(KeyImpl.getComparator());
 
 
-            sorter.sort();
-            System.out.println("Hellz yeah, it's sorted, bitches!");
-            //System.out.println("Index root " + NodeTree.rootNodeId);
+            SetIterator itr = sorter.sort();
+        long[] prev = itr.getNext();
+        int countA = 0;
+        int countB = 0;
+        while(itr.hasNext()){
+            long[] next = itr.getNext();
+            assert(KeyImpl.getComparator().compare(next, prev) > 0);
+            prev = next;
+            if(next[0] != 90603815){
+                countA++;
+            }
+            else{
+                countB++;
+            }
         }
-        finally {
-            //inserter.shutdown();
-            this.disk.shutdown();
-        }
+            System.out.println("Sorting Complete.");
+            System.out.println("found paths post-sort for path A: " + countA);
+        System.out.println("found paths post-sort for path B: " + countB);
+
     }
 
     public void buildIndex() throws IOException {
         DiskCache sortedDisk = sorter.getSortedDisk();
 
-        DiskCache disk = DiskCache.persistentDiskCache("lubm50Index.db");
+        DiskCache disk = DiskCache.persistentDiskCache(LUBM_INDEX_PATH);
         BulkPageSource sortedDataSource = new BulkPageSource(sortedDisk, sorter.finalPageId());
 
         NodeBulkLoader bulkLoader = new NodeBulkLoader(sortedDataSource, disk);
         long root = bulkLoader.run();
-        NodeTree proxy = new NodeTree(root, disk.getPagedFile());
-        System.out.println("Done: " + proxy.rootNodeId);
+        //NodeTree index = new NodeTree(root, disk);
+        System.out.println("Done: " + root);
+        disk.shutdown();
+        sortedDisk.shutdown();
     }
 
 
@@ -171,39 +191,58 @@ private long getOrCreateNode(String label, String uri){
 
 private void getPaths() throws IOException {
     System.out.println(nodes.size());
+    long count = 0;
+    Map<Long, Long> pathMap = new HashMap<>();
     GraphDatabaseService db = new GraphDatabaseFactory().newEmbeddedDatabase( DB_PATH );
+    GlobalGraphOperations ggo = GlobalGraphOperations.at(db);
     try ( Transaction tx = db.beginTx()) {
         int i = 0;
-        for (Long nodeA : nodes.values()) {
+        for (Node node1 : ggo.getAllNodes()) {
             i++;
-            if (i % 100000 == 0) {
+
+            if (i % 50000 == 0) {
                 System.out.println(i);
             }
-            Node node1 = db.getNodeById(nodeA);
             for (Relationship relationship1 : node1.getRelationships()) {
                 Node node2 = relationship1.getOtherNode(node1);
                 for (Relationship relationship2 : node2.getRelationships()) {
                     Node node3 = relationship2.getOtherNode(node2);
                     if (relationship1.getId() != relationship2.getId()) {
-                        /*
                         if (validPath(relationship1, relationship2)) {
-                            long pathId = pathIdBuilder(node1, node2, relationship1, relationship2);
+                            //long pathId = pathIdBuilder(node1, node2, relationship1, relationship2);
+                            PathIDBuilder pathBuilder = new PathIDBuilder(relationship1.getType().name(), relationship2.getType().name());
+                            long pathId = pathBuilder.buildPath();
+                            if(!pathMap.containsKey(pathId)){
+                                pathMap.put(pathId, 0l);
+                                System.out.println(pathBuilder.path.toString() + " --> : " + pathId);
+                            }
+                            pathMap.put(pathId, pathMap.get(pathId) + 1);
                             //index.insert(new long[]{pathId, node1, node2, node3});
                             //keys.add(new Long[]{pathId, node1, node2, node3});
                             sorter.addUnsortedKey(new long[]{pathId, node1.getId(), node2.getId(), node3.getId()});
+                            count++;
                         }
-                        */
-                        long pathId = pathIdBuilder(node1, node2, relationship1, relationship2);
-                        sorter.addUnsortedKey(new long[]{pathId, node1.getId(), node2.getId(), node3.getId()});
+                        //long pathId = pathIdBuilder(node1, node2, relationship1, relationship2);
+                        //sorter.addUnsortedKey(new long[]{pathId, node1.getId(), node2.getId(), node3.getId()});
                     }
                 }
             }
         }
     }
+    System.out.println("# of keys written to unsorted disk: " + count);
+    for(Long key : pathMap.keySet()){
+        System.out.println("PathID: " + key +  " , entries for this key: " + pathMap.get(key));
+    }
 }
 
     private boolean validPath(Relationship relA, Relationship relB){
-        return (relA.getType().name().equals("memberOf") && relB.getType().name().equals("subOrganizationOf"));
+        boolean valid = false;
+        //valid = valid || (relA.getType().name().equals("worksFor"));
+        //valid = valid || (relA.getType().name().equals("memberOf"));
+        valid = valid || (relA.getType().name().equals("memberOf") && relB.getType().name().equals("subOrganizationOf"));
+        valid = valid || (relA.getType().name().equals("takesCourse") && relB.getType().name().equals("teacherOf"));
+        //valid = valid || (relA.getType().name().equals("memberOf") && relB.getType().name().equals("undergraduateDegreeFrom") && relC.getType().name().equals("subOrganizationOf"));
+        return valid;
     }
 
 private Long pathIdBuilder(Node node1, Node node2, Relationship relationship1, Relationship relationship2){
@@ -237,34 +276,34 @@ private Node getOtherNode(Relationship relationship, Node thisNode){
     }
 }
 
-    public class BulkPageSource implements BulkLoadDataSource{
-        DiskCache disk;
-        long finalPage;
-        long currentPage = 0;
-        PageProxyCursor cursor;
+public class BulkPageSource implements BulkLoadDataSource{
+    DiskCache disk;
+    long finalPage;
+    long currentPage = 0;
+    PageProxyCursor cursor;
 
-        public BulkPageSource(DiskCache disk, long finalPage) throws IOException {
-            this.disk = disk;
-            this.finalPage = finalPage;
-            cursor = disk.getCursor(0, PagedFile.PF_SHARED_LOCK);
-        }
-
-        @Override
-        public byte[] nextPage() throws IOException {
-            cursor.next(currentPage++);
-            byte[] bytes = new byte[DiskCache.PAGE_SIZE];
-            cursor.getBytes(bytes);
-            return bytes;
-        }
-
-        @Override
-        public boolean hasNext() throws IOException {
-            if(currentPage > finalPage){
-                this.cursor.close();
-            }
-            return currentPage < finalPage;
-        }
+    public BulkPageSource(DiskCache disk, long finalPage) throws IOException {
+        this.disk = disk;
+        this.finalPage = finalPage;
+        cursor = disk.getCursor(0, PagedFile.PF_SHARED_LOCK);
     }
+
+    @Override
+    public byte[] nextPage() throws IOException {
+        cursor.next(currentPage++);
+        byte[] bytes = new byte[cursor.getInt()];
+        cursor.getBytes(bytes);
+        return bytes;
+    }
+
+    @Override
+    public boolean hasNext() throws IOException {
+        if(currentPage > finalPage){
+            this.cursor.close();
+        }
+        return currentPage <= finalPage;
+    }
+}
 
 public class Triple{
     public String subjectType;
