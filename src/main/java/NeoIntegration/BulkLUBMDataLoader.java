@@ -35,9 +35,11 @@ public class BulkLUBMDataLoader {
     HashMap<String, RelationshipType> relationships = new HashMap<>();
     HashMap<String, Long> nodes = new HashMap<>();
     HashMap<Integer, Sorter> sorters = new HashMap<>();
-    ArrayList<RelationshipType> relationshipTypes = new ArrayList<>();
+    HashMap<RelationshipType, Integer> relationshipTypes = new HashMap<>();
     Map<String, Long> pathMap = new HashMap<>();
     StringBuilder strBulder;
+    LinkedList<String> prettyPaths = new LinkedList<>();
+
 
     public static void main( String[] args ) throws IOException {
 
@@ -53,6 +55,7 @@ public class BulkLUBMDataLoader {
         for(Sorter sorter : bulkLUBMDataLoader.sorters.values()){
             bulkLUBMDataLoader.buildIndex(sorter);
         }
+
     }
 
     public BulkLUBMDataLoader() throws IOException {
@@ -127,22 +130,22 @@ public class BulkLUBMDataLoader {
         }
     }
 
-private long getOrCreateNode(String label, String uri){
-    Label typeLabel = labels.get(label);
-    if(typeLabel == null) {
-        typeLabel = DynamicLabel.label(label);
-        labels.put(label, typeLabel);
+    private long getOrCreateNode(String label, String uri){
+        Label typeLabel = labels.get(label);
+        if(typeLabel == null) {
+            typeLabel = DynamicLabel.label(label);
+            labels.put(label, typeLabel);
+        }
+        Long foundNode = nodes.get(uri);
+        if(foundNode == null){
+            Map<String, Object> properties = new HashMap<>();
+            properties.put("uri", uri);
+            foundNode = inserter.createNode(properties, typeLabel);
+            //inserter.setNodeProperty(foundNode, "uri", uri);
+            nodes.put(uri, foundNode);
+        }
+        return foundNode;
     }
-    Long foundNode = nodes.get(uri);
-    if(foundNode == null){
-        Map<String, Object> properties = new HashMap<>();
-        properties.put("uri", uri);
-        foundNode = inserter.createNode(properties, typeLabel);
-        //inserter.setNodeProperty(foundNode, "uri", uri);
-        nodes.put(uri, foundNode);
-    }
-    return foundNode;
-}
 
     private List<Triple> fileParser(File file){
         String line = null;
@@ -178,7 +181,6 @@ private long getOrCreateNode(String label, String uri){
         try ( Transaction tx = db.beginTx()) {
             for (RelationshipType relType : ggo.getAllRelationshipTypes()) {
                 totalRels = IteratorUtil.count(ggo.getAllRelationships());
-
                 for (Relationship relationship1 : ggo.getAllRelationships()) {
                     count++;
                     if (count % 5000 == 0) {
@@ -204,15 +206,14 @@ private long getOrCreateNode(String label, String uri){
                 }
             }
         }
-        for(String key : pathMap.keySet()){
-            System.out.println("Path: " + key +  " , entries for this key: " + pathMap.get(key));
+        System.out.println();
+        try(PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter("BulkLUBMLoaderLog" + System.currentTimeMillis() +".txt", true)))) {
+            for (String key : pathMap.keySet()) {
+                System.out.println("Path: " + key + " , entries: " + pathMap.get(key));
+                out.println("Path: " + key + " , entries: " + pathMap.get(key));
+            }
         }
     }
-
-
-
-
-
 
     private void getPathsRelationshipPerspective() throws IOException{
     GraphDatabaseService db = new GraphDatabaseFactory().newEmbeddedDatabase( DB_PATH );
@@ -230,14 +231,17 @@ private long getOrCreateNode(String label, String uri){
                     relType.name().equals("teacherOf") ||
                     relType.name().equals("subOrganizationOf") ||
                     relType.name().equals("undergraduateDegreeFrom")){
-                relationshipTypes.add(relType);
+                relationshipTypes.put(relType,1);
             }
         }
         totalRels = IteratorUtil.count(ggo.getAllRelationships());
 
         for(Relationship relationship1 : ggo.getAllRelationships()){
             count++;
-            if(count %10000 == 0) {
+            if(count % 30 != 0) {
+                continue;
+            }
+            if(count % 10000 == 0) {
                 printStats(pathMap, count, totalRels);
             }
             if(badRel(relationship1)){continue;}
@@ -260,13 +264,22 @@ private long getOrCreateNode(String label, String uri){
             }
         }
     }
-    for(String key : pathMap.keySet()){
-        System.out.println("Path: " + key +  " , entries for this key: " + pathMap.get(key));
+    System.out.println();
+    try(PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter("BulkLUBMLoaderLog" + System.currentTimeMillis() +".txt", true)))) {
+        for (String key : pathMap.keySet()) {
+            System.out.println("Path: " + key + " , entries: " + pathMap.get(key));
+            out.println("Path: " + key + " , entries: " + pathMap.get(key));
+        }
     }
 }
 
     private void addPathIfValid(Node node1, Relationship relationship1, Node node2) throws IOException {
-        if(relationship1.getType().name().equals("worksFor") || relationship1.getType().name().equals("memberOf")){
+        if(relationship1.getType().name().equals("worksFor")){
+            PathIDBuilder builder = new PathIDBuilder(node1, relationship1, node2);
+            sorters.get(3).addUnsortedKey(new long[]{builder.buildPath(), node1.getId(), node2.getId()});
+            updateStats(pathMap, builder);
+        }
+        else if (relationship1.getType().name().equals("memberOf")){
             PathIDBuilder builder = new PathIDBuilder(node1, relationship1, node2);
             sorters.get(3).addUnsortedKey(new long[]{builder.buildPath(), node1.getId(), node2.getId()});
             updateStats(pathMap, builder);
@@ -306,19 +319,20 @@ private long getOrCreateNode(String label, String uri){
     private void addPath(Node node1, Relationship relationship1, Node node2) throws IOException {
         PathIDBuilder builder = new PathIDBuilder(node1, relationship1, node2);
         sorters.get(3).addUnsortedKey(new long[]{builder.buildPath(), node1.getId(), node2.getId()});
-        updateStats(pathMap, builder);
     }
-
     private void addPath(Node node1, Relationship relationship1, Node node2, Relationship relationship2, Node node3) throws IOException {
         PathIDBuilder builder = new PathIDBuilder(node1, relationship1, node2, relationship2, node3);
         sorters.get(4).addUnsortedKey(new long[]{builder.buildPath(), node1.getId(), node2.getId(), node3.getId()});
         updateStats(pathMap, builder);
+
     }
 
     private void addPath(Node node1, Relationship relationship1, Node node2, Relationship relationship2, Node node3, Relationship relationship3, Node node4) throws IOException {
         PathIDBuilder builder = new PathIDBuilder(node1, relationship1, node2, relationship2, node3, relationship3, node4);
         sorters.get(5).addUnsortedKey(new long[]{builder.buildPath(), node1.getId(), node2.getId(), node3.getId(), node4.getId()});
         updateStats(pathMap, builder);
+
+
     }
 
     private void printStats(Map<String, Long> pathMap, double count, double totalRels){
@@ -327,10 +341,8 @@ private long getOrCreateNode(String label, String uri){
             for(int i = 0; i < b; i++){System.out.print("\b");}
         }
         strBulder = new StringBuilder();
-        strBulder.append("Progress: " + count + "  |  " + (int) ((count / totalRels) * 100) + "% complete. Paths: ");
-        for(String key : pathMap.keySet()){
-            strBulder.append(key + "->" + pathMap.get(key) + ", ");
-        }
+        strBulder.append("Progress: ").append(count).append("  |  ").append((int) ((count / totalRels) * 100)).append("% complete. Paths: ").append(pathMap.size());
+
         System.out.print("\r" + strBulder.toString());
     }
 
@@ -338,42 +350,38 @@ private long getOrCreateNode(String label, String uri){
         long pathID = builder.pathID;
         if(!pathMap.containsKey(builder.toString())){
             pathMap.put(builder.toString(), 0l);
-            //System.out.println("\n" + builder.path.toString() + " --> : " + pathID);
+            prettyPaths.add(builder.prettyPrint());
         }
         pathMap.put(builder.toString(), pathMap.get(builder.toString()) + 1);
     }
 
-private boolean badRel(Relationship rel){
-    for(RelationshipType relType : relationshipTypes){ //todo probably faster to change to map.
-        if(relType.name().equals(rel.getType().name())){
-            return false;
-        }
+    private boolean badRel(Relationship rel){
+        return relationshipTypes.get(rel.getType()) == null;
     }
-    return true;
-}
 
-private void getPathsNodesPerspective() throws IOException {
-    long count = 0;
-    GraphDatabaseService db = new GraphDatabaseFactory().newEmbeddedDatabase( DB_PATH );
-    GlobalGraphOperations ggo = GlobalGraphOperations.at(db);
-    try ( Transaction tx = db.beginTx()) {
-        int i = 0;
-        for (Node node1 : ggo.getAllNodes()) {
-            i++;
-            if (i % 50000 == 0) {System.out.println(i);}
-            for (Relationship relationship1 : node1.getRelationships()) {
-                Node node2 = relationship1.getOtherNode(node1);
-                for (Relationship relationship2 : node2.getRelationships()) {
-                    Node node3 = relationship2.getOtherNode(node2);
-                    if (relationship1.getId() != relationship2.getId()) {
-                        if (validPath(relationship1, relationship2, null)) {
-                           doInsertion(node1, node2, node3, relationship1, relationship2, pathMap);
-                        }
-                        for(Relationship relationship3 : node3.getRelationships()){
-                            Node node4 = relationship3.getOtherNode(node3);
-                            if(relationship2.getId() != relationship3.getId()){
-                                if (validPath(relationship1, relationship2, relationship3)) {
-                                    doInsertion(node1, node2, node3, node4, relationship1, relationship2, relationship3, pathMap);
+    private void getPathsNodesPerspective() throws IOException {
+        long count = 0;
+        GraphDatabaseService db = new GraphDatabaseFactory().newEmbeddedDatabase( DB_PATH );
+        GlobalGraphOperations ggo = GlobalGraphOperations.at(db);
+        try ( Transaction tx = db.beginTx()) {
+            int i = 0;
+            for (Node node1 : ggo.getAllNodes()) {
+                i++;
+                if (i % 50000 == 0) {System.out.println(i);}
+                for (Relationship relationship1 : node1.getRelationships()) {
+                    Node node2 = relationship1.getOtherNode(node1);
+                    for (Relationship relationship2 : node2.getRelationships()) {
+                        Node node3 = relationship2.getOtherNode(node2);
+                        if (relationship1.getId() != relationship2.getId()) {
+                            if (validPath(relationship1, relationship2, null)) {
+                               doInsertion(node1, node2, node3, relationship1, relationship2, pathMap);
+                            }
+                            for(Relationship relationship3 : node3.getRelationships()){
+                                Node node4 = relationship3.getOtherNode(node3);
+                                if(relationship2.getId() != relationship3.getId()){
+                                    if (validPath(relationship1, relationship2, relationship3)) {
+                                        doInsertion(node1, node2, node3, node4, relationship1, relationship2, relationship3, pathMap);
+                                    }
                                 }
                             }
                         }
@@ -381,18 +389,20 @@ private void getPathsNodesPerspective() throws IOException {
                 }
             }
         }
+        System.out.println("\n # of keys written to unsorted disk: " + count);
+        //for(String pretty : prettyPaths){
+        //    System.out.println(pretty);
+        //}
+        for(String key : pathMap.keySet()){
+            System.out.println("PathID: " + key +  ", count: " + pathMap.get(key));
+        }
     }
-    System.out.println("\n # of keys written to unsorted disk: " + count);
-    for(String key : pathMap.keySet()){
-        System.out.println("PathID: " + key +  " , entries for this key: " + pathMap.get(key));
-    }
-}
     private void doInsertion(Node node1, Node node2, Node node3, Relationship relationship1, Relationship relationship2, Map<String, Long> pathMap) throws IOException {
         PathIDBuilder pathBuilder = new PathIDBuilder(node1, node2, relationship1, relationship2);
         long pathId = pathBuilder.buildPath();
         if(!pathMap.containsKey(pathId)){
             pathMap.put(pathBuilder.toString(), 0l);
-            System.out.println(pathBuilder.path.toString() + " --> : " + pathId);
+            prettyPaths.add(pathBuilder.prettyPrint());
         }
         pathMap.put(pathBuilder.toString(), pathMap.get(pathId) + 1);
         long[] key = new long[]{pathId, node1.getId(), node2.getId(), node3.getId()};
@@ -404,7 +414,7 @@ private void getPathsNodesPerspective() throws IOException {
         long pathId = pathBuilder.buildPath();
         if(!pathMap.containsKey(pathId)){
             pathMap.put(pathBuilder.toString(), 0l);
-            System.out.println(pathBuilder.path.toString() + " --> : " + pathId);
+            prettyPaths.add(pathBuilder.prettyPrint());
         }
         pathMap.put(pathBuilder.toString(), pathMap.get(pathId) + 1);
         long[] key = new long[]{pathId, node1.getId(), node2.getId(), node3.getId(), node4.getId()};

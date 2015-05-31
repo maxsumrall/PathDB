@@ -7,6 +7,7 @@ import org.neo4j.graphdb.RelationshipType;
 
 public class PathIDBuilder {
     public StringBuilder path = new StringBuilder();
+    public StringBuilder prettyPrint = new StringBuilder();
     public long pathID = 0;
     public PathIDBuilder(Node node1, Relationship relationship1, Node node2){
         addRelationship(node1, relationship1);
@@ -40,24 +41,35 @@ public class PathIDBuilder {
     public PathIDBuilder(RelationshipType relA, RelationshipType relB, boolean relAOutgoing, boolean relBOutgoing){
         if(relAOutgoing){
             path.append(relA.name());
+            prettyPrint.append("()-[:" + relA.name() + "]->");
         }
         else{
             path.append(new StringBuffer(relA.name()).reverse());
+            prettyPrint.append("()<-[:"+relA.name() +"]-");
+
         }
         if(relBOutgoing){
             path.append(relB.name());
+            prettyPrint.append("()-[:"+relB.name()+"->()");
+
         }
         else{
             path.append(new StringBuilder(relB.name()).reverse());
+            prettyPrint.append("()<-[:"+relB.name()+"-()");
+
         }
     }
 
     public PathIDBuilder addRelationship(Node node, Relationship relationship){
         if(isOutgoing(node, relationship)){
             path.append(relationship.getType().name());
+            prettyPrint.append("()-[:"+relationship.getType().name()+"->()");
+
         }
         else{
             path.append(new StringBuilder(relationship.getType().name()).reverse());
+            prettyPrint.append("()<-[:"+relationship.getType().name()+"-()");
+
         }
         return this;
     }
@@ -73,7 +85,10 @@ public class PathIDBuilder {
     }
 
     public String toString(){
-        return path + ":" + buildPath();
+        //return path + ":" + buildPath();
+        return prettyPrint();
     }
-
+    public String prettyPrint(){
+        return prettyPrint.toString().replace("()()", "()");
+    }
 }
