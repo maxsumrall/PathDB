@@ -7,6 +7,21 @@ import org.neo4j.graphdb.RelationshipType;
 
 public class PathIDBuilder {
     public StringBuilder path = new StringBuilder();
+    public long pathID = 0;
+    public PathIDBuilder(Node node1, Relationship relationship1, Node node2){
+        addRelationship(node1, relationship1);
+    }
+
+    public PathIDBuilder(Node node1, Relationship relationship1, Node node2, Relationship relationship2, Node node3){
+        addRelationship(node1, relationship1);
+        addRelationship(node2, relationship2);
+    }
+
+    public PathIDBuilder(Node node1, Relationship relationship1, Node node2, Relationship relationship2, Node node3, Relationship relationship3, Node node4){
+        addRelationship(node1, relationship1);
+        addRelationship(node2, relationship2);
+        addRelationship(node3, relationship3);
+    }
 
     public PathIDBuilder(String relA, String relB){
         path.append(relA);
@@ -47,10 +62,18 @@ public class PathIDBuilder {
         return this;
     }
     public long buildPath(){
-        return Math.abs(path.toString().hashCode());
+        if(pathID == 0l){
+            pathID = Math.abs(path.toString().hashCode());
+        }
+        return pathID;
     }
 
     public boolean isOutgoing(Node node, Relationship rel){
         return rel.getStartNode().getId() == node.getId();
     }
+
+    public String toString(){
+        return path + ":" + buildPath();
+    }
+
 }

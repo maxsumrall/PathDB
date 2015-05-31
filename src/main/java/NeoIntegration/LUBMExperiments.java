@@ -46,7 +46,7 @@ public class LUBMExperiments {
             }
             System.out.println("Begin Neo4j Transaction");
             long startTime = System.nanoTime();
-            Result queryAResult = database.execute("MATCH (x)-[:takesCourse]-(y)-[:teacherOf]-(z) RETURN ID(x), ID(y), ID(z)");
+            Result queryAResult = database.execute("MATCH (x)-[:takesCourse]->(y)<-[:teacherOf]-(z) RETURN ID(x), ID(y), ID(z)");
             queryAResult.next();
             long timeToFirstResult = System.nanoTime();
             //System.out.println(queryAResult.getQueryStatistics());

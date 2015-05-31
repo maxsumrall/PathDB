@@ -15,7 +15,7 @@ import java.util.*;
  * Main entry into the Sorter.
  */
 public class Sorter {
-    int FAN_IN = 500;
+    int FAN_IN = 2;
     PageProxyCursor setIteratorCursor;
     DiskCache writeToDisk;
     DiskCache readFromDisk;
@@ -37,16 +37,16 @@ public class Sorter {
     public Sorter(int keySize) throws IOException {
         this.keySize = keySize;
         this.keyByteSize = this.keySize * 8;
-        writeToDisk = DiskCache.getDiskCacheWithFilename("tmp_sortFileA.dat");
-        readFromDisk = DiskCache.getDiskCacheWithFilename("tmp_sortFileB.dat");
+        writeToDisk = DiskCache.getDiskCacheWithFilename(keySize+"tmp_sortFileA.dat");
+        readFromDisk = DiskCache.getDiskCacheWithFilename(keySize+"tmp_sortFileB.dat");
         writeToCursor = writeToDisk.getCursor(0, PagedFile.PF_EXCLUSIVE_LOCK);
         //writePageSets.push(new PageSet(0));
     }
 
     public SetIterator sort() throws IOException {
         flushBulkLoadedKeys(); //check the contents of last page
-        System.out.println("Post-Bulk, countA: " + countA + " countB: " + countB);
-        System.out.println("Final Page ID: " + writeToCursor.getCurrentPageId());
+        //System.out.println("Post-Bulk, countA: " + countA + " countB: " + countB);
+        //System.out.println("Final Page ID: " + writeToCursor.getCurrentPageId());
         countA = 0;
         countB = 0;
         writeToCursor.close();
@@ -79,8 +79,8 @@ public class Sorter {
             mergeSets(pageSets);
         }
         flushAfterSortedKey();
-        System.out.println("countA: " + countA + " countB: " + countB);
-        System.out.println("Final Page ID: " + writeToCursor.getCurrentPageId());
+        //System.out.println("countA: " + countA + " countB: " + countB);
+        //System.out.println("Final Page ID: " + writeToCursor.getCurrentPageId());
         countA = 0;
         countB = 0;
         setIteratorCursor.close();
@@ -235,6 +235,9 @@ public class Sorter {
         writeToCursor.next(writeToCursor.getCurrentPageId() + 1);
         bulkLoadedKeys.clear();
         byteRepSize = 0;
+    }
+    public String toString(){
+        return "K" + keySize;
     }
 
 

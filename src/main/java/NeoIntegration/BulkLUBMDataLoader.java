@@ -1,14 +1,13 @@
 package NeoIntegration;
 
-import PageCacheSort.SetIterator;
 import PageCacheSort.Sorter;
 import bptree.BulkLoadDataSource;
 import bptree.PageProxyCursor;
 import bptree.impl.DiskCache;
-import bptree.impl.KeyImpl;
 import bptree.impl.NodeBulkLoader;
 import org.neo4j.graphdb.*;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
+import org.neo4j.helpers.collection.IteratorUtil;
 import org.neo4j.io.fs.FileUtils;
 import org.neo4j.io.pagecache.PagedFile;
 import org.neo4j.kernel.impl.store.InvalidRecordException;
@@ -35,35 +34,41 @@ public class BulkLUBMDataLoader {
     HashMap<String, Label> labels = new HashMap<>();
     HashMap<String, RelationshipType> relationships = new HashMap<>();
     HashMap<String, Long> nodes = new HashMap<>();
-    Sorter sorter = new Sorter(4);
-
+    HashMap<Integer, Sorter> sorters = new HashMap<>();
+    ArrayList<RelationshipType> relationshipTypes = new ArrayList<>();
+    Map<String, Long> pathMap = new HashMap<>();
+    StringBuilder strBulder;
 
     public static void main( String[] args ) throws IOException {
 
         BulkLUBMDataLoader bulkLUBMDataLoader = new BulkLUBMDataLoader();
 
-        //bulkLUBMDataLoader.bulkLoad();
+        bulkLUBMDataLoader.bulkLoad();
 
+        //bulkLUBMDataLoader.getPathsRelationshipPerspective();
+        bulkLUBMDataLoader.getPathsAll();
 
         bulkLUBMDataLoader.sortKeys();
 
-        bulkLUBMDataLoader.buildIndex();
-
+        for(Sorter sorter : bulkLUBMDataLoader.sorters.values()){
+            bulkLUBMDataLoader.buildIndex(sorter);
+        }
     }
 
     public BulkLUBMDataLoader() throws IOException {
 
-        //File deleteGraph = new File(DB_PATH);
-        //FileUtils.deleteRecursively(deleteGraph);
         File deleteIndex = new File(LUBM_INDEX_PATH);
         FileUtils.deleteFile(deleteIndex);
         owlFiles = new File(uriDir).listFiles();
-        //disk = DiskCache.persistentDiskCache("lmdbBig.dat");
-        //index = new NodeTree(disk);
-        //keys = new ArrayList<>();
+
+        sorters.put(3, new Sorter(3));
+        sorters.put(4, new Sorter(4));
+        sorters.put(5, new Sorter(5));
     }
 
-    public void bulkLoad(){
+    public void bulkLoad() throws IOException {
+        File deleteGraph = new File(DB_PATH);
+        FileUtils.deleteRecursively(deleteGraph);
         inserter = BatchInserters.inserter(DB_PATH);
         try{
             for(File file : owlFiles) {
@@ -77,43 +82,19 @@ public class BulkLUBMDataLoader {
     }
 
     public void sortKeys() throws IOException {
-            //inserter = BatchInserters.inserter(DB_PATH);
-            getPaths();
-
             System.out.println("Sorting keys");
-            //bulkLUBMDataLoader.keys.sort(KeyImpl.getComparator());
-
-
-            SetIterator itr = sorter.sort();
-        long[] prev = itr.getNext();
-        int countA = 0;
-        int countB = 0;
-        while(itr.hasNext()){
-            long[] next = itr.getNext();
-            assert(KeyImpl.getComparator().compare(next, prev) > 0);
-            prev = next;
-            if(next[0] != 90603815){
-                countA++;
-            }
-            else{
-                countB++;
-            }
+        for(Sorter sorter : sorters.values()){
+            sorter.sort();
         }
-            System.out.println("Sorting Complete.");
-            System.out.println("found paths post-sort for path A: " + countA);
-        System.out.println("found paths post-sort for path B: " + countB);
-
     }
 
-    public void buildIndex() throws IOException {
+    public void buildIndex(Sorter sorter) throws IOException {
         DiskCache sortedDisk = sorter.getSortedDisk();
-
-        DiskCache disk = DiskCache.persistentDiskCache(LUBM_INDEX_PATH);
+        DiskCache disk = DiskCache.persistentDiskCache(sorter.toString() + LUBM_INDEX_PATH);
         BulkPageSource sortedDataSource = new BulkPageSource(sortedDisk, sorter.finalPageId());
 
         NodeBulkLoader bulkLoader = new NodeBulkLoader(sortedDataSource, disk);
         long root = bulkLoader.run();
-        //NodeTree index = new NodeTree(root, disk);
         System.out.println("Done: " + root);
         disk.shutdown();
         sortedDisk.shutdown();
@@ -128,7 +109,7 @@ public class BulkLUBMDataLoader {
             }
             else{
                 try {
-                    //inserter.setNodeProperty(thisNode, triple.predicate, triple.objectURI);
+                    //inserter.setNodeProperty(thisNode, triple.predicate, triple.objectURI); //these properties don't seem to work sometimes.
                 }
                 catch(InvalidRecordException e){
                     System.out.println("Error writing: " + triple + "\n" + e.getMessage());
@@ -189,92 +170,256 @@ private long getOrCreateNode(String label, String uri){
         return triples;
     }
 
-private void getPaths() throws IOException {
-    System.out.println(nodes.size());
+    private void getPathsAll() throws IOException{
+        GraphDatabaseService db = new GraphDatabaseFactory().newEmbeddedDatabase( DB_PATH );
+        GlobalGraphOperations ggo = GlobalGraphOperations.at(db);
+        double count = 0;
+        double totalRels = 0;
+        try ( Transaction tx = db.beginTx()) {
+            for (RelationshipType relType : ggo.getAllRelationshipTypes()) {
+                totalRels = IteratorUtil.count(ggo.getAllRelationships());
+
+                for (Relationship relationship1 : ggo.getAllRelationships()) {
+                    count++;
+                    if (count % 5000 == 0) {
+                        printStats(pathMap, count, totalRels);
+                    }
+                    Node node1 = relationship1.getStartNode();
+                    Node node2 = relationship1.getEndNode();
+                    addPath(node1, relationship1, node2);
+                    for (Relationship relationship2 : node2.getRelationships()) {
+                        if (relationship2.getId() == relationship1.getId()) {
+                            continue;
+                        }
+                        Node node3 = relationship2.getOtherNode(node2);
+                        addPath(node1, relationship1, node2, relationship2, node3);
+                        for (Relationship relationship3 : node3.getRelationships()) {
+                            if (relationship2.getId() == relationship3.getId()) {
+                                continue;
+                            }
+                            Node node4 = relationship3.getOtherNode(node3);
+                            addPath(node1, relationship1, node2, relationship2, node3, relationship3, node4);
+                        }
+                    }
+                }
+            }
+        }
+        for(String key : pathMap.keySet()){
+            System.out.println("Path: " + key +  " , entries for this key: " + pathMap.get(key));
+        }
+    }
+
+
+
+
+
+
+    private void getPathsRelationshipPerspective() throws IOException{
+    GraphDatabaseService db = new GraphDatabaseFactory().newEmbeddedDatabase( DB_PATH );
+    GlobalGraphOperations ggo = GlobalGraphOperations.at(db);
+    double count = 0;
+    double totalRels = 0;
+
+    try ( Transaction tx = db.beginTx()) {
+        for(RelationshipType relType : ggo.getAllRelationshipTypes()){
+            if(relType.name().equals("memberOf") ||
+                    relType.name().equals("worksFor") ||
+                    relType.name().equals("headOf") ||
+                    relType.name().equals("advisor") ||
+                    relType.name().equals("takesCourse") ||
+                    relType.name().equals("teacherOf") ||
+                    relType.name().equals("subOrganizationOf") ||
+                    relType.name().equals("undergraduateDegreeFrom")){
+                relationshipTypes.add(relType);
+            }
+        }
+        totalRels = IteratorUtil.count(ggo.getAllRelationships());
+
+        for(Relationship relationship1 : ggo.getAllRelationships()){
+            count++;
+            if(count %10000 == 0) {
+                printStats(pathMap, count, totalRels);
+            }
+            if(badRel(relationship1)){continue;}
+            Node node1 = relationship1.getStartNode();
+            Node node2 = relationship1.getEndNode();
+            addPathIfValid(node1, relationship1, node2);
+            for(Relationship relationship2 : node2.getRelationships()){
+                if(relationship2.getId() == relationship1.getId()){
+                    continue;
+                }
+                if(badRel(relationship2)){continue;}
+                Node node3 = relationship2.getOtherNode(node2);
+                addPathIfValid(node1, relationship1, node2, relationship2, node3);
+                for(Relationship relationship3 : node3.getRelationships()){
+                    if(relationship2.getId() == relationship3.getId()){continue;}
+                    if(badRel(relationship3)){continue;}
+                    Node node4 = relationship3.getOtherNode(node3);
+                    addPathIfValid(node1, relationship1, node2, relationship2, node3, relationship3, node4);
+                }
+            }
+        }
+    }
+    for(String key : pathMap.keySet()){
+        System.out.println("Path: " + key +  " , entries for this key: " + pathMap.get(key));
+    }
+}
+
+    private void addPathIfValid(Node node1, Relationship relationship1, Node node2) throws IOException {
+        if(relationship1.getType().name().equals("worksFor") || relationship1.getType().name().equals("memberOf")){
+            PathIDBuilder builder = new PathIDBuilder(node1, relationship1, node2);
+            sorters.get(3).addUnsortedKey(new long[]{builder.buildPath(), node1.getId(), node2.getId()});
+            updateStats(pathMap, builder);
+        }
+    }
+
+    private void addPathIfValid(Node node1, Relationship relationship1, Node node2, Relationship relationship2, Node node3) throws IOException {
+        if((relationship1.getType().name().equals("takesCourse") && relationship2.getType().name().equals("teacherOf")) ||
+                (relationship1.getType().name().equals("memberOf") && relationship2.getType().name().equals("subOrganizationOf"))){
+            PathIDBuilder builder = new PathIDBuilder(node1, relationship1, node2, relationship2, node3);
+            sorters.get(4).addUnsortedKey(new long[]{builder.buildPath(), node1.getId(), node2.getId(), node3.getId()});
+            updateStats(pathMap, builder);
+        }
+    }
+    //private void addPathIfValid(Node node1, Relationship relationship1, Node node2, Relationship relationship2, Node node3, Relationship relationship3){}
+
+    private void addPathIfValid(Node node1, Relationship relationship1, Node node2, Relationship relationship2, Node node3, Relationship relationship3, Node node4) throws IOException {
+        if(relationship1.getType().name().equals("headOf") && relationship2.getType().name().equals("worksFor") && relationship3.getType().name().equals("subOrganizationOf")){
+            PathIDBuilder builder = new PathIDBuilder(node1, relationship1, node2, relationship2, node3, relationship3, node4);
+            sorters.get(5).addUnsortedKey(new long[]{builder.buildPath(), node1.getId(), node2.getId(), node3.getId(), node4.getId()});
+            updateStats(pathMap, builder);
+        }
+        else if((relationship1.getType().name().equals("advisor") && relationship2.getType().name().equals("teacherOf") && relationship3.getType().name().equals("takesCourse") &&
+                (node1.getId() == node4.getId()))){
+            PathIDBuilder builder = new PathIDBuilder(node1, relationship1, node2, relationship2, node3);
+            sorters.get(4).addUnsortedKey(new long[]{builder.buildPath(), node1.getId(), node2.getId(), node3.getId()});
+            updateStats(pathMap, builder);
+        }
+        else if((relationship1.getType().name().equals("undergraduateDegreeFrom") && relationship2.getType().name().equals("subOrganizationOf") && relationship3.getType().name().equals("memberOf") &&
+                (node1.getId() == node4.getId()))){
+            PathIDBuilder builder = new PathIDBuilder(node1, relationship1, node2, relationship2, node3, relationship3, node4);
+            sorters.get(4).addUnsortedKey(new long[]{builder.buildPath(), node1.getId(), node2.getId(), node3.getId()});
+            updateStats(pathMap, builder);
+        }
+    }
+    //
+    private void addPath(Node node1, Relationship relationship1, Node node2) throws IOException {
+        PathIDBuilder builder = new PathIDBuilder(node1, relationship1, node2);
+        sorters.get(3).addUnsortedKey(new long[]{builder.buildPath(), node1.getId(), node2.getId()});
+        updateStats(pathMap, builder);
+    }
+
+    private void addPath(Node node1, Relationship relationship1, Node node2, Relationship relationship2, Node node3) throws IOException {
+        PathIDBuilder builder = new PathIDBuilder(node1, relationship1, node2, relationship2, node3);
+        sorters.get(4).addUnsortedKey(new long[]{builder.buildPath(), node1.getId(), node2.getId(), node3.getId()});
+        updateStats(pathMap, builder);
+    }
+
+    private void addPath(Node node1, Relationship relationship1, Node node2, Relationship relationship2, Node node3, Relationship relationship3, Node node4) throws IOException {
+        PathIDBuilder builder = new PathIDBuilder(node1, relationship1, node2, relationship2, node3, relationship3, node4);
+        sorters.get(5).addUnsortedKey(new long[]{builder.buildPath(), node1.getId(), node2.getId(), node3.getId(), node4.getId()});
+        updateStats(pathMap, builder);
+    }
+
+    private void printStats(Map<String, Long> pathMap, double count, double totalRels){
+        if(strBulder != null){
+            int b = strBulder.toString().length();
+            for(int i = 0; i < b; i++){System.out.print("\b");}
+        }
+        strBulder = new StringBuilder();
+        strBulder.append("Progress: " + count + "  |  " + (int) ((count / totalRels) * 100) + "% complete. Paths: ");
+        for(String key : pathMap.keySet()){
+            strBulder.append(key + "->" + pathMap.get(key) + ", ");
+        }
+        System.out.print("\r" + strBulder.toString());
+    }
+
+    private void updateStats(Map<String, Long> pathMap, PathIDBuilder builder){
+        long pathID = builder.pathID;
+        if(!pathMap.containsKey(builder.toString())){
+            pathMap.put(builder.toString(), 0l);
+            //System.out.println("\n" + builder.path.toString() + " --> : " + pathID);
+        }
+        pathMap.put(builder.toString(), pathMap.get(builder.toString()) + 1);
+    }
+
+private boolean badRel(Relationship rel){
+    for(RelationshipType relType : relationshipTypes){ //todo probably faster to change to map.
+        if(relType.name().equals(rel.getType().name())){
+            return false;
+        }
+    }
+    return true;
+}
+
+private void getPathsNodesPerspective() throws IOException {
     long count = 0;
-    Map<Long, Long> pathMap = new HashMap<>();
     GraphDatabaseService db = new GraphDatabaseFactory().newEmbeddedDatabase( DB_PATH );
     GlobalGraphOperations ggo = GlobalGraphOperations.at(db);
     try ( Transaction tx = db.beginTx()) {
         int i = 0;
         for (Node node1 : ggo.getAllNodes()) {
             i++;
-
-            if (i % 50000 == 0) {
-                System.out.println(i);
-            }
+            if (i % 50000 == 0) {System.out.println(i);}
             for (Relationship relationship1 : node1.getRelationships()) {
                 Node node2 = relationship1.getOtherNode(node1);
                 for (Relationship relationship2 : node2.getRelationships()) {
                     Node node3 = relationship2.getOtherNode(node2);
                     if (relationship1.getId() != relationship2.getId()) {
-                        if (validPath(relationship1, relationship2)) {
-                            //long pathId = pathIdBuilder(node1, node2, relationship1, relationship2);
-                            PathIDBuilder pathBuilder = new PathIDBuilder(relationship1.getType().name(), relationship2.getType().name());
-                            long pathId = pathBuilder.buildPath();
-                            if(!pathMap.containsKey(pathId)){
-                                pathMap.put(pathId, 0l);
-                                System.out.println(pathBuilder.path.toString() + " --> : " + pathId);
-                            }
-                            pathMap.put(pathId, pathMap.get(pathId) + 1);
-                            //index.insert(new long[]{pathId, node1, node2, node3});
-                            //keys.add(new Long[]{pathId, node1, node2, node3});
-                            sorter.addUnsortedKey(new long[]{pathId, node1.getId(), node2.getId(), node3.getId()});
-                            count++;
+                        if (validPath(relationship1, relationship2, null)) {
+                           doInsertion(node1, node2, node3, relationship1, relationship2, pathMap);
                         }
-                        //long pathId = pathIdBuilder(node1, node2, relationship1, relationship2);
-                        //sorter.addUnsortedKey(new long[]{pathId, node1.getId(), node2.getId(), node3.getId()});
+                        for(Relationship relationship3 : node3.getRelationships()){
+                            Node node4 = relationship3.getOtherNode(node3);
+                            if(relationship2.getId() != relationship3.getId()){
+                                if (validPath(relationship1, relationship2, relationship3)) {
+                                    doInsertion(node1, node2, node3, node4, relationship1, relationship2, relationship3, pathMap);
+                                }
+                            }
+                        }
                     }
                 }
             }
         }
     }
-    System.out.println("# of keys written to unsorted disk: " + count);
-    for(Long key : pathMap.keySet()){
+    System.out.println("\n # of keys written to unsorted disk: " + count);
+    for(String key : pathMap.keySet()){
         System.out.println("PathID: " + key +  " , entries for this key: " + pathMap.get(key));
     }
 }
+    private void doInsertion(Node node1, Node node2, Node node3, Relationship relationship1, Relationship relationship2, Map<String, Long> pathMap) throws IOException {
+        PathIDBuilder pathBuilder = new PathIDBuilder(node1, node2, relationship1, relationship2);
+        long pathId = pathBuilder.buildPath();
+        if(!pathMap.containsKey(pathId)){
+            pathMap.put(pathBuilder.toString(), 0l);
+            System.out.println(pathBuilder.path.toString() + " --> : " + pathId);
+        }
+        pathMap.put(pathBuilder.toString(), pathMap.get(pathId) + 1);
+        long[] key = new long[]{pathId, node1.getId(), node2.getId(), node3.getId()};
+        sorters.get(key.length).addUnsortedKey(key);
+    }
 
-    private boolean validPath(Relationship relA, Relationship relB){
+    private void doInsertion(Node node1, Node node2, Node node3, Node node4, Relationship relationship1, Relationship relationship2, Relationship relationship3, Map<String, Long> pathMap) throws IOException {
+        PathIDBuilder pathBuilder = new PathIDBuilder(node1, node2, node3, relationship1, relationship2, relationship3);
+        long pathId = pathBuilder.buildPath();
+        if(!pathMap.containsKey(pathId)){
+            pathMap.put(pathBuilder.toString(), 0l);
+            System.out.println(pathBuilder.path.toString() + " --> : " + pathId);
+        }
+        pathMap.put(pathBuilder.toString(), pathMap.get(pathId) + 1);
+        long[] key = new long[]{pathId, node1.getId(), node2.getId(), node3.getId(), node4.getId()};
+        sorters.get(key.length).addUnsortedKey(key);
+    }
+
+    private boolean validPath(Relationship relA, Relationship relB, Relationship relC){
         boolean valid = false;
         //valid = valid || (relA.getType().name().equals("worksFor"));
         //valid = valid || (relA.getType().name().equals("memberOf"));
-        valid = valid || (relA.getType().name().equals("memberOf") && relB.getType().name().equals("subOrganizationOf"));
-        valid = valid || (relA.getType().name().equals("takesCourse") && relB.getType().name().equals("teacherOf"));
-        //valid = valid || (relA.getType().name().equals("memberOf") && relB.getType().name().equals("undergraduateDegreeFrom") && relC.getType().name().equals("subOrganizationOf"));
+        valid = valid || (relA.getType().name().equals("memberOf") && relB.getType().name().equals("subOrganizationOf") && relC == null);
+        valid = valid || (relA.getType().name().equals("takesCourse") && relB.getType().name().equals("teacherOf") && relC == null);
+        valid = valid || (relA.getType().name().equals("memberOf") && relB.getType().name().equals("undergraduateDegreeFrom") && relC.getType().name().equals("subOrganizationOf"));
         return valid;
     }
-
-private Long pathIdBuilder(Node node1, Node node2, Relationship relationship1, Relationship relationship2){
-    StringBuilder pathId = new StringBuilder();
-    if(forwardRelationship(node1, relationship1)){
-        pathId.append(relationship1.getType().name());
-    }
-    else{
-        pathId.append((new StringBuilder(relationship1.getType().name())).reverse());
-    }
-    if(forwardRelationship(node2, relationship2)){
-        pathId.append(relationship2.getType().name());
-    }
-    else{
-        pathId.append((new StringBuilder(relationship2.getType().name())).reverse());
-    }
-    return (long) Math.abs((pathId.toString()).hashCode());
-}
-
-private boolean forwardRelationship(Node node, Relationship relationship){
-    return node.equals(relationship.getStartNode());
-}
-
-private Node getOtherNode(Relationship relationship, Node thisNode){
-    Node startNode = relationship.getStartNode();
-    if(startNode.equals(thisNode)){
-        return relationship.getEndNode();
-    }
-    else{
-        return startNode;
-    }
-}
 
 public class BulkPageSource implements BulkLoadDataSource{
     DiskCache disk;
