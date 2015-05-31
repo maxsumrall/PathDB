@@ -341,7 +341,8 @@ public class BulkLUBMDataLoader {
             for(int i = 0; i < b; i++){System.out.print("\b");}
         }
         strBulder = new StringBuilder();
-        strBulder.append("Progress: ").append(count).append("  |  ").append((int) ((count / totalRels) * 100)).append("% complete. Paths: ").append(pathMap.size());
+        Calendar cal = Calendar.getInstance();
+        strBulder.append("Progress: ").append(count).append("  |  ").append((int) ((count / totalRels) * 100)).append("% complete. Paths: ").append(pathMap.size()).append(", Time: ").append(cal.get(Calendar.HOUR_OF_DAY)).append(":").append(cal.get(Calendar.MINUTE));
 
         System.out.print("\r" + strBulder.toString());
     }
