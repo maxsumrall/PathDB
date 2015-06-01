@@ -13,18 +13,12 @@ import java.nio.ByteBuffer;
 
 
 public class DiskCache {
-    public static int PAGE_SIZE = 8192;
     protected final static String DEFAULT_CACHE_FILE_NAME = "cache.bin";
-    //protected int recordSize = 1; //TODO What is this?
+    protected static int PAGE_SIZE = 8192; //size of a single page, in bytes.
     protected int max_size_in_mb = 4096;
     protected int maxPages = max_size_in_mb * (1000000 / PAGE_SIZE);
-    //protected int maxPages = 8000; //TODO How big should this be?
-    protected int pageCachePageSize = PAGE_SIZE;
-    //protected int recordsPerFilePage = pageCachePageSize / recordSize;
-    //protected int recordCount = 25 * maxPages * recordsPerFilePage;
-    //protected int filePageSize = ;recordsPerFilePage * recordSize;
-    protected transient DefaultFileSystemAbstraction fs;
-    protected transient MuninnPageCache pageCache;
+    protected DefaultFileSystemAbstraction fs;
+    protected MuninnPageCache pageCache;
     public transient PagedFile pagedFile;
     public File cache_file;
 
@@ -37,22 +31,12 @@ public class DiskCache {
             e.printStackTrace();
         }
     }
-    public PageProxyCursor getCursor(long id, int lockType) throws IOException {
-        return new BasicPageCursor(this, id, lockType);
-        //return new ZLIBPageCursor(singleInstance, id, lockType);
-    }
 
     public static DiskCache temporaryDiskCache(){
         return temporaryDiskCache(DEFAULT_CACHE_FILE_NAME);
     }
 
     public static DiskCache temporaryDiskCache(String filename){
-        File cache_file = new File(filename);
-        cache_file.deleteOnExit();
-        return new DiskCache(cache_file);
-    }
-
-    public static DiskCache getDiskCacheWithFilename(String filename){
         File cache_file = new File(filename);
         cache_file.deleteOnExit();
         return new DiskCache(cache_file);
@@ -69,9 +53,13 @@ public class DiskCache {
     private void initializePageCache(File page_cache_file) throws IOException {
         fs = new DefaultFileSystemAbstraction();
         SingleFilePageSwapperFactory factory = new SingleFilePageSwapperFactory(fs);
-        //factory.setFileSystemAbstraction( fs );
-        pageCache = new MuninnPageCache(factory, maxPages, pageCachePageSize, PageCacheMonitor.NULL);
-        pagedFile = pageCache.map(page_cache_file, pageCachePageSize);
+        pageCache = new MuninnPageCache(factory, maxPages, PAGE_SIZE, PageCacheMonitor.NULL);
+        pagedFile = pageCache.map(page_cache_file, PAGE_SIZE);
+    }
+
+    public PageProxyCursor getCursor(long id, int lockType) throws IOException {
+        return new BasicPageCursor(this, id, lockType);
+        //return new ZLIBPageCursor(singleInstance, id, lockType);
     }
 
     public ByteBuffer readPage(NodeTree tree, long id) {

@@ -35,8 +35,8 @@ public class Sorter {
     public Sorter(int keySize) throws IOException {
         this.keySize = keySize;
         this.keyByteSize = this.keySize * 8;
-        writeToDisk = DiskCache.getDiskCacheWithFilename(keySize+"tmp_sortFileA.dat");
-        readFromDisk = DiskCache.getDiskCacheWithFilename(keySize+"tmp_sortFileB.dat");
+        writeToDisk = DiskCache.temporaryDiskCache(keySize+"tmp_sortFileA.dat");
+        readFromDisk = DiskCache.temporaryDiskCache(keySize+"tmp_sortFileB.dat");
         writeToCursor = writeToDisk.getCursor(0, PagedFile.PF_EXCLUSIVE_LOCK);
     }
 
