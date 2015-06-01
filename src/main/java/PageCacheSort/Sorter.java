@@ -24,7 +24,7 @@ public class Sorter {
     PageSet postSortSet;
     public static final int ALT_MAX_PAGE_SIZE = DiskCache.PAGE_SIZE - NodeHeader.NODE_HEADER_LENGTH;
     long finalPage;
-    final int keySize;
+    public final int keySize;
     final int keyByteSize;
     LinkedList<PageSet> writePageSets = new LinkedList<>();
     LinkedList<PageSet> readPageSets = new LinkedList<>();

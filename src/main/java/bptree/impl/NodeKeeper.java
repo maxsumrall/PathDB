@@ -27,7 +27,7 @@ public class NodeKeeper {
             return node;
         }
         else {
-            ByteBuffer buffer = this.diskCache.readPage(id);
+            ByteBuffer buffer = this.diskCache.readPage(null, id); //todo delete this shit
             if (buffer.capacity() == 0) {
                 throw new IOException("Unable to read page from cache. Page: " + id);
             }

@@ -8,13 +8,17 @@ import java.io.IOException;
 
 public class NodeSearch {
     private static PrimitiveLongArray arrayUtil = new PrimitiveLongArray();
-    public static PageProxyCursor cursor;
+    public  PageProxyCursor cursor;
+    public NodeTree tree;
 
-    public static SearchCursor find(long[] key){
+    public NodeSearch(NodeTree tree){
+        this.tree = tree;
+    }
+    public SearchCursor find(long[] key){
         long[] entry = null;
         SearchCursor resultsCursor = null;
         int[] searchResult;
-        try (PageProxyCursor cursor = NodeTree.disk.getCursor(NodeTree.rootNodeId, PagedFile.PF_EXCLUSIVE_LOCK)) {
+        try (PageProxyCursor cursor = tree.disk.getCursor(tree.rootNodeId, PagedFile.PF_EXCLUSIVE_LOCK)) {
                     searchResult = find(cursor, key);
                     long currentNode = cursor.getCurrentPageId();
                     if(searchResult[0] == 0) {
@@ -30,23 +34,23 @@ public class NodeSearch {
         return resultsCursor;
     }
 
-    public static int[] find(PageProxyCursor cursor, long[] key) throws IOException {
+    public int[] find(PageProxyCursor cursor, long[] key) throws IOException {
         int[] searchResult;
         if(NodeHeader.isLeafNode(cursor)){
             searchResult = search(cursor, key);
         }
         else{
             int index = search(cursor, key)[0];
-            long child = NodeTree.getChildIdAtIndex(cursor, index);
+            long child = tree.getChildIdAtIndex(cursor, index);
             cursor.next(child);
             searchResult = find(cursor, key);
         }
         return searchResult;
     }
 
-    public static int[] search(long nodeId, long[] key) {
+    public int[] search(long nodeId, long[] key) {
         int[] result = new int[]{-1, -1};
-        try (PageProxyCursor cursor = NodeTree.disk.getCursor(nodeId, PagedFile.PF_EXCLUSIVE_LOCK)) {
+        try (PageProxyCursor cursor = tree.disk.getCursor(nodeId, PagedFile.PF_EXCLUSIVE_LOCK)) {
                     result = search(cursor, key);
 
         } catch (IOException e) {

@@ -2,7 +2,6 @@ package bptree;
 
 import bptree.impl.DiskCache;
 import bptree.impl.NodeTree;
-import bptree.impl.PathIndexImpl;
 import bptree.impl.SearchCursor;
 import org.junit.Before;
 import org.junit.Test;
@@ -21,8 +20,7 @@ public class NodeProxyTreeTest {
 
     Index index;
     ArrayList<Long[]> labelPaths;
-    PathIndexImpl pindex;
-    NodeTree proxy;
+    NodeTree tree;
     DiskCache disk;
 
     public long[] toPrimitive(Long[] key) {
@@ -36,14 +34,9 @@ public class NodeProxyTreeTest {
     @Before
     public void initializeIndex() throws IOException {
         labelPaths = exampleLabelPaths(2, 2);
-        index = PathIndexImpl.getTemporaryPathIndex()
-                .setRangeOfPathLengths(2, 2)
-                .setLabelPaths(labelPaths)
-                .setSignaturesToDefault();
 
-        pindex = ((PathIndexImpl) index);
-        disk = pindex.tree.nodeKeeper.diskCache;
-        proxy = new NodeTree(pindex.tree.rootNodePageID, disk);
+        disk = DiskCache.temporaryDiskCache();
+        tree = new NodeTree(0, disk);
     }
 
     @Test
@@ -55,12 +48,12 @@ public class NodeProxyTreeTest {
             keys[i][1] = (long)i;
             keys[i][2] = (long)i;
             keys[i][3] = (long)i;
-            pindex.tree.proxyInsertion(keys[i]);
+            tree.insert(keys[i]);
         }
         SearchCursor searchCursor;
         long[] foundKey;
         for(long[] key : keys){
-            searchCursor = pindex.tree.proxyFind(key);
+            searchCursor = tree.find(key);
             try(PageProxyCursor cursor = disk.getCursor(searchCursor.pageID, PagedFile.PF_EXCLUSIVE_LOCK)) {
                 foundKey = searchCursor.next(cursor);
                 assert (Arrays.equals(foundKey, key));
@@ -68,7 +61,7 @@ public class NodeProxyTreeTest {
         }
         for(int i = 0; i < number_of_paths; i++){
             int count = 0;
-            searchCursor = pindex.tree.proxyFind(new long[]{i});
+            searchCursor = tree.find(new long[]{i});
             try(PageProxyCursor cursor = disk.getCursor(searchCursor.pageID, PagedFile.PF_EXCLUSIVE_LOCK)) {
                 while (searchCursor.hasNext(cursor)) {
                     long[] next = searchCursor.next(cursor);
@@ -80,7 +73,7 @@ public class NodeProxyTreeTest {
 
 
         for(int i = 0; i < keys.length/2; i++){
-            pindex.tree.proxyRemove(keys[i]);
+            tree.remove(keys[i]);
             }
         for(int i = keys.length/2; i < keys.length; i++){
             //assert(pindex.tree.proxyFind(keys[i]).hasNext());

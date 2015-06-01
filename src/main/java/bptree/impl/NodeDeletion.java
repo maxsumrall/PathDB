@@ -12,15 +12,20 @@ import java.io.IOException;
 public class NodeDeletion {
     public static PageProxyCursor cursor;
     public static DiskCache disk;
+    public NodeTree tree;
 
-    public static RemoveResultProxy remove(long[] key){
+    public NodeDeletion(NodeTree tree){
+        this.tree = tree;
+    }
+
+    public RemoveResultProxy remove(long[] key){
         RemoveResultProxy result = null;
-        try (PageProxyCursor cursor = NodeTree.disk.getCursor(NodeTree.rootNodeId, PagedFile.PF_EXCLUSIVE_LOCK)) {
+        try (PageProxyCursor cursor = tree.disk.getCursor(tree.rootNodeId, PagedFile.PF_EXCLUSIVE_LOCK)) {
                     if(NodeHeader.isLeafNode(cursor)){
                         result = removeKeyFromLeafNode(cursor, cursor.getCurrentPageId(), key);
                     } else {
                         int index = NodeSearch.search(cursor, key)[0];
-                        long child = NodeTree.getChildIdAtIndex(cursor, index);
+                        long child = tree.getChildIdAtIndex(cursor, index);
                         long id = cursor.getCurrentPageId();
                         cursor.next(child);
                         result = remove(cursor, key);
@@ -34,14 +39,14 @@ public class NodeDeletion {
         }
         return result;
     }
-    private static RemoveResultProxy remove(PageProxyCursor cursor, long[] key) throws IOException {
+    private RemoveResultProxy remove(PageProxyCursor cursor, long[] key) throws IOException {
         RemoveResultProxy result = null;
         if(NodeHeader.isLeafNode(cursor)){
             result = removeKeyFromLeafNode(cursor, cursor.getCurrentPageId(), key);
         }
         else{
             int index = NodeSearch.search(cursor, key)[0];
-            long child = NodeTree.getChildIdAtIndex(cursor, index);
+            long child = tree.getChildIdAtIndex(cursor, index);
             long id = cursor.getCurrentPageId();
             cursor.next(child);
             result = remove(cursor, key);
@@ -104,9 +109,9 @@ public class NodeDeletion {
         return result;
     }
 
-    public static RemoveResultProxy removeKeyFromLeafNode(long nodeId, long[] key){
+    public RemoveResultProxy removeKeyFromLeafNode(long nodeId, long[] key){
         RemoveResultProxy result = null;
-        try (PageProxyCursor cursor = NodeTree.disk.getCursor(nodeId, PagedFile.PF_EXCLUSIVE_LOCK)) {
+        try (PageProxyCursor cursor = tree.disk.getCursor(nodeId, PagedFile.PF_EXCLUSIVE_LOCK)) {
                     result = removeKeyFromLeafNode(cursor, nodeId, key);
 
         } catch (IOException e) {

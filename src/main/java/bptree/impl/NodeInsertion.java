@@ -13,15 +13,20 @@ public class NodeInsertion {
     private static PrimitiveLongArray arrayUtil = new PrimitiveLongArray();
     public static PageProxyCursor cursor;
     public static DiskCache disk;
+    public NodeTree tree;
 
-    public static SplitResult insert(long[] key){
+    public NodeInsertion(NodeTree tree){
+        this.tree = tree;
+    }
+
+    public SplitResult insert(long[] key){
         SplitResult result = null;
-        try (PageProxyCursor cursor = NodeTree.disk.getCursor(NodeTree.rootNodeId, PagedFile.PF_EXCLUSIVE_LOCK)) {
+        try (PageProxyCursor cursor = tree.disk.getCursor(tree.rootNodeId, PagedFile.PF_EXCLUSIVE_LOCK)) {
                     if(NodeHeader.isLeafNode(cursor)){
                         result = addKeyToLeafNode(cursor, key);
                     } else{
                         int index = NodeSearch.search(cursor, key)[0];
-                        long child = NodeTree.getChildIdAtIndex(cursor, index);
+                        long child = tree.getChildIdAtIndex(cursor, index);
                         long id = cursor.getCurrentPageId();
                         cursor.next(child);
                         result = insert(cursor, key);
@@ -35,14 +40,14 @@ public class NodeInsertion {
         }
         return result;
     }
-    private static SplitResult insert(PageProxyCursor cursor, long[] key) throws IOException {
+    private SplitResult insert(PageProxyCursor cursor, long[] key) throws IOException {
         SplitResult result = null;
         if(NodeHeader.isLeafNode(cursor)){
             result = addKeyToLeafNode(cursor, key);
         }
         else{
             int index = NodeSearch.search(cursor, key)[0];
-            long child = NodeTree.getChildIdAtIndex(cursor, index);
+            long child = tree.getChildIdAtIndex(cursor, index);
             long id = cursor.getCurrentPageId();
             cursor.next(child);
             result = insert(cursor, key);
@@ -53,9 +58,9 @@ public class NodeInsertion {
         }
         return result;
     }
-    public static SplitResult addKeyAndChildToInternalNode(long nodeId, long[] key, long child){
+    public SplitResult addKeyAndChildToInternalNode(long nodeId, long[] key, long child){
         SplitResult result = null;
-        try (PageProxyCursor cursor = NodeTree.disk.getCursor(nodeId, PagedFile.PF_EXCLUSIVE_LOCK)) {
+        try (PageProxyCursor cursor = tree.disk.getCursor(nodeId, PagedFile.PF_EXCLUSIVE_LOCK)) {
                     result = addKeyAndChildToInternalNode(cursor, nodeId, key, child);
         } catch (IOException e) {
             e.printStackTrace();
@@ -86,9 +91,9 @@ public class NodeInsertion {
         return result;
     }
 
-    public static SplitResult addKeyToLeafNode(long nodeId, long[] key){
+    public SplitResult addKeyToLeafNode(long nodeId, long[] key){
         SplitResult result = null;
-        try (PageProxyCursor cursor = NodeTree.disk.getCursor(nodeId, PagedFile.PF_EXCLUSIVE_LOCK)) {
+        try (PageProxyCursor cursor = tree.disk.getCursor(nodeId, PagedFile.PF_EXCLUSIVE_LOCK)) {
                     result = addKeyToLeafNode(cursor, key);
 
         } catch (IOException e) {

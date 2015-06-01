@@ -27,6 +27,7 @@ public class BulkLUBMDataLoader {
     //private final String DB_PATH = "/Users/max/Downloads/neo4j/data/graph.db";
     public static final String DB_PATH = "graph.db/";
     public static final String LUBM_INDEX_PATH = "lubm50Index.db";
+    public static final String INDEX_METADATA_PATH = "pathIndexMetaData.dat";
     //public ArrayList<Long[]> keys;
     //String uriDir = "/Users/max/Desktop/lubm_data/csvData/";
     String uriDir = "csvData/";
@@ -52,9 +53,11 @@ public class BulkLUBMDataLoader {
         //bulkLUBMDataLoader.getPathsAll();
 
         bulkLUBMDataLoader.sortKeys();
-
-        for(Sorter sorter : bulkLUBMDataLoader.sorters.values()){
-            bulkLUBMDataLoader.buildIndex(sorter);
+        try(PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(INDEX_METADATA_PATH, false)))) {
+            for (Sorter sorter : bulkLUBMDataLoader.sorters.values()) {
+                long root = bulkLUBMDataLoader.buildIndex(sorter);
+                out.println(sorter.keySize +","+root);
+            }
         }
     }
 
@@ -91,16 +94,17 @@ public class BulkLUBMDataLoader {
         }
     }
 
-    public void buildIndex(Sorter sorter) throws IOException {
+    public long buildIndex(Sorter sorter) throws IOException {
         DiskCache sortedDisk = sorter.getSortedDisk();
         DiskCache disk = DiskCache.persistentDiskCache(sorter.toString() + LUBM_INDEX_PATH);
         BulkPageSource sortedDataSource = new BulkPageSource(sortedDisk, sorter.finalPageId());
 
         NodeBulkLoader bulkLoader = new NodeBulkLoader(sortedDataSource, disk);
         long root = bulkLoader.run();
-        System.out.println("Done: " + root);
+        System.out.println("Done. Root for this index (SAVE THIS VALUE!): " + root);
         disk.shutdown();
         sortedDisk.shutdown();
+        return root;
     }
 
 
@@ -226,7 +230,7 @@ public class BulkLUBMDataLoader {
             if(relType.name().equals("memberOf") ||
                     relType.name().equals("worksFor") ||
                     relType.name().equals("headOf") ||
-                    relType.name().equals("advisor") ||
+                    relType.name().equals("hasAdvisor") ||
                     relType.name().equals("takesCourse") ||
                     relType.name().equals("teacherOf") ||
                     relType.name().equals("subOrganizationOf") ||
@@ -241,11 +245,11 @@ public class BulkLUBMDataLoader {
 
         for(Relationship relationship1 : ggo.getAllRelationships()){
             count++;
-           /*
-            if(count % 30 != 0) {
+/*
+            if(count % 50 != 0) {
                 continue;
             }
-            */
+*/
             if(count % 10000 == 0) {
                 printStats(pathMap, count, totalRels);
             }
@@ -270,7 +274,7 @@ public class BulkLUBMDataLoader {
         }
     }
     System.out.println();
-    try(PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter("BulkLUBMLoaderLog" + System.currentTimeMillis() +".txt", true)))) {
+    try(PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter("BulkLUBMLoaderLog.txt", false)))) {
         for (String key : pathMap.keySet()) {
             System.out.println("Path: " + key + " , entries: " + pathMap.get(key));
             out.println("Path: " + key + " , entries: " + pathMap.get(key));
@@ -318,7 +322,7 @@ public class BulkLUBMDataLoader {
             sorters.get(5).addUnsortedKey(new Long[]{builder.buildPath(), node1.getId(), node2.getId(), node3.getId(), node4.getId()});
             updateStats(pathMap, builder);
         }
-        else*/ if((relationship1.getType().name().equals("advisor") && relationship2.getType().name().equals("teacherOf") && relationship3.getType().name().equals("takesCourse") &&
+        else*/ if((relationship1.getType().name().equals("takesCourse") && relationship2.getType().name().equals("teacherOf") && relationship3.getType().name().equals("hasAdvisor") &&
                 (node1.getId() == node4.getId()))){
             PathIDBuilder builder = new PathIDBuilder(node1, relationship1, node2, relationship2, node3);
             sorters.get(4).addUnsortedKey(new Long[]{builder.buildPath(), node1.getId(), node2.getId(), node3.getId()});

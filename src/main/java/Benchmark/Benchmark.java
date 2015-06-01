@@ -1,8 +1,6 @@
 package Benchmark;
 
 import bptree.impl.DiskCache;
-import bptree.impl.NodeInsertion;
-import bptree.impl.NodeSearch;
 import bptree.impl.NodeTree;
 
 import java.io.BufferedWriter;
@@ -92,7 +90,7 @@ public class Benchmark {
         logToFile(strBuilder.toString());
     }
 
-    public static double performInsertionExperiment(NodeTree index, int items_to_insert, int number_of_paths){
+    public static double performInsertionExperiment(NodeTree tree, int items_to_insert, int number_of_paths){
         double totalSum = 0;
         long[] key = new long[4];
         for (int i = 0; i < items_to_insert; i++) {
@@ -103,7 +101,7 @@ public class Benchmark {
             long startTime = System.nanoTime();
             //Do timed operation here
 
-            NodeInsertion.insert(key);
+            tree.insert(key);
 
             long endTime = System.nanoTime();
 
@@ -113,7 +111,7 @@ public class Benchmark {
         return totalSum;
     }
 
-    public static double performSearchExperiment(NodeTree index, int items_to_insert, int number_of_paths){
+    public static double performSearchExperiment(NodeTree tree, int items_to_insert, int number_of_paths){
         double totalSum = 0;
         long[] key = new long[4];
         for (int i = 0; i < items_to_insert; i++) {
@@ -124,7 +122,7 @@ public class Benchmark {
             long startTime = System.nanoTime();
             //Do timed operation here
 
-            NodeSearch.find(key);
+            tree.find(key);
 
             long endTime = System.nanoTime();
 

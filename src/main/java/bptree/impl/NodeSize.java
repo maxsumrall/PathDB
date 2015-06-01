@@ -12,17 +12,17 @@ public class NodeSize {
 
     public static PageProxyCursor cursor;
 
-    public static boolean leafNodeContainsSpaceForNewKey(long nodeId, long[] newKey){
-        return leafNodeByteSize(nodeId, newKey) < DiskCache.PAGE_SIZE;
-    }
+    //public static boolean leafNodeContainsSpaceForNewKey(long nodeId, long[] newKey){
+//        return leafNodeByteSize(nodeId, newKey) < DiskCache.PAGE_SIZE;
+  //  }
 
     public static boolean leafNodeContainsSpaceForNewKey(PageProxyCursor cursor, long[] newKey){
         return leafNodeByteSize(cursor, newKey) < DiskCache.PAGE_SIZE;
     }
 
-    public static int leafNodeByteSize(long nodeId, long[] newKey){
+    public static int leafNodeByteSize(NodeTree tree, long nodeId, long[] newKey){
         int size = 0;
-        try (PageProxyCursor cursor = NodeTree.disk.getCursor(nodeId, PagedFile.PF_EXCLUSIVE_LOCK)) {
+        try (PageProxyCursor cursor = tree.disk.getCursor(nodeId, PagedFile.PF_EXCLUSIVE_LOCK)) {
                     size = leafNodeByteSize(cursor, newKey);
         } catch (IOException e) {
             e.printStackTrace();
@@ -54,17 +54,17 @@ public class NodeSize {
         return byteSize;
     }
 
-    public boolean internalNodeContainsSpaceForNewKeyAndChild(long nodeId, long[] newKey){
-        return internalNodeByteSize(nodeId, newKey) < DiskCache.PAGE_SIZE;
-    }
+    //public boolean internalNodeContainsSpaceForNewKeyAndChild(long nodeId, long[] newKey){
+        //return internalNodeByteSize(nodeId, newKey) < DiskCache.PAGE_SIZE;
+    //}
 
     public static boolean internalNodeContainsSpaceForNewKeyAndChild(PageProxyCursor cursor, long[] newKey){
         return internalNodeByteSize(cursor, newKey) < DiskCache.PAGE_SIZE;
     }
 
-    public static int internalNodeByteSize(long nodeId, long[] newKey){
+    public static int internalNodeByteSize(NodeTree tree, long nodeId, long[] newKey){
         int size = 0;
-        try (PageProxyCursor cursor = NodeTree.disk.getCursor(nodeId, PagedFile.PF_EXCLUSIVE_LOCK)) {
+        try (PageProxyCursor cursor = tree.disk.getCursor(nodeId, PagedFile.PF_EXCLUSIVE_LOCK)) {
                     size = internalNodeByteSize(cursor, newKey);
         } catch (IOException e) {
             e.printStackTrace();

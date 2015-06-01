@@ -74,9 +74,9 @@ public class DiskCache {
         pagedFile = pageCache.map(page_cache_file, filePageSize);
     }
 
-    public ByteBuffer readPage(long id) {
+    public ByteBuffer readPage(NodeTree tree, long id) {
         byte[] byteArray = new byte[0];
-        try (PageProxyCursor cursor = getCursor(NodeTree.rootNodeId, PagedFile.PF_EXCLUSIVE_LOCK)) {
+        try (PageProxyCursor cursor = getCursor(tree.rootNodeId, PagedFile.PF_EXCLUSIVE_LOCK)) {
                     byteArray = new byte[cursor.getSize()];
                     cursor.getBytes(byteArray);
 
@@ -115,7 +115,7 @@ public class DiskCache {
     }
 
     public void shutdown() throws IOException {
-        System.out.println(this.cache_file);
+        //System.out.println(this.cache_file);
         pagedFile.close();
         pageCache.close();
     }

@@ -26,16 +26,18 @@ public class NodeBulkLoader {
     private long previousLeaf = -1;
     private ParentBufferWriter parentWriter = new ParentBufferWriter();
     public static PageProxyCursor cursor;
+    public NodeTree tree;
 
-    public NodeBulkLoader(BulkLoadDataSource data, DiskCache disk){
+    public NodeBulkLoader(BulkLoadDataSource data, DiskCache disk) throws IOException {
         this.data = data;
         this.disk = disk;
         this.pagedFile = this.disk.pagedFile;
+        this.tree = new NodeTree(this.disk);
     }
 
     public long run(){
         long root = -1;
-        try (PageProxyCursor cursor = this.disk.getCursor(NodeTree.rootNodeId, PagedFile.PF_EXCLUSIVE_LOCK)) {
+        try (PageProxyCursor cursor = this.disk.getCursor(0, PagedFile.PF_EXCLUSIVE_LOCK)) {
                     long firstInternalNode = NodeTree.acquireNewInternalNode(cursor);
                     cursor.next(firstInternalNode);
                     NodeHeader.setKeyLength(cursor, KEY_LENGTH);
@@ -166,12 +168,12 @@ public class NodeBulkLoader {
         this.currentPair++;
         this.currentOffset+=8;
     }
-    public static byte[] traverseToFindFirstKeyInLeafAsBytes(PageProxyCursor cursor) throws IOException {
+    public byte[] traverseToFindFirstKeyInLeafAsBytes(PageProxyCursor cursor) throws IOException {
         if(NodeHeader.isLeafNode(cursor)){
             return NodeInsertion.getFirstKeyInNodeAsBytes(cursor);
         }
         else{
-            long leftMostChild = NodeTree.getChildIdAtIndex(cursor, 0);
+            long leftMostChild = tree.getChildIdAtIndex(cursor, 0);
             cursor.next(leftMostChild);
             return traverseToFindFirstKeyInLeafAsBytes(cursor);
         }

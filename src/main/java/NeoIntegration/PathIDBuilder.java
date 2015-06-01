@@ -86,7 +86,7 @@ public class PathIDBuilder {
 
     public String toString(){
         //return path + ":" + buildPath();
-        return prettyPrint();
+        return prettyPrint() + " " + buildPath();
     }
     public String prettyPrint(){
         return prettyPrint.toString().replace("()()", "()");

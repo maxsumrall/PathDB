@@ -12,14 +12,20 @@ import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.io.pagecache.PagedFile;
 import org.neo4j.tooling.GlobalGraphOperations;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
 
 /**
  * Created by max on 5/28/15.
  */
 public class LUBMExperiments {
-    public NodeTree index;
-    public DiskCache pathIndexDisk;
+    public HashMap<Integer, NodeTree> indexes = new HashMap<>();
+    public HashMap<Integer, DiskCache> disks = new HashMap<>();
     public GraphDatabaseService database;
     public GlobalGraphOperations ggo;
 
@@ -27,14 +33,27 @@ public class LUBMExperiments {
         LUBMExperiments experiments = new LUBMExperiments();
         experiments.indexA();
         experiments.queryA();
-        experiments.pathIndexDisk.shutdown();
+        for(DiskCache disk : experiments.disks.values()){
+            disk.shutdown();
+        }
     }
 
     public LUBMExperiments() throws IOException {
-        pathIndexDisk = DiskCache.persistentDiskCache(BulkLUBMDataLoader.LUBM_INDEX_PATH);
 
-        index = new NodeTree(38149, pathIndexDisk);
-//28982 = first block
+
+        BufferedReader bufferedReader = new BufferedReader(new FileReader(new File(BulkLUBMDataLoader.INDEX_METADATA_PATH)));
+        String line;
+        while((line = bufferedReader.readLine()) != null) {
+            List<String> entry = Arrays.asList(line.split(","));
+            int k = new Integer(entry.get(0));
+            long root = new Long(entry.get(1));
+            DiskCache disk = DiskCache.persistentDiskCache("K"+k+BulkLUBMDataLoader.LUBM_INDEX_PATH);
+            indexes.put(k, new NodeTree(root, disk));
+            disks.put(k, disk);
+        }
+        bufferedReader.close();
+
+
         database = new GraphDatabaseFactory().newEmbeddedDatabaseBuilder(BulkLUBMDataLoader.DB_PATH).newGraphDatabase();
         ggo = GlobalGraphOperations.at(database);
     }
@@ -70,18 +89,19 @@ public class LUBMExperiments {
         long startTime = System.nanoTime();
         long timeToFirstResult;
         long timeToLastResult;
-        PathIDBuilder pathIDBuilder = (new PathIDBuilder("takesCourse", "teacherOf"));
-        long pathID = pathIDBuilder.buildPath();
+
+        long pathID = 1136874830;
         //from last run: memberOfSubOrganizationOf = 90603815
         //takesCourseteacherOf --> : 1050811698
-        System.out.println("Index Searching Path: " + pathIDBuilder.path.toString());
+        //System.out.println("Index Searching Path: " + pathIDBuilder.path.toString());
         System.out.println("Path ID searching for: " + pathID);
         long[] searchKey = new long[]{pathID};
+        System.out.println(disks.get(4).cache_file);
 
         long[] foundKey;
         int count = 0;
-        SearchCursor searchCursor = index.find(searchKey);
-        try (PageProxyCursor cursor = pathIndexDisk.getCursor(searchCursor.pageID, PagedFile.PF_EXCLUSIVE_LOCK)) {
+        SearchCursor searchCursor = indexes.get(4).find(searchKey);
+        try (PageProxyCursor cursor = disks.get(4).getCursor(searchCursor.pageID, PagedFile.PF_EXCLUSIVE_LOCK)) {
             searchCursor.next(cursor);
             timeToFirstResult = System.nanoTime();
             while(searchCursor.hasNext(cursor)) {

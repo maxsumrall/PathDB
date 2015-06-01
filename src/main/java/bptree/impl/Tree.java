@@ -205,6 +205,7 @@ public class Tree implements Closeable, Serializable, ObjectInputValidation {
         }
     }
 
+   /*
     public void proxyInsertion(long[] key) throws IOException{
         SplitResult result = NodeInsertion.insert(key);
 
@@ -226,7 +227,7 @@ public class Tree implements Closeable, Serializable, ObjectInputValidation {
             NodeTree.rootNodeId = newRoot.id;
         }
     }
-
+*/
     public int getCountOfMatchingKeys(Long[] search_key) throws IOException {
         int count = 0;
         LeafNode leaf = getFirstLeaf();
