@@ -3,6 +3,7 @@ package bptree.impl;
 import bptree.PageProxyCursor;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.pagecache.PagedFile;
+import org.neo4j.io.pagecache.impl.SingleFilePageSwapperFactory;
 import org.neo4j.io.pagecache.impl.muninn.MuninnPageCache;
 import org.neo4j.io.pagecache.monitoring.PageCacheMonitor;
 
@@ -67,7 +68,9 @@ public class DiskCache {
 
     private void initializePageCache(File page_cache_file) throws IOException {
         fs = new DefaultFileSystemAbstraction();
-        pageCache = new MuninnPageCache(fs, maxPages, pageCachePageSize, PageCacheMonitor.NULL);
+        SingleFilePageSwapperFactory factory = new SingleFilePageSwapperFactory(fs);
+        //factory.setFileSystemAbstraction( fs );
+        pageCache = new MuninnPageCache(factory, maxPages, pageCachePageSize, PageCacheMonitor.NULL);
         pagedFile = pageCache.map(page_cache_file, filePageSize);
     }
 

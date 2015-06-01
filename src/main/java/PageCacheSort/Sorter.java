@@ -24,8 +24,6 @@ public class Sorter {
     PageSet postSortSet;
     public static final int ALT_MAX_PAGE_SIZE = DiskCache.PAGE_SIZE - NodeHeader.NODE_HEADER_LENGTH;
     long finalPage;
-    int countA = 0; //debugging
-    int countB = 0; //debugging
     final int keySize;
     final int keyByteSize;
     LinkedList<PageSet> writePageSets = new LinkedList<>();
@@ -40,21 +38,14 @@ public class Sorter {
         writeToDisk = DiskCache.getDiskCacheWithFilename(keySize+"tmp_sortFileA.dat");
         readFromDisk = DiskCache.getDiskCacheWithFilename(keySize+"tmp_sortFileB.dat");
         writeToCursor = writeToDisk.getCursor(0, PagedFile.PF_EXCLUSIVE_LOCK);
-        //writePageSets.push(new PageSet(0));
     }
 
     public SetIterator sort() throws IOException {
         flushBulkLoadedKeys(); //check the contents of last page
-        //System.out.println("Post-Bulk, countA: " + countA + " countB: " + countB);
-        //System.out.println("Final Page ID: " + writeToCursor.getCurrentPageId());
-        countA = 0;
-        countB = 0;
         writeToCursor.close();
-        //sortEachPage();
-       // debug_countKeysType();
-        //long startTime = System.nanoTime();
+
         sortHelper();
-        //System.out.println("Merge Duration: " + ((System.nanoTime() - startTime) / 1000000));
+
         setIteratorCursor = null;
         postSortSet = writePageSets.pop();
         finalPage = postSortSet.pagesInSet.getLast();
@@ -79,10 +70,6 @@ public class Sorter {
             mergeSets(pageSets);
         }
         flushAfterSortedKey();
-        //System.out.println("countA: " + countA + " countB: " + countB);
-        //System.out.println("Final Page ID: " + writeToCursor.getCurrentPageId());
-        countA = 0;
-        countB = 0;
         setIteratorCursor.close();
         writeToCursor.close();
         if(writePageSets.size() > 1){
@@ -97,14 +84,9 @@ public class Sorter {
         for(PageSet set : pageSets){
             pQueue.add(new SetIteratorImpl(set));
         }
-        //long[] prev = new long[]{0,0,0,0};
-        //long[] next;
         SetIterator curr;
         while(pQueue.size() > 0){
             curr = pQueue.poll();
-            //next = curr.getNext();
-            //assert(KeyImpl.getComparator().compare(next, prev) > 0);
-            //prev = next;
             addSortedKey(curr.getNext());
             if(curr.hasNext()) {
                 pQueue.add(curr);
@@ -171,16 +153,20 @@ public class Sorter {
         }
     }
 
+    public void addUnsortedKey(long[] key) throws IOException {
+        Long[] objKey = new Long[key.length];
+        for(int i = 0; i < key.length; i++){
+            objKey[i] = key[i];
+        }
+        addUnsortedKey(objKey);
+    }
+
     public void addUnsortedKey(Long[] key) throws IOException {
         if(byteRepSize + (keySize * 8) > ALT_MAX_PAGE_SIZE){
             flushBulkLoadedKeys();
         }
         byteRepSize += key.length * 8;
-        //Long[] keyObj = new Long[key.length];
-        //for(int i = 0; i < key.length; i++){
-        //    keyObj[i] = key[i];
-        //}
-        bulkLoadedKeys.add(key); //TODO optimize this crap, this primitive -> obj conversion is retarded.
+        bulkLoadedKeys.add(key);
     }
     public void addSortedKey(long[] key) throws IOException {
         if(byteRepSize + (keySize * 8) > ALT_MAX_PAGE_SIZE){
@@ -191,7 +177,7 @@ public class Sorter {
         for(int i = 0; i < key.length; i++){
             keyObj[i] = key[i];
         }
-        bulkLoadedKeys.add(keyObj); //TODO optimize this crap, this primitive -> obj conversion is retarded.
+        bulkLoadedKeys.add(keyObj);
     }
 
     private void flushBulkLoadedKeys() throws IOException {
@@ -275,15 +261,17 @@ public class Sorter {
 
         public long[] peekNext() throws IOException {
             long[] ret = getNext();
-            buffer.position(buffer.position() - keySize);
+            if(ret != null) {
+                buffer.position(buffer.position() - keySize);
+            }
             return ret;
         }
 
         public boolean hasNext() throws IOException {
-            if((buffer.position()) == buffer.capacity() && set.isEmpty()) {
+            if((buffer.position()+keySize) >  buffer.capacity() && set.isEmpty()) {
                 return false;
             }
-            if((buffer.position()) == buffer.capacity() && !set.isEmpty()){
+            if((buffer.position()+keySize) > buffer.capacity() && !set.isEmpty()){
                 fillBuffer(set.pop());
             }
             return true;

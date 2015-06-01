@@ -39,6 +39,7 @@ public class BulkLUBMDataLoader {
     Map<String, Long> pathMap = new HashMap<>();
     StringBuilder strBulder;
     LinkedList<String> prettyPaths = new LinkedList<>();
+    RelationshipType headOf;
 
 
     public static void main( String[] args ) throws IOException {
@@ -47,15 +48,14 @@ public class BulkLUBMDataLoader {
 
         //bulkLUBMDataLoader.bulkLoad();
 
-        //bulkLUBMDataLoader.getPathsRelationshipPerspective();
-        bulkLUBMDataLoader.getPathsAll();
+        bulkLUBMDataLoader.getPathsRelationshipPerspective();
+        //bulkLUBMDataLoader.getPathsAll();
 
         bulkLUBMDataLoader.sortKeys();
 
         for(Sorter sorter : bulkLUBMDataLoader.sorters.values()){
             bulkLUBMDataLoader.buildIndex(sorter);
         }
-
     }
 
     public BulkLUBMDataLoader() throws IOException {
@@ -233,14 +233,19 @@ public class BulkLUBMDataLoader {
                     relType.name().equals("undergraduateDegreeFrom")){
                 relationshipTypes.put(relType,1);
             }
+            if(relType.name().equals("headOf")){
+                headOf = relType;
+            }
         }
         totalRels = IteratorUtil.count(ggo.getAllRelationships());
 
         for(Relationship relationship1 : ggo.getAllRelationships()){
             count++;
+           /*
             if(count % 30 != 0) {
                 continue;
             }
+            */
             if(count % 10000 == 0) {
                 printStats(pathMap, count, totalRels);
             }
@@ -287,22 +292,33 @@ public class BulkLUBMDataLoader {
     }
 
     private void addPathIfValid(Node node1, Relationship relationship1, Node node2, Relationship relationship2, Node node3) throws IOException {
-        if((relationship1.getType().name().equals("takesCourse") && relationship2.getType().name().equals("teacherOf")) ||
-                (relationship1.getType().name().equals("memberOf") && relationship2.getType().name().equals("subOrganizationOf"))){
+        if((relationship1.getType().name().equals("takesCourse") && relationship2.getType().name().equals("teacherOf"))){
             PathIDBuilder builder = new PathIDBuilder(node1, relationship1, node2, relationship2, node3);
             sorters.get(4).addUnsortedKey(new Long[]{builder.buildPath(), node1.getId(), node2.getId(), node3.getId()});
+            updateStats(pathMap, builder);
+        }
+
+        if(relationship1.getType().name().equals("memberOf") && relationship2.getType().name().equals("subOrganizationOf")){
+            PathIDBuilder builder = new PathIDBuilder(node1, relationship1, node2, relationship2, node3);
+            sorters.get(4).addUnsortedKey(new Long[]{builder.buildPath(), node1.getId(), node2.getId(), node3.getId()});
+            updateStats(pathMap, builder);
+        }
+
+        if(relationship1.getType().name().equals("worksFor") && relationship2.getType().name().equals("subOrganizationOf") && node1.hasRelationship(headOf)){
+            PathIDBuilder builder = new PathIDBuilder(node1.getSingleRelationship(headOf, Direction.BOTH).getEndNode(), node1.getSingleRelationship(headOf, Direction.BOTH), node1, relationship1, node2, relationship2, node3);
+            sorters.get(5).addUnsortedKey(new Long[]{builder.buildPath(), node1.getId(), node2.getId(), node3.getId()});
             updateStats(pathMap, builder);
         }
     }
     //private void addPathIfValid(Node node1, Relationship relationship1, Node node2, Relationship relationship2, Node node3, Relationship relationship3){}
 
     private void addPathIfValid(Node node1, Relationship relationship1, Node node2, Relationship relationship2, Node node3, Relationship relationship3, Node node4) throws IOException {
-        if(relationship1.getType().name().equals("headOf") && relationship2.getType().name().equals("worksFor") && relationship3.getType().name().equals("subOrganizationOf")){
+        /*if(relationship1.getType().name().equals("headOf") && relationship2.getType().name().equals("worksFor") && relationship3.getType().name().equals("subOrganizationOf")){
             PathIDBuilder builder = new PathIDBuilder(node1, relationship1, node2, relationship2, node3, relationship3, node4);
             sorters.get(5).addUnsortedKey(new Long[]{builder.buildPath(), node1.getId(), node2.getId(), node3.getId(), node4.getId()});
             updateStats(pathMap, builder);
         }
-        else if((relationship1.getType().name().equals("advisor") && relationship2.getType().name().equals("teacherOf") && relationship3.getType().name().equals("takesCourse") &&
+        else*/ if((relationship1.getType().name().equals("advisor") && relationship2.getType().name().equals("teacherOf") && relationship3.getType().name().equals("takesCourse") &&
                 (node1.getId() == node4.getId()))){
             PathIDBuilder builder = new PathIDBuilder(node1, relationship1, node2, relationship2, node3);
             sorters.get(4).addUnsortedKey(new Long[]{builder.buildPath(), node1.getId(), node2.getId(), node3.getId()});
@@ -339,7 +355,7 @@ public class BulkLUBMDataLoader {
         }
         strBulder = new StringBuilder();
         Calendar cal = Calendar.getInstance();
-        strBulder.append("Progress: ").append(count).append("  |  ").append((int) ((count / totalRels) * 100)).append("% complete. Paths: ").append(pathMap.size()).append(", Time: ").append(cal.get(Calendar.HOUR_OF_DAY)).append(":").append(cal.get(Calendar.MINUTE));
+        strBulder.append("Progress: ").append(count).append("  |  ").append((int) ((count / totalRels) * 100)).append("% complete. Paths: ").append(pathMap.size()).append(", Last Updated: ").append(cal.get(Calendar.HOUR_OF_DAY)).append(":").append(cal.get(Calendar.MINUTE));
 
         System.out.print("\r" + strBulder.toString());
     }
