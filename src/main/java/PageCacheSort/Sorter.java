@@ -15,7 +15,7 @@ import java.util.*;
  * Main entry into the Sorter.
  */
 public class Sorter {
-    int FAN_IN = 2;
+    int FAN_IN = 1024;
     PageProxyCursor setIteratorCursor;
     DiskCache writeToDisk;
     DiskCache readFromDisk;
@@ -97,15 +97,15 @@ public class Sorter {
         for(PageSet set : pageSets){
             pQueue.add(new SetIteratorImpl(set));
         }
-        long[] prev = new long[]{0,0,0,0};
-        long[] next;
+        //long[] prev = new long[]{0,0,0,0};
+        //long[] next;
         SetIterator curr;
         while(pQueue.size() > 0){
             curr = pQueue.poll();
-            next = curr.getNext();
-            assert(KeyImpl.getComparator().compare(next, prev) > 0);
-            prev = next;
-            addSortedKey(next);
+            //next = curr.getNext();
+            //assert(KeyImpl.getComparator().compare(next, prev) > 0);
+            //prev = next;
+            addSortedKey(curr.getNext());
             if(curr.hasNext()) {
                 pQueue.add(curr);
             }
@@ -139,8 +139,7 @@ public class Sorter {
     }
     private SetIterator getFinalIterator(DiskCache sortedNumbersDisk) throws IOException {
         readFromDisk = sortedNumbersDisk;
-        SetIterator itr = new SetIteratorImpl(postSortSet);
-        return itr;
+        return new SetIteratorImpl(postSortSet);
     }
 
     private void debug_countKeysType() throws IOException {
@@ -172,16 +171,16 @@ public class Sorter {
         }
     }
 
-    public void addUnsortedKey(long[] key) throws IOException {
+    public void addUnsortedKey(Long[] key) throws IOException {
         if(byteRepSize + (keySize * 8) > ALT_MAX_PAGE_SIZE){
             flushBulkLoadedKeys();
         }
         byteRepSize += key.length * 8;
-        Long[] keyObj = new Long[key.length];
-        for(int i = 0; i < key.length; i++){
-            keyObj[i] = key[i];
-        }
-        bulkLoadedKeys.add(keyObj); //TODO optimize this crap, this primitive -> obj conversion is retarded.
+        //Long[] keyObj = new Long[key.length];
+        //for(int i = 0; i < key.length; i++){
+        //    keyObj[i] = key[i];
+        //}
+        bulkLoadedKeys.add(key); //TODO optimize this crap, this primitive -> obj conversion is retarded.
     }
     public void addSortedKey(long[] key) throws IOException {
         if(byteRepSize + (keySize * 8) > ALT_MAX_PAGE_SIZE){
@@ -203,12 +202,6 @@ public class Sorter {
             for (Long val : sortedKey) {
                 writeToCursor.putLong(val);
             }
-            if(!sortedKey[0].equals(new Long(90603815l))){
-                countA++;
-            }
-            else{
-                countB++;
-            }
         }
         bulkLoadedKeys.clear();
         byteRepSize = 0;
@@ -224,12 +217,6 @@ public class Sorter {
             Long[] sortedKey = bulkLoadedKeys.poll();
             for (Long val : sortedKey) {
                 writeToCursor.putLong(val);
-            }
-            if(!sortedKey[0].equals(new Long(90603815l))){
-                countA++;
-            }
-            else{
-                countB++;
             }
         }
         writeToCursor.next(writeToCursor.getCurrentPageId() + 1);
@@ -276,12 +263,6 @@ public class Sorter {
         }
 
         public long[] getNext() throws IOException {
-            /*long[] ret = new long[keySize];
-            System.arraycopy(next, 0, ret, 0, keySize);
-            readKey();
-            return ret;
-            */
-
             if(hasNext()){
                 long[] next = new long[keySize];
                 for (int i = 0; i < keySize; i++) {
@@ -305,7 +286,6 @@ public class Sorter {
             if((buffer.position()) == buffer.capacity() && !set.isEmpty()){
                 fillBuffer(set.pop());
             }
-            //return !nextKeyAllZeros();
             return true;
         }
 

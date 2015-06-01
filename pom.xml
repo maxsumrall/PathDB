@@ -53,6 +53,7 @@
                     <executable>java</executable>
                     <mainClass>NeoIntegration.BulkLUBMDataLoader</mainClass>
                     <arguments>
+                        <argument>-Xmx7G -Xms7G</argument>
                         <argument>-XX:+UseFastAccessorMethods</argument>
                         <argument>-XX:+DisableExplicitGC</argument>
                         <argument>-XX:+UseConcMarkSweepGC</argument>

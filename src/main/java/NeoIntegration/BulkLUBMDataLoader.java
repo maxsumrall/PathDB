@@ -148,7 +148,7 @@ public class BulkLUBMDataLoader {
     }
 
     private List<Triple> fileParser(File file){
-        String line = null;
+        String line;
         LinkedList<Triple> triples = new LinkedList<>();
         try {
             // FileReader reads text files in the default encoding.
@@ -177,7 +177,7 @@ public class BulkLUBMDataLoader {
         GraphDatabaseService db = new GraphDatabaseFactory().newEmbeddedDatabase( DB_PATH );
         GlobalGraphOperations ggo = GlobalGraphOperations.at(db);
         double count = 0;
-        double totalRels = 0;
+        double totalRels;
         try ( Transaction tx = db.beginTx()) {
             for (RelationshipType relType : ggo.getAllRelationshipTypes()) {
                 totalRels = IteratorUtil.count(ggo.getAllRelationships());
@@ -219,7 +219,7 @@ public class BulkLUBMDataLoader {
     GraphDatabaseService db = new GraphDatabaseFactory().newEmbeddedDatabase( DB_PATH );
     GlobalGraphOperations ggo = GlobalGraphOperations.at(db);
     double count = 0;
-    double totalRels = 0;
+    double totalRels;
 
     try ( Transaction tx = db.beginTx()) {
         for(RelationshipType relType : ggo.getAllRelationshipTypes()){
@@ -276,12 +276,12 @@ public class BulkLUBMDataLoader {
     private void addPathIfValid(Node node1, Relationship relationship1, Node node2) throws IOException {
         if(relationship1.getType().name().equals("worksFor")){
             PathIDBuilder builder = new PathIDBuilder(node1, relationship1, node2);
-            sorters.get(3).addUnsortedKey(new long[]{builder.buildPath(), node1.getId(), node2.getId()});
+            sorters.get(3).addUnsortedKey(new Long[]{builder.buildPath(), node1.getId(), node2.getId()});
             updateStats(pathMap, builder);
         }
         else if (relationship1.getType().name().equals("memberOf")){
             PathIDBuilder builder = new PathIDBuilder(node1, relationship1, node2);
-            sorters.get(3).addUnsortedKey(new long[]{builder.buildPath(), node1.getId(), node2.getId()});
+            sorters.get(3).addUnsortedKey(new Long[]{builder.buildPath(), node1.getId(), node2.getId()});
             updateStats(pathMap, builder);
         }
     }
@@ -290,7 +290,7 @@ public class BulkLUBMDataLoader {
         if((relationship1.getType().name().equals("takesCourse") && relationship2.getType().name().equals("teacherOf")) ||
                 (relationship1.getType().name().equals("memberOf") && relationship2.getType().name().equals("subOrganizationOf"))){
             PathIDBuilder builder = new PathIDBuilder(node1, relationship1, node2, relationship2, node3);
-            sorters.get(4).addUnsortedKey(new long[]{builder.buildPath(), node1.getId(), node2.getId(), node3.getId()});
+            sorters.get(4).addUnsortedKey(new Long[]{builder.buildPath(), node1.getId(), node2.getId(), node3.getId()});
             updateStats(pathMap, builder);
         }
     }
@@ -299,40 +299,37 @@ public class BulkLUBMDataLoader {
     private void addPathIfValid(Node node1, Relationship relationship1, Node node2, Relationship relationship2, Node node3, Relationship relationship3, Node node4) throws IOException {
         if(relationship1.getType().name().equals("headOf") && relationship2.getType().name().equals("worksFor") && relationship3.getType().name().equals("subOrganizationOf")){
             PathIDBuilder builder = new PathIDBuilder(node1, relationship1, node2, relationship2, node3, relationship3, node4);
-            sorters.get(5).addUnsortedKey(new long[]{builder.buildPath(), node1.getId(), node2.getId(), node3.getId(), node4.getId()});
+            sorters.get(5).addUnsortedKey(new Long[]{builder.buildPath(), node1.getId(), node2.getId(), node3.getId(), node4.getId()});
             updateStats(pathMap, builder);
         }
         else if((relationship1.getType().name().equals("advisor") && relationship2.getType().name().equals("teacherOf") && relationship3.getType().name().equals("takesCourse") &&
                 (node1.getId() == node4.getId()))){
             PathIDBuilder builder = new PathIDBuilder(node1, relationship1, node2, relationship2, node3);
-            sorters.get(4).addUnsortedKey(new long[]{builder.buildPath(), node1.getId(), node2.getId(), node3.getId()});
+            sorters.get(4).addUnsortedKey(new Long[]{builder.buildPath(), node1.getId(), node2.getId(), node3.getId()});
             updateStats(pathMap, builder);
         }
         else if((relationship1.getType().name().equals("undergraduateDegreeFrom") && relationship2.getType().name().equals("subOrganizationOf") && relationship3.getType().name().equals("memberOf") &&
                 (node1.getId() == node4.getId()))){
             PathIDBuilder builder = new PathIDBuilder(node1, relationship1, node2, relationship2, node3, relationship3, node4);
-            sorters.get(4).addUnsortedKey(new long[]{builder.buildPath(), node1.getId(), node2.getId(), node3.getId()});
+            sorters.get(4).addUnsortedKey(new Long[]{builder.buildPath(), node1.getId(), node2.getId(), node3.getId()});
             updateStats(pathMap, builder);
         }
     }
     //
     private void addPath(Node node1, Relationship relationship1, Node node2) throws IOException {
         PathIDBuilder builder = new PathIDBuilder(node1, relationship1, node2);
-        sorters.get(3).addUnsortedKey(new long[]{builder.buildPath(), node1.getId(), node2.getId()});
+        sorters.get(3).addUnsortedKey(new Long[]{builder.buildPath(), node1.getId(), node2.getId()});
     }
     private void addPath(Node node1, Relationship relationship1, Node node2, Relationship relationship2, Node node3) throws IOException {
         PathIDBuilder builder = new PathIDBuilder(node1, relationship1, node2, relationship2, node3);
-        sorters.get(4).addUnsortedKey(new long[]{builder.buildPath(), node1.getId(), node2.getId(), node3.getId()});
+        sorters.get(4).addUnsortedKey(new Long[]{builder.buildPath(), node1.getId(), node2.getId(), node3.getId()});
         updateStats(pathMap, builder);
-
     }
 
     private void addPath(Node node1, Relationship relationship1, Node node2, Relationship relationship2, Node node3, Relationship relationship3, Node node4) throws IOException {
         PathIDBuilder builder = new PathIDBuilder(node1, relationship1, node2, relationship2, node3, relationship3, node4);
-        sorters.get(5).addUnsortedKey(new long[]{builder.buildPath(), node1.getId(), node2.getId(), node3.getId(), node4.getId()});
+        sorters.get(5).addUnsortedKey(new Long[]{builder.buildPath(), node1.getId(), node2.getId(), node3.getId(), node4.getId()});
         updateStats(pathMap, builder);
-
-
     }
 
     private void printStats(Map<String, Long> pathMap, double count, double totalRels){
@@ -348,7 +345,6 @@ public class BulkLUBMDataLoader {
     }
 
     private void updateStats(Map<String, Long> pathMap, PathIDBuilder builder){
-        long pathID = builder.pathID;
         if(!pathMap.containsKey(builder.toString())){
             pathMap.put(builder.toString(), 0l);
             prettyPaths.add(builder.prettyPrint());
@@ -360,6 +356,7 @@ public class BulkLUBMDataLoader {
         return relationshipTypes.get(rel.getType()) == null;
     }
 
+    /*
     private void getPathsNodesPerspective() throws IOException {
         long count = 0;
         GraphDatabaseService db = new GraphDatabaseFactory().newEmbeddedDatabase( DB_PATH );
@@ -400,25 +397,25 @@ public class BulkLUBMDataLoader {
     }
     private void doInsertion(Node node1, Node node2, Node node3, Relationship relationship1, Relationship relationship2, Map<String, Long> pathMap) throws IOException {
         PathIDBuilder pathBuilder = new PathIDBuilder(node1, node2, relationship1, relationship2);
-        long pathId = pathBuilder.buildPath();
+        Long pathId = pathBuilder.buildPath();
         if(!pathMap.containsKey(pathId)){
             pathMap.put(pathBuilder.toString(), 0l);
             prettyPaths.add(pathBuilder.prettyPrint());
         }
         pathMap.put(pathBuilder.toString(), pathMap.get(pathId) + 1);
-        long[] key = new long[]{pathId, node1.getId(), node2.getId(), node3.getId()};
+        Long[] key = new Long[]{pathId, node1.getId(), node2.getId(), node3.getId()};
         sorters.get(key.length).addUnsortedKey(key);
     }
 
     private void doInsertion(Node node1, Node node2, Node node3, Node node4, Relationship relationship1, Relationship relationship2, Relationship relationship3, Map<String, Long> pathMap) throws IOException {
         PathIDBuilder pathBuilder = new PathIDBuilder(node1, node2, node3, relationship1, relationship2, relationship3);
-        long pathId = pathBuilder.buildPath();
+        Long pathId = pathBuilder.buildPath();
         if(!pathMap.containsKey(pathId)){
             pathMap.put(pathBuilder.toString(), 0l);
             prettyPaths.add(pathBuilder.prettyPrint());
         }
         pathMap.put(pathBuilder.toString(), pathMap.get(pathId) + 1);
-        long[] key = new long[]{pathId, node1.getId(), node2.getId(), node3.getId(), node4.getId()};
+        Long[] key = new Long[]{pathId, node1.getId(), node2.getId(), node3.getId(), node4.getId()};
         sorters.get(key.length).addUnsortedKey(key);
     }
 
@@ -426,11 +423,12 @@ public class BulkLUBMDataLoader {
         boolean valid = false;
         //valid = valid || (relA.getType().name().equals("worksFor"));
         //valid = valid || (relA.getType().name().equals("memberOf"));
-        valid = valid || (relA.getType().name().equals("memberOf") && relB.getType().name().equals("subOrganizationOf") && relC == null);
+        valid = (relA.getType().name().equals("memberOf") && relB.getType().name().equals("subOrganizationOf") && relC == null);
         valid = valid || (relA.getType().name().equals("takesCourse") && relB.getType().name().equals("teacherOf") && relC == null);
         valid = valid || (relA.getType().name().equals("memberOf") && relB.getType().name().equals("undergraduateDegreeFrom") && relC.getType().name().equals("subOrganizationOf"));
         return valid;
     }
+    */
 
 public class BulkPageSource implements BulkLoadDataSource{
     DiskCache disk;
@@ -467,7 +465,7 @@ public class Triple{
     public String predicate;
     public String objectType;
     public String objectURI;
-    public Triple(){};
+    public Triple(){}
     public Triple(List<String> csvLine){
         subjectType = csvLine.get(0);
         subjectURI = csvLine.get(1);
