@@ -45,7 +45,7 @@ public class BulkLUBMDataLoader {
 
         BulkLUBMDataLoader bulkLUBMDataLoader = new BulkLUBMDataLoader();
 
-        bulkLUBMDataLoader.bulkLoad();
+        //bulkLUBMDataLoader.bulkLoad();
 
         //bulkLUBMDataLoader.getPathsRelationshipPerspective();
         bulkLUBMDataLoader.getPathsAll();
