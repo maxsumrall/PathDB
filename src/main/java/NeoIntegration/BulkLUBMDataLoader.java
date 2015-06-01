@@ -41,6 +41,7 @@ public class BulkLUBMDataLoader {
     StringBuilder strBulder;
     LinkedList<String> prettyPaths = new LinkedList<>();
     RelationshipType headOf;
+    RelationshipType takesCourse;
 
 
     public static void main( String[] args ) throws IOException {
@@ -48,9 +49,9 @@ public class BulkLUBMDataLoader {
         BulkLUBMDataLoader bulkLUBMDataLoader = new BulkLUBMDataLoader();
 
         //bulkLUBMDataLoader.bulkLoad();
-
-        bulkLUBMDataLoader.getPathsRelationshipPerspective();
-        //bulkLUBMDataLoader.getPathsAll();
+        //bulkLUBMDataLoader.getPathCypher();
+        //bulkLUBMDataLoader.getPathsRelationshipPerspective();
+        bulkLUBMDataLoader.getPathsAll();
 
         bulkLUBMDataLoader.sortKeys();
         try(PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(INDEX_METADATA_PATH, false)))) {
@@ -99,7 +100,7 @@ public class BulkLUBMDataLoader {
         DiskCache disk = DiskCache.persistentDiskCache(sorter.toString() + LUBM_INDEX_PATH);
         BulkPageSource sortedDataSource = new BulkPageSource(sortedDisk, sorter.finalPageId());
 
-        NodeBulkLoader bulkLoader = new NodeBulkLoader(sortedDataSource, disk);
+        NodeBulkLoader bulkLoader = new NodeBulkLoader(sortedDataSource, disk, sorter.keySize);
         long root = bulkLoader.run();
         System.out.println("Done. Root for this index (SAVE THIS VALUE!): " + root);
         disk.shutdown();
@@ -219,6 +220,52 @@ public class BulkLUBMDataLoader {
         }
     }
 
+    private void getPathCypher() throws IOException {
+        GraphDatabaseService db = new GraphDatabaseFactory().newEmbeddedDatabase(DB_PATH);
+        GlobalGraphOperations ggo = GlobalGraphOperations.at(db);
+        double count = 0;
+        double totalRels;
+
+        try (Transaction tx = db.beginTx()) {
+            for (RelationshipType relType : ggo.getAllRelationshipTypes()) {
+                if (relType.name().equals("memberOf") ||
+                        relType.name().equals("worksFor") ||
+                        relType.name().equals("headOf") ||
+                        relType.name().equals("hasAdvisor") ||
+                        relType.name().equals("takesCourse") ||
+                        relType.name().equals("teacherOf") ||
+                        relType.name().equals("subOrganizationOf") ||
+                        relType.name().equals("undergraduateDegreeFrom")) {
+                    relationshipTypes.put(relType, 1);
+                }
+                if (relType.name().equals("headOf")) {
+                    headOf = relType;
+                }
+                if (relType.name().equals("takesCourse")) {
+                    takesCourse = relType;
+                }
+            }
+            totalRels = IteratorUtil.count(ggo.getAllRelationships());
+
+
+
+            String cypher = "MATCH (x)<-[:headOf]-(y)-[:worksFor]->(z)-[:subOrganizationOf]->(w) RETURN ID(x), ID(y), ID(z), ID(w)";
+
+            Result queryAResult = db.execute(cypher);
+            while(queryAResult.hasNext()){
+                Map<String, Object> result = queryAResult.next();
+                Long[] key = new Long[result.size()];
+                int i = 0;
+                for(Object val : result.values()){
+                    key[i++] = new Long(val.toString());
+                }
+
+                count++;
+            }
+        }
+    }
+
+
     private void getPathsRelationshipPerspective() throws IOException{
     GraphDatabaseService db = new GraphDatabaseFactory().newEmbeddedDatabase( DB_PATH );
     GlobalGraphOperations ggo = GlobalGraphOperations.at(db);
@@ -239,6 +286,9 @@ public class BulkLUBMDataLoader {
             }
             if(relType.name().equals("headOf")){
                 headOf = relType;
+            }
+            if(relType.name().equals("takesCourse")){
+                takesCourse = relType;
             }
         }
         totalRels = IteratorUtil.count(ggo.getAllRelationships());
@@ -310,25 +360,20 @@ public class BulkLUBMDataLoader {
 
         if(relationship1.getType().name().equals("worksFor") && relationship2.getType().name().equals("subOrganizationOf") && node1.hasRelationship(headOf)){
             PathIDBuilder builder = new PathIDBuilder(node1.getSingleRelationship(headOf, Direction.BOTH).getEndNode(), node1.getSingleRelationship(headOf, Direction.BOTH), node1, relationship1, node2, relationship2, node3);
-            sorters.get(5).addUnsortedKey(new Long[]{builder.buildPath(), node1.getId(), node2.getId(), node3.getId()});
+            sorters.get(5).addUnsortedKey(new Long[]{builder.buildPath(),node1.getSingleRelationship(headOf, Direction.BOTH).getEndNode().getId(), node1.getId(), node2.getId(), node3.getId()});
             updateStats(pathMap, builder);
+        }
+        if(relationship1.getType().name().equals("hasAdvisor") && relationship2.getType().name().equals("teacherOf")){
+            for(Relationship relationship3 : node3.getRelationships(takesCourse)){
+                PathIDBuilder builder = new PathIDBuilder(node1, relationship1, node2, relationship2, node3, relationship3, relationship3.getOtherNode(node3));
+                sorters.get(4).addUnsortedKey(new Long[]{builder.buildPath(), node1.getId(), node2.getId(), node3.getId()});
+                updateStats(pathMap, builder);
+            }
         }
     }
-    //private void addPathIfValid(Node node1, Relationship relationship1, Node node2, Relationship relationship2, Node node3, Relationship relationship3){}
 
     private void addPathIfValid(Node node1, Relationship relationship1, Node node2, Relationship relationship2, Node node3, Relationship relationship3, Node node4) throws IOException {
-        /*if(relationship1.getType().name().equals("headOf") && relationship2.getType().name().equals("worksFor") && relationship3.getType().name().equals("subOrganizationOf")){
-            PathIDBuilder builder = new PathIDBuilder(node1, relationship1, node2, relationship2, node3, relationship3, node4);
-            sorters.get(5).addUnsortedKey(new Long[]{builder.buildPath(), node1.getId(), node2.getId(), node3.getId(), node4.getId()});
-            updateStats(pathMap, builder);
-        }
-        else*/ if((relationship1.getType().name().equals("takesCourse") && relationship2.getType().name().equals("teacherOf") && relationship3.getType().name().equals("hasAdvisor") &&
-                (node1.getId() == node4.getId()))){
-            PathIDBuilder builder = new PathIDBuilder(node1, relationship1, node2, relationship2, node3);
-            sorters.get(4).addUnsortedKey(new Long[]{builder.buildPath(), node1.getId(), node2.getId(), node3.getId()});
-            updateStats(pathMap, builder);
-        }
-        else if((relationship1.getType().name().equals("undergraduateDegreeFrom") && relationship2.getType().name().equals("subOrganizationOf") && relationship3.getType().name().equals("memberOf") &&
+       if((relationship1.getType().name().equals("undergraduateDegreeFrom") && relationship2.getType().name().equals("subOrganizationOf") && relationship3.getType().name().equals("memberOf") &&
                 (node1.getId() == node4.getId()))){
             PathIDBuilder builder = new PathIDBuilder(node1, relationship1, node2, relationship2, node3, relationship3, node4);
             sorters.get(4).addUnsortedKey(new Long[]{builder.buildPath(), node1.getId(), node2.getId(), node3.getId()});

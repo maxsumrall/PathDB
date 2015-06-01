@@ -50,12 +50,12 @@ public class PathIDBuilder {
         }
         if(relBOutgoing){
             path.append(relB.name());
-            prettyPrint.append("()-[:"+relB.name()+"->()");
+            prettyPrint.append("()-[:"+relB.name()+"]->()");
 
         }
         else{
             path.append(new StringBuilder(relB.name()).reverse());
-            prettyPrint.append("()<-[:"+relB.name()+"-()");
+            prettyPrint.append("()<-[:"+relB.name()+"]-()");
 
         }
     }
@@ -63,12 +63,12 @@ public class PathIDBuilder {
     public PathIDBuilder addRelationship(Node node, Relationship relationship){
         if(isOutgoing(node, relationship)){
             path.append(relationship.getType().name());
-            prettyPrint.append("()-[:"+relationship.getType().name()+"->()");
+            prettyPrint.append("()-[:"+relationship.getType().name()+"]->()");
 
         }
         else{
             path.append(new StringBuilder(relationship.getType().name()).reverse());
-            prettyPrint.append("()<-[:"+relationship.getType().name()+"-()");
+            prettyPrint.append("()<-[:"+relationship.getType().name()+"]-()");
 
         }
         return this;

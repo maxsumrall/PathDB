@@ -20,7 +20,7 @@ public class NodeBulkLoaderTest {
         tree = Tree.initializeNewTree("tmp_tree_yo.dat", disk); //used for debugging
         int numberOfPages = 40000; //100000 pages should roughly equal 20mil keys;
         SimpleDataGenerator dataGenerator = new SimpleDataGenerator(numberOfPages);
-        NodeBulkLoader bulkLoader = new NodeBulkLoader(dataGenerator, disk);
+        NodeBulkLoader bulkLoader = new NodeBulkLoader(dataGenerator, disk, 4);
         long root = bulkLoader.run();
         NodeTree proxy = new NodeTree(root, disk);
         System.out.println("Done: " + root);

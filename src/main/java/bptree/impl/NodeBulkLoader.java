@@ -16,23 +16,27 @@ public class NodeBulkLoader {
     private BulkLoadDataSource data;
     private PagedFile pagedFile;
     private DiskCache disk;
-    public static int KEY_LENGTH = 4;
-    //public static int MAX_PAIRS = ((DiskCache.PAGE_SIZE - NodeHeader.NODE_HEADER_LENGTH) / ((KEY_LENGTH + 1)*8) ) / 2; //why did I do this? what is this??
-    public static int MAX_PAIRS = ((DiskCache.PAGE_SIZE - NodeHeader.NODE_HEADER_LENGTH) / ((KEY_LENGTH + 1)*8) ) - 1; //why did I do this? what is this??
-    private static int RESERVED_CHILDREN_SPACE = (MAX_PAIRS + 1) * 8;
+    public int keySize;
+    //public static int MAX_PAIRS = ((DiskCache.PAGE_SIZE - NodeHeader.NODE_HEADER_LENGTH) / ((keySize + 1)*8) ) / 2; //why did I do this? what is this??
+    public int MAX_PAIRS;
+    private int RESERVED_CHILDREN_SPACE;
     private int currentPair = 0;
     private long currentParent;
     private int currentOffset = 0;
     private long previousLeaf = -1;
-    private ParentBufferWriter parentWriter = new ParentBufferWriter();
+    private ParentBufferWriter parentWriter;
     public static PageProxyCursor cursor;
     public NodeTree tree;
 
-    public NodeBulkLoader(BulkLoadDataSource data, DiskCache disk) throws IOException {
+    public NodeBulkLoader(BulkLoadDataSource data, DiskCache disk, int keySize) throws IOException {
         this.data = data;
         this.disk = disk;
         this.pagedFile = this.disk.pagedFile;
         this.tree = new NodeTree(this.disk);
+        this.keySize = keySize;
+        this.MAX_PAIRS = ((DiskCache.PAGE_SIZE - NodeHeader.NODE_HEADER_LENGTH) / ((keySize + 1)*8) ) - 1; //why did I do this? what is this??
+        this.RESERVED_CHILDREN_SPACE  = (MAX_PAIRS + 1) * 8;
+        parentWriter = new ParentBufferWriter();
     }
 
     public long run(){
@@ -40,7 +44,7 @@ public class NodeBulkLoader {
         try (PageProxyCursor cursor = this.disk.getCursor(0, PagedFile.PF_EXCLUSIVE_LOCK)) {
                     long firstInternalNode = NodeTree.acquireNewInternalNode(cursor);
                     cursor.next(firstInternalNode);
-                    NodeHeader.setKeyLength(cursor, KEY_LENGTH);
+                    NodeHeader.setKeyLength(cursor, keySize);
                     this.currentParent = firstInternalNode;
                     while(data.hasNext()){
                         insertKeys(cursor, data.nextPage());
@@ -50,7 +54,7 @@ public class NodeBulkLoader {
                     cursor.putBytes(parentWriter.getChildren());
                     byte[] keys = parentWriter.getKeys();
                     cursor.putBytes(keys);
-                    NodeHeader.setNumberOfKeys(cursor, ((keys.length/KEY_LENGTH) / 8));
+                    NodeHeader.setNumberOfKeys(cursor, ((keys.length/ keySize) / 8));
                     //Leaf row and one parent row made.
                     //Build tree above internal nodes.
                     root = buildUpperLeaves(cursor, firstInternalNode);
@@ -64,8 +68,8 @@ public class NodeBulkLoader {
     private void insertKeys(PageProxyCursor cursor, byte[] keyBytes) throws IOException {
         long newLeaf = NodeTree.acquireNewLeafNode(cursor);
         cursor.next(newLeaf);
-        NodeHeader.setKeyLength(cursor, KEY_LENGTH);
-        NodeHeader.setNumberOfKeys(cursor, keyBytes.length/(KEY_LENGTH * 8));
+        NodeHeader.setKeyLength(cursor, keySize);
+        NodeHeader.setNumberOfKeys(cursor, keyBytes.length/(keySize * 8));
         writeBytesToLeaf(cursor, newLeaf, keyBytes);
         if(previousLeaf != -1) {
             NodeTree.updateSiblingAndFollowingIdsInsertion(cursor, previousLeaf, newLeaf);
@@ -89,7 +93,7 @@ public class NodeBulkLoader {
             NodeHeader.setNumberOfKeys(cursor, MAX_PAIRS);
             long newParent = NodeTree.acquireNewInternalNode(cursor);
             cursor.next(newParent);
-            NodeHeader.setKeyLength(cursor, KEY_LENGTH);
+            NodeHeader.setKeyLength(cursor, keySize);
             NodeTree.updateSiblingAndFollowingIdsInsertion(cursor, this.currentParent, newParent);
             this.currentParent = newParent;
             this.currentOffset = 0;
@@ -111,7 +115,7 @@ public class NodeBulkLoader {
     private long buildUpperLeaves(PageProxyCursor cursor, long leftMostNode) throws IOException {
         long firstParent = NodeTree.acquireNewInternalNode(cursor);
         cursor.next(firstParent);
-        NodeHeader.setKeyLength(cursor, KEY_LENGTH);
+        NodeHeader.setKeyLength(cursor, keySize);
         this.currentParent = firstParent;
         this.currentOffset = 0;
         this.currentPair = 0;
@@ -131,7 +135,7 @@ public class NodeBulkLoader {
         cursor.putBytes(parentWriter.getChildren());
         byte[] keys = parentWriter.getKeys();
         cursor.putBytes(keys);
-        NodeHeader.setNumberOfKeys(cursor, ((keys.length/KEY_LENGTH) / 8));
+        NodeHeader.setNumberOfKeys(cursor, ((keys.length/ keySize) / 8));
 
         if(firstParent != this.currentParent){
             return buildUpperLeaves(cursor, firstParent);
@@ -151,7 +155,7 @@ public class NodeBulkLoader {
             NodeHeader.setNumberOfKeys(cursor, MAX_PAIRS);
             long newParent = NodeTree.acquireNewInternalNode(cursor);
             cursor.next(newParent);
-            NodeHeader.setKeyLength(cursor, KEY_LENGTH);
+            NodeHeader.setKeyLength(cursor, keySize);
             NodeTree.updateSiblingAndFollowingIdsInsertion(cursor, this.currentParent, newParent);
             this.currentParent = newParent;
             this.currentOffset = 0;
@@ -182,7 +186,7 @@ public class NodeBulkLoader {
 
     private class ParentBufferWriter {
         byte[] children = new byte[RESERVED_CHILDREN_SPACE];
-        byte[] keys = new byte[MAX_PAIRS * KEY_LENGTH * 8];
+        byte[] keys = new byte[MAX_PAIRS * keySize * 8];
         ByteBuffer cb = ByteBuffer.wrap(children);
         LongBuffer cBuffer = cb.asLongBuffer();
         ByteBuffer kb = ByteBuffer.wrap(keys);

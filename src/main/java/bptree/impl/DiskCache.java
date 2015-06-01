@@ -15,14 +15,14 @@ import java.nio.ByteBuffer;
 public class DiskCache {
     public static int PAGE_SIZE = 8192;
     protected final static String DEFAULT_CACHE_FILE_NAME = "cache.bin";
-    protected int recordSize = 9; //TODO What is this?
-    protected int max_size_in_mb = 16384;
+    //protected int recordSize = 1; //TODO What is this?
+    protected int max_size_in_mb = 4096;
     protected int maxPages = max_size_in_mb * (1000000 / PAGE_SIZE);
     //protected int maxPages = 8000; //TODO How big should this be?
     protected int pageCachePageSize = PAGE_SIZE;
-    protected int recordsPerFilePage = pageCachePageSize / recordSize;
-    protected int recordCount = 25 * maxPages * recordsPerFilePage;
-    protected int filePageSize = recordsPerFilePage * recordSize;
+    //protected int recordsPerFilePage = pageCachePageSize / recordSize;
+    //protected int recordCount = 25 * maxPages * recordsPerFilePage;
+    //protected int filePageSize = ;recordsPerFilePage * recordSize;
     protected transient DefaultFileSystemAbstraction fs;
     protected transient MuninnPageCache pageCache;
     public transient PagedFile pagedFile;
@@ -71,7 +71,7 @@ public class DiskCache {
         SingleFilePageSwapperFactory factory = new SingleFilePageSwapperFactory(fs);
         //factory.setFileSystemAbstraction( fs );
         pageCache = new MuninnPageCache(factory, maxPages, pageCachePageSize, PageCacheMonitor.NULL);
-        pagedFile = pageCache.map(page_cache_file, filePageSize);
+        pagedFile = pageCache.map(page_cache_file, pageCachePageSize);
     }
 
     public ByteBuffer readPage(NodeTree tree, long id) {

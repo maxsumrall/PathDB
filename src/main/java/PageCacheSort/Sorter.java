@@ -124,35 +124,6 @@ public class Sorter {
         return new SetIteratorImpl(postSortSet);
     }
 
-    private void debug_countKeysType() throws IOException {
-        HashMap<Long, Long> map = new HashMap<>();
-        try(PageProxyCursor cursor = writeToDisk.getCursor(0, PagedFile.PF_EXCLUSIVE_LOCK)){
-            for(PageSet set : writePageSets) {
-                for (long pageId : set.getAll()) {
-                    cursor.next(pageId);
-                    long[] next = new long[4];
-                    next[0] = cursor.getLong();
-                    next[1] = cursor.getLong();
-                    next[2] = cursor.getLong();
-                    next[3] = cursor.getLong();
-                    while (cursor.getOffset() + (4 * 8) < DiskCache.PAGE_SIZE) {
-                        for (int i = 0; i < 4; i++) {
-                            next[i] = cursor.getLong();
-                        }
-                        if (!map.containsKey(next[0])) {
-                            map.put(next[0], 0l);
-                        }
-                        map.put(next[0], map.get(next[0]) + 1);
-
-                    }
-                }
-            }
-        }
-        for(Long key : map.keySet()){
-            System.out.println("Debug - Key: " + key + "Found vals: " + map.get(key));
-        }
-    }
-
     public void addUnsortedKey(long[] key) throws IOException {
         Long[] objKey = new Long[key.length];
         for(int i = 0; i < key.length; i++){
@@ -162,6 +133,7 @@ public class Sorter {
     }
 
     public void addUnsortedKey(Long[] key) throws IOException {
+        assert(key.length == keySize);
         if(byteRepSize + (keySize * 8) > ALT_MAX_PAGE_SIZE){
             flushBulkLoadedKeys();
         }
