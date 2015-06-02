@@ -13,23 +13,30 @@ import java.nio.ByteBuffer;
 
 
 public class DiskCache {
+    public static int PAGE_SIZE = 8192; //size of a single page, in bytes.
     protected final static String DEFAULT_CACHE_FILE_NAME = "cache.bin";
-    protected static int PAGE_SIZE = 8192; //size of a single page, in bytes.
     protected int max_size_in_mb = 4096;
     protected int maxPages = max_size_in_mb * (1000000 / PAGE_SIZE);
     protected DefaultFileSystemAbstraction fs;
     protected MuninnPageCache pageCache;
     public transient PagedFile pagedFile;
-    public File cache_file;
+    public File pageCacheFile;
 
-    private DiskCache(File cache_file) {
+    private DiskCache(File pageCacheFile) {
+        this.pageCacheFile = pageCacheFile;
         try {
-            initializePageCache(cache_file);
-            this.cache_file = cache_file;
+            initializePageCache();
         }
         catch (IOException e){
             e.printStackTrace();
         }
+    }
+
+    private void initializePageCache() throws IOException {
+        fs = new DefaultFileSystemAbstraction();
+        SingleFilePageSwapperFactory factory = new SingleFilePageSwapperFactory(fs);
+        pageCache = new MuninnPageCache(factory, maxPages, PAGE_SIZE, PageCacheMonitor.NULL);
+        pagedFile = pageCache.map(this.pageCacheFile, PAGE_SIZE);
     }
 
     public static DiskCache temporaryDiskCache(){
@@ -48,13 +55,6 @@ public class DiskCache {
 
     public static DiskCache persistentDiskCache(String filename){
         return new DiskCache(new File(filename));
-    }
-
-    private void initializePageCache(File page_cache_file) throws IOException {
-        fs = new DefaultFileSystemAbstraction();
-        SingleFilePageSwapperFactory factory = new SingleFilePageSwapperFactory(fs);
-        pageCache = new MuninnPageCache(factory, maxPages, PAGE_SIZE, PageCacheMonitor.NULL);
-        pagedFile = pageCache.map(page_cache_file, PAGE_SIZE);
     }
 
     public PageProxyCursor getCursor(long id, int lockType) throws IOException {
@@ -95,7 +95,7 @@ public class DiskCache {
     }
 
     public int cache_size(){
-        return (int)(cache_file.length() / 1000000l);
+        return (int)(pageCacheFile.length() / 1000000l);
     }
 
     public PagedFile getPagedFile(){
@@ -103,7 +103,7 @@ public class DiskCache {
     }
 
     public void shutdown() throws IOException {
-        //System.out.println(this.cache_file);
+        //System.out.println(this.pageCacheFile);
         pagedFile.close();
         pageCache.close();
     }
