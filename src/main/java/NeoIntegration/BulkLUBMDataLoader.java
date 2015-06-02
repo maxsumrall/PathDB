@@ -1,15 +1,13 @@
 package NeoIntegration;
 
 import PageCacheSort.Sorter;
-import bptree.BulkLoadDataSource;
-import bptree.PageProxyCursor;
 import bptree.impl.DiskCache;
 import bptree.impl.NodeBulkLoader;
+import bptree.impl.NodeTree;
 import org.neo4j.graphdb.*;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.helpers.collection.IteratorUtil;
 import org.neo4j.io.fs.FileUtils;
-import org.neo4j.io.pagecache.PagedFile;
 import org.neo4j.kernel.impl.store.InvalidRecordException;
 import org.neo4j.tooling.GlobalGraphOperations;
 import org.neo4j.unsafe.batchinsert.BatchInserter;
@@ -37,7 +35,8 @@ public class BulkLUBMDataLoader {
     HashMap<String, Long> nodes = new HashMap<>();
     HashMap<Integer, Sorter> sorters = new HashMap<>();
     HashMap<RelationshipType, Integer> relationshipTypes = new HashMap<>();
-    Map<String, Long> pathMap = new HashMap<>();
+    Map<String, Long> pathMap = new HashMap<>(); //relationship types to path ids
+    Map<Integer, NodeTree> indexes = new HashMap<>();
     StringBuilder strBulder;
     LinkedList<String> prettyPaths = new LinkedList<>();
     RelationshipType headOf;
@@ -50,8 +49,8 @@ public class BulkLUBMDataLoader {
 
         //bulkLUBMDataLoader.bulkLoad();
         //bulkLUBMDataLoader.doCypherQueries();
-        //bulkLUBMDataLoader.getPathsRelationshipPerspective();
-        bulkLUBMDataLoader.getPathsAll();
+        bulkLUBMDataLoader.getPathsRelationshipPerspective();
+        //bulkLUBMDataLoader.getPathsAll();
 
         bulkLUBMDataLoader.sortKeys();
         try(PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(INDEX_METADATA_PATH, false)))) {
@@ -103,6 +102,7 @@ public class BulkLUBMDataLoader {
         NodeBulkLoader bulkLoader = new NodeBulkLoader(sortedDataSource, disk, sorter.keySize);
         long root = bulkLoader.run();
         System.out.println("Done. Root for this index (SAVE THIS VALUE!): " + root);
+
         disk.shutdown();
         sortedDisk.shutdown();
         return root;
@@ -177,6 +177,8 @@ public class BulkLUBMDataLoader {
         }
         return triples;
     }
+
+
 
     private void getPathsAll() throws IOException{
         GraphDatabaseService db = new GraphDatabaseFactory().newEmbeddedDatabase( DB_PATH );
@@ -395,6 +397,7 @@ public class BulkLUBMDataLoader {
     private void addPath(Node node1, Relationship relationship1, Node node2) throws IOException {
         PathIDBuilder builder = new PathIDBuilder(node1, relationship1, node2);
         sorters.get(3).addUnsortedKey(new Long[]{builder.buildPath(), node1.getId(), node2.getId()});
+        updateStats(pathMap, builder);
     }
     private void addPath(Node node1, Relationship relationship1, Node node2, Relationship relationship2, Node node3) throws IOException {
         PathIDBuilder builder = new PathIDBuilder(node1, relationship1, node2, relationship2, node3);
@@ -505,35 +508,6 @@ public class BulkLUBMDataLoader {
         return valid;
     }
     */
-
-public class BulkPageSource implements BulkLoadDataSource{
-    DiskCache disk;
-    long finalPage;
-    long currentPage = 0;
-    PageProxyCursor cursor;
-
-    public BulkPageSource(DiskCache disk, long finalPage) throws IOException {
-        this.disk = disk;
-        this.finalPage = finalPage;
-        cursor = disk.getCursor(0, PagedFile.PF_SHARED_LOCK);
-    }
-
-    @Override
-    public byte[] nextPage() throws IOException {
-        cursor.next(currentPage++);
-        byte[] bytes = new byte[cursor.getInt()];
-        cursor.getBytes(bytes);
-        return bytes;
-    }
-
-    @Override
-    public boolean hasNext() throws IOException {
-        if(currentPage > finalPage){
-            this.cursor.close();
-        }
-        return currentPage <= finalPage;
-    }
-}
 
 public class Triple{
     public String subjectType;

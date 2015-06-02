@@ -63,6 +63,7 @@ public class SearchCursor {
 
     private void loadSiblingNode(PageProxyCursor cursor) throws IOException {
         cursor.next(siblingNode);
+        this.pageID = siblingNode;
         this.keysInNode = NodeHeader.getNumberOfKeys(cursor);
         this.currentKeyIndex = 0;
         this.siblingNode = NodeHeader.getSiblingID(cursor);
