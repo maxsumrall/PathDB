@@ -49,7 +49,7 @@ public class BulkLUBMDataLoader {
         BulkLUBMDataLoader bulkLUBMDataLoader = new BulkLUBMDataLoader();
 
         //bulkLUBMDataLoader.bulkLoad();
-        //bulkLUBMDataLoader.getPathCypher();
+        //bulkLUBMDataLoader.doCypherQueries();
         //bulkLUBMDataLoader.getPathsRelationshipPerspective();
         bulkLUBMDataLoader.getPathsAll();
 
@@ -188,18 +188,18 @@ public class BulkLUBMDataLoader {
                 totalRels = IteratorUtil.count(ggo.getAllRelationships());
                 for (Relationship relationship1 : ggo.getAllRelationships()) {
                     count++;
-                    if (count % 5000 == 0) {
+                    if (count % 1000 == 0) {
                         printStats(pathMap, count, totalRels);
                     }
                     Node node1 = relationship1.getStartNode();
                     Node node2 = relationship1.getEndNode();
-                    addPath(node1, relationship1, node2);
+                    //addPath(node1, relationship1, node2);
                     for (Relationship relationship2 : node2.getRelationships()) {
                         if (relationship2.getId() == relationship1.getId()) {
                             continue;
                         }
                         Node node3 = relationship2.getOtherNode(node2);
-                        addPath(node1, relationship1, node2, relationship2, node3);
+                        //addPath(node1, relationship1, node2, relationship2, node3);
                         for (Relationship relationship3 : node3.getRelationships()) {
                             if (relationship2.getId() == relationship3.getId()) {
                                 continue;
@@ -220,7 +220,19 @@ public class BulkLUBMDataLoader {
         }
     }
 
-    private void getPathCypher() throws IOException {
+    private void doCypherQueries() throws IOException {
+        getPathCypher(1136874830,"MATCH (x)-[:takesCourse]->(y)<-[:teacherOf]-(z)");
+        getPathCypher(90603815, "MATCH (x)-[:memberOf]->(y)-[:subOrganizationOf]->(z)");
+        getPathCypher(1491269145, "MATCH (x)-[:memberOf]->(y)<-[:subOrganizationOf]-(z)");
+        getPathCypher(1628983526, "MATCH (x)<-[:headOf]-(y)-[:worksFor]->(z)<-[:subOrganizationOf]-(w)");
+        getPathCypher(1924021844, "MATCH (x)-[:hasAdvisor]->(y)-[:teacherOf]->(z)<-[:takesCourse]-(w)");
+        getPathCypher(1084110810, "MATCH (x)<-[:headOf]-(y)-[:worksFor]->(z)-[:subOrganizationOf]->(w)");
+        getPathCypher(35729895, "MATCH (x)-[:worksFor]->(y)");
+        getPathCypher(1947276320, "MATCH (x)-[:undergraduateDegreeFrom]->(y)<-[:subOrganizationOf]-(z)<-[:memberOf]-(w)");
+        getPathCypher(649439727,"MATCH (x)-[:memberOf]->(y)");
+    }
+
+    private void getPathCypher(long pathID, String cypher) throws IOException {
         GraphDatabaseService db = new GraphDatabaseFactory().newEmbeddedDatabase(DB_PATH);
         GlobalGraphOperations ggo = GlobalGraphOperations.at(db);
         double count = 0;
@@ -247,24 +259,20 @@ public class BulkLUBMDataLoader {
             }
             totalRels = IteratorUtil.count(ggo.getAllRelationships());
 
-
-
-            String cypher = "MATCH (x)<-[:headOf]-(y)-[:worksFor]->(z)-[:subOrganizationOf]->(w) RETURN ID(x), ID(y), ID(z), ID(w)";
-
             Result queryAResult = db.execute(cypher);
             while(queryAResult.hasNext()){
                 Map<String, Object> result = queryAResult.next();
-                Long[] key = new Long[result.size()];
-                int i = 0;
+                Long[] key = new Long[result.size() + 1];
+                int i = 1;
+                key[0] = pathID;
                 for(Object val : result.values()){
                     key[i++] = new Long(val.toString());
                 }
-
                 count++;
             }
         }
+        System.out.println("Found: " + count);
     }
-
 
     private void getPathsRelationshipPerspective() throws IOException{
     GraphDatabaseService db = new GraphDatabaseFactory().newEmbeddedDatabase( DB_PATH );
@@ -365,9 +373,12 @@ public class BulkLUBMDataLoader {
         }
         if(relationship1.getType().name().equals("hasAdvisor") && relationship2.getType().name().equals("teacherOf")){
             for(Relationship relationship3 : node3.getRelationships(takesCourse)){
-                PathIDBuilder builder = new PathIDBuilder(node1, relationship1, node2, relationship2, node3, relationship3, relationship3.getOtherNode(node3));
-                sorters.get(4).addUnsortedKey(new Long[]{builder.buildPath(), node1.getId(), node2.getId(), node3.getId()});
-                updateStats(pathMap, builder);
+                Node node4 = relationship3.getOtherNode(node3);
+                if(node4.getId() == node1.getId()) {
+                    PathIDBuilder builder = new PathIDBuilder(node1, relationship1, node2, relationship2, node3, relationship3, relationship3.getOtherNode(node3));
+                    sorters.get(4).addUnsortedKey(new Long[]{builder.buildPath(), node1.getId(), node2.getId(), node3.getId()});
+                    updateStats(pathMap, builder);
+                }
             }
         }
     }

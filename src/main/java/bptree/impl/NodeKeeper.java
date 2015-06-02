@@ -17,7 +17,7 @@ public class NodeKeeper {
     public NodeKeeper(Tree tree, DiskCache diskCache){
         this.tree = tree;
         this.diskCache = diskCache;
-        max_cache_size = (max_cache_size_mb * 1000000) / diskCache.pageCachePageSize; //TODO this is a tunable parameter
+        max_cache_size = (max_cache_size_mb * 1000000) / DiskCache.PAGE_SIZE; //TODO this is a tunable parameter
         cache = new LRUCache<>(max_cache_size);
     }
 

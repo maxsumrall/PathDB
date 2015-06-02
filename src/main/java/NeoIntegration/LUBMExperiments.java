@@ -4,10 +4,7 @@ import bptree.PageProxyCursor;
 import bptree.impl.DiskCache;
 import bptree.impl.NodeTree;
 import bptree.impl.SearchCursor;
-import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.RelationshipType;
-import org.neo4j.graphdb.Result;
-import org.neo4j.graphdb.Transaction;
+import org.neo4j.graphdb.*;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.io.pagecache.PagedFile;
 import org.neo4j.tooling.GlobalGraphOperations;
@@ -31,33 +28,48 @@ public class LUBMExperiments {
 
     public static void main(String[] args) throws IOException {
         LUBMExperiments experiments = new LUBMExperiments();
+        int query;
+        int index;
 
-        experiments.query("MATCH (x)-[:memberOf]->(y) RETURN ID(x), ID(y)");
-        experiments.index(3, 649439727);
+        query = experiments.query("MATCH (x)-[:memberOf]->(y) RETURN ID(x), ID(y)");
+        index = experiments.index(3, 649439727, null);
+        assert(query == index);
 
-        experiments.query("MATCH (x)-[:worksFor]->(y) RETURN ID(x), ID(y)");
-        experiments.index(3, 35729895);
+        query = experiments.query("MATCH (x)-[:memberOf]->(y) WHERE x.uri=\"http://www.Department0.University0.edu/UndergraduateStudent207\" RETURN ID(x), ID(y)");
+        index = experiments.index(3, 649439727, new IndexConstraint(1, "uri", "http://www.Department0.University0.edu/UndergraduateStudent207"));
+        assert(query == index);
 
-        experiments.query("MATCH (x)-[:takesCourse]->(y)<-[:teacherOf]-(z) RETURN ID(x), ID(y), ID(z)");
-        experiments.index(4, 1136874830);
+        query = experiments.query("MATCH (x)-[:worksFor]->(y) RETURN ID(x), ID(y)");
+        index = experiments.index(3, 35729895, null);
+        assert(query == index);
 
-        experiments.query("MATCH (x)-[:memberOf]->(y)<-[:subOrganizationOf]-(z) RETURN ID(x), ID(y), ID(z)");
-        experiments.index(4, 1491269145);
+        query = experiments.query("MATCH (x)-[:takesCourse]->(y)<-[:teacherOf]-(z) RETURN ID(x), ID(y), ID(z)");
+        index = experiments.index(4, 1136874830, null);
+        assert(query == index);
 
-        experiments.query("MATCH (x)-[:memberOf]->(y)-[:subOrganizationOf]->(z) RETURN ID(x), ID(y), ID(z)");
-        experiments.index(4, 90603815);
+        query = experiments.query("MATCH (x)-[:memberOf]->(y)<-[:subOrganizationOf]-(z) RETURN ID(x), ID(y), ID(z)");
+        index = experiments.index(4, 1491269145, null);
+        assert(query == index);
 
-        experiments.query("MATCH (x)-[:undergraduateDegreeFrom]->(y)<-[:subOrganizationOf]-(z)<-[:memberOf]-(w) RETURN ID(x), ID(y), ID(z), ID(w)");
-        experiments.index(4, 1947276320);
+        query = experiments.query("MATCH (x)-[:memberOf]->(y)-[:subOrganizationOf]->(z) RETURN ID(x), ID(y), ID(z)");
+        index = experiments.index(4, 90603815, null);
+        assert(query == index);
 
-        experiments.query("MATCH (x)-[:hasAdvisor]->(y)-[:teacherOf]->(z)<-[:takesCourse]-(x) RETURN ID(x), ID(y), ID(z)");
-        experiments.index(4, 1924021844);
+        query = experiments.query("MATCH (x)-[:undergraduateDegreeFrom]->(y)<-[:subOrganizationOf]-(z)<-[:memberOf]-(x) RETURN ID(x), ID(y), ID(z)");
+        index = experiments.index(4, 1947276320, null);
+        assert(query == index);
 
-        experiments.query("MATCH (x)<-[:headOf]-(y)-[:worksFor]->(z)<-[:subOrganizationOf]-(w) RETURN ID(x), ID(y), ID(z), ID(w)");
-        experiments.index(5, 1628983526);
+        query = experiments.query("MATCH (x)-[:hasAdvisor]->(y)-[:teacherOf]->(z)<-[:takesCourse]-(x) RETURN ID(x), ID(y), ID(z)");
+        index = experiments.index(4, 1924021844, null);
+        assert(query == index);
 
-        experiments.query("MATCH (x)<-[:headOf]-(y)-[:worksFor]->(z)-[:subOrganizationOf]->(w) RETURN ID(x), ID(y), ID(z), ID(w)");
-        experiments.index(5, 1084110810);
+        query = experiments.query("MATCH (x)<-[:headOf]-(y)-[:worksFor]->(z)<-[:subOrganizationOf]-(w) RETURN ID(x), ID(y), ID(z), ID(w)");
+        index = experiments.index(5, 1628983526, null);
+        assert(query == index);
+
+        query = experiments.query("MATCH (x)<-[:headOf]-(y)-[:worksFor]->(z)-[:subOrganizationOf]->(w) RETURN ID(x), ID(y), ID(z), ID(w)");
+        index = experiments.index(5, 1084110810, null);
+        assert(query == index);
 
 
         for(DiskCache disk : experiments.disks.values()){
@@ -85,21 +97,20 @@ public class LUBMExperiments {
         ggo = GlobalGraphOperations.at(database);
     }
 
-    public void query(String cypher){
+    public int query(String cypher){
+        int count = 0;
         try(Transaction tx = database.beginTx()){
             for(RelationshipType each : ggo.getAllRelationshipTypes()){
                 //System.out.println(each);
             }
             System.out.println("\n" + cypher);
-            System.out.println("Begin Neo4j Transaction");
+            //System.out.println("Begin Neo4j Transaction");
             long startTime = System.nanoTime();
             Result queryAResult = database.execute(cypher);
             queryAResult.next();
             long timeToFirstResult = System.nanoTime();
-            //System.out.println(queryAResult.getQueryStatistics());
-            //System.out.println(queryAResult.getExecutionPlanDescription());
-
-            int count = 0;
+            //System.out.println("Query Statistics:\n" + queryAResult.getQueryStatistics());
+            //System.out.println("Query Execution Plan Description:\n" + queryAResult.getExecutionPlanDescription());
 
             while(queryAResult.hasNext()){
                 //System.out.println(queryAResult.next().toString());
@@ -107,43 +118,56 @@ public class LUBMExperiments {
                 count++;
             }
             long timeToLastResult = System.nanoTime();
-            System.out.println("Number of results found in Neo4j:" + count);
-            System.out.print("Neo4j Time to first result(ms): " + (timeToFirstResult - startTime) / 1000000);
-            System.out.println(", Neo4j Time to last result(ms): " + (timeToLastResult - startTime) / 1000000);
+            //System.out.println("Number of results found in Neo4j:" + count);
+            System.out.print("Neo4j: Time to first result(ms): " + (timeToFirstResult - startTime) / 1000000);
+            System.out.println(", Time to last result(ms): " + (timeToLastResult - startTime) / 1000000);
         }
+        return count;
     }
 
-    public void index(int index, long pathID) throws IOException {
+    public int index(int index, long pathID, IndexConstraint constraint) throws IOException {
+        Transaction tx = null;
+        if(constraint != null){
+            tx = database.beginTx();
+        }
         long startTime = System.nanoTime();
         long timeToFirstResult;
         long timeToLastResult;
         //from last run: memberOfSubOrganizationOf = 90603815
         //takesCourseteacherOf --> : 1050811698
         //System.out.println("Index Searching Path: " + pathIDBuilder.path.toString());
-        System.out.println("Path ID searching for: " + pathID);
+        //System.out.println("Path ID searching for: " + pathID);
         long[] searchKey = new long[]{pathID};
-        System.out.println(disks.get(index).cache_file);
+        //System.out.println(disks.get(index).pageCacheFile);
 
         long[] foundKey;
-        int count = 1;
+        int count = 0;
         SearchCursor searchCursor = indexes.get(index).find(searchKey);
         try (PageProxyCursor cursor = disks.get(index).getCursor(searchCursor.pageID, PagedFile.PF_EXCLUSIVE_LOCK)) {
-            searchCursor.next(cursor);
             timeToFirstResult = System.nanoTime();
             while(searchCursor.hasNext(cursor)) {
                 foundKey = searchCursor.next(cursor);
-                int l = foundKey.length; //todo so that the compiler doesnt wipe out the prev call. dunno.
                 count++;
+                if(constraint != null){
+                    Node n = database.getNodeById(foundKey[constraint.indexInResultSet]);
+                    String value = (String)n.getProperty(constraint.property);
+                    if(value.equals(constraint.value)){
+                        count = 1;
+                        break;
+                    }
+                }
             }
             timeToLastResult = System.nanoTime();
         }
-        System.out.println("Number of results found in Index: " + count);
-        System.out.print("Index Time to first result(ms): " + (timeToFirstResult - startTime) / 1000000);
-        System.out.println(", Index Time to last result(ms): " + (timeToLastResult - startTime) / 1000000);
+        //System.out.println("Number of results found in Index: " + count);
+        System.out.print("Path Index: Time to first result(ms): " + (timeToFirstResult - startTime) / 1000000);
+        System.out.println(", Time to last result(ms): " + (timeToLastResult - startTime) / 1000000);
+        System.out.println("Result Set Size: " + count);
 
+        if(tx != null){
+            tx.close();
+        }
+    return count;
     }
-
-
-
-
 }
+

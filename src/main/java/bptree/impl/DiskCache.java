@@ -5,7 +5,7 @@ import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.pagecache.PagedFile;
 import org.neo4j.io.pagecache.impl.SingleFilePageSwapperFactory;
 import org.neo4j.io.pagecache.impl.muninn.MuninnPageCache;
-import org.neo4j.io.pagecache.monitoring.PageCacheMonitor;
+import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 
 import java.io.File;
 import java.io.IOException;
@@ -15,7 +15,7 @@ import java.nio.ByteBuffer;
 public class DiskCache {
     public static int PAGE_SIZE = 8192; //size of a single page, in bytes.
     protected final static String DEFAULT_CACHE_FILE_NAME = "cache.bin";
-    protected int max_size_in_mb = 4096;
+    protected int max_size_in_mb = 5120;
     protected int maxPages = max_size_in_mb * (1000000 / PAGE_SIZE);
     protected DefaultFileSystemAbstraction fs;
     protected MuninnPageCache pageCache;
@@ -35,7 +35,7 @@ public class DiskCache {
     private void initializePageCache() throws IOException {
         fs = new DefaultFileSystemAbstraction();
         SingleFilePageSwapperFactory factory = new SingleFilePageSwapperFactory(fs);
-        pageCache = new MuninnPageCache(factory, maxPages, PAGE_SIZE, PageCacheMonitor.NULL);
+        pageCache = new MuninnPageCache(factory, maxPages, PAGE_SIZE, PageCacheTracer.NULL);
         pagedFile = pageCache.map(this.pageCacheFile, PAGE_SIZE);
     }
 
