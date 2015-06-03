@@ -1,8 +1,9 @@
 package bptree;
 
-import bptree.impl.*;
+import bptree.impl.DiskCache;
+import bptree.impl.SimpleDataGenerator;
+import bptree.impl.Tree;
 import org.junit.Test;
-import org.neo4j.io.pagecache.PagedFile;
 
 import java.io.IOException;
 
@@ -22,7 +23,8 @@ public class ZLIBPageCursorTest {
         SimpleDataGenerator dataGenerator = new SimpleDataGenerator(numberOfPages);
         //NodeTree proxy = new NodeTree(root, disk.getPagedFile());
 
-        try (PageProxyCursor cursor = disk.getCursor(9, PagedFile.PF_EXCLUSIVE_LOCK)) {
+
+        /*try (PageProxyCursor cursor = disk.getCursor(9, PagedFile.PF_EXCLUSIVE_LOCK)) {
                 NodeHeader.initializeLeafNode(cursor);
                 cursor.setOffset(NodeHeader.NODE_HEADER_LENGTH);
                 cursor.putBytes(dataGenerator.nextPage());
@@ -37,5 +39,6 @@ public class ZLIBPageCursorTest {
             e.printStackTrace();
         }
         System.out.println("Done: ");
+        */
     }
 }

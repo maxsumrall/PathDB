@@ -1,43 +1,34 @@
 package bptree.impl;
 
-import bptree.BulkLoadDataSource;
+import bptree.PageProxyCursor;
+import org.neo4j.io.pagecache.PagedFile;
 
-import java.nio.ByteBuffer;
-import java.nio.LongBuffer;
+import java.io.IOException;
 
 
-public class SimpleDataGenerator implements BulkLoadDataSource {
+public class SimpleDataGenerator {
 
     public int numberOfPages;
-    public int currentPage = 0;
-    public long currentKey = 0;
-    int keyLength = 4;
-    byte[] keysInPage = new byte[1000 * 4 * 8]; //just random guess for 1000
-    ByteBuffer bb = ByteBuffer.wrap(keysInPage);
-    LongBuffer lb = bb.asLongBuffer();
+    public int keyLength = 4;
+    public int keysPerPage = (((DiskCache.PAGE_SIZE - NodeHeader.NODE_HEADER_LENGTH) / Long.BYTES) / keyLength) ;
+    public DiskCache disk = DiskCache.temporaryDiskCache();
 
-    public SimpleDataGenerator(int numberOfPages){
+    public SimpleDataGenerator(int numberOfPages) throws IOException {
         this.numberOfPages = numberOfPages;
-    }
-
-    @Override
-    public byte[] nextPage() {
-        lb.position(0);
-        long[] key = new long[keyLength];
-        for (long j = 0; j < 1000; j++) {
-            for (int k = 0; k < key.length; k++) {
-                key[k] = currentKey;
+        for(int i = 0; i < numberOfPages; i++){
+            try(PageProxyCursor cursor = disk.getCursor(i, PagedFile.PF_EXCLUSIVE_LOCK)){
+                NodeHeader.setNodeTypeLeaf(cursor);
+                NodeHeader.setFollowingID(cursor, cursor.getCurrentPageId() + 1);
+                NodeHeader.setPrecedingId(cursor, cursor.getCurrentPageId() - 1);
+                NodeHeader.setKeyLength(cursor, keyLength);
+                NodeHeader.setNumberOfKeys(cursor, keysPerPage);
+                cursor.setOffset(NodeHeader.NODE_HEADER_LENGTH);
+                for(int j = 0; j < keysPerPage; j++){
+                    for(int k = 0; k < keyLength; k++){
+                        cursor.putLong((i * keysPerPage) + j + 1);
+                    }
+                }
             }
-            lb.put(key);
-            currentKey++;
         }
-        currentPage++;
-        return keysInPage;
-    }
-
-
-    @Override
-    public boolean hasNext() {
-        return currentPage <= numberOfPages;
     }
 }

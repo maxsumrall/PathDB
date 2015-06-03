@@ -99,7 +99,7 @@ public class BulkLUBMDataLoader {
         DiskCache disk = DiskCache.persistentDiskCache(sorter.toString() + LUBM_INDEX_PATH);
         BulkPageSource sortedDataSource = new BulkPageSource(sortedDisk, sorter.finalPageId());
 
-        NodeBulkLoader bulkLoader = new NodeBulkLoader(sortedDataSource, disk, sorter.keySize);
+        NodeBulkLoader bulkLoader = new NodeBulkLoader(disk, sorter.finalPageId(), sorter.keySize);
         long root = bulkLoader.run();
         System.out.println("Done. Root for this index (SAVE THIS VALUE!): " + root);
 

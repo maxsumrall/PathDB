@@ -15,10 +15,7 @@ import org.neo4j.helpers.collection.IteratorUtil;
 import org.neo4j.io.pagecache.PagedFile;
 import org.neo4j.tooling.GlobalGraphOperations;
 
-import java.io.BufferedWriter;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.PrintWriter;
+import java.io.*;
 import java.util.*;
 
 /**
@@ -73,22 +70,19 @@ public class CleverIndexBuilder {
 
         buildK2Paths();
         Sorter sorterK2 = sorters.get(4);
-        //sorterK2.sort();
         sorterK2.finishWithoutSort();
         NodeTree k2Index = buildIndex(sorterK2);
         indexes.put(2, k2Index);
     }
 
     public NodeTree buildIndex(Sorter sorter) throws IOException {
+        System.out.println("Building Index");
         DiskCache sortedDisk = sorter.getSortedDisk();
-        DiskCache disk = DiskCache.persistentDiskCache(sorter.toString() + LUBM_INDEX_PATH);
-        BulkPageSource sortedDataSource = new BulkPageSource(sortedDisk, sorter.finalPageId());
-
-        NodeBulkLoader bulkLoader = new NodeBulkLoader(sortedDataSource, disk, sorter.keySize);
+        NodeBulkLoader bulkLoader = new NodeBulkLoader(sortedDisk, sorter.finalPageId(), sorter.keySize);
         long root = bulkLoader.run();
+        sortedDisk.pageCacheFile.renameTo(new File(sorter.toString() + LUBM_INDEX_PATH));
         System.out.println("Done. Root for this index: " + root);
-        sortedDisk.shutdown();
-        return new NodeTree(root, disk);
+        return new NodeTree(root, sortedDisk);
     }
 
     private void printStats(Map<String, Long> pathMap, double count, double totalRels){

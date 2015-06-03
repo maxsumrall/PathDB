@@ -35,7 +35,7 @@ public class Sorter {
     public Sorter(int keySize) throws IOException {
         this.keySize = keySize;
         this.keyByteSize = this.keySize * 8;
-        writeToDisk = DiskCache.temporaryDiskCache(keySize+"tmp_sortFileA.dat");
+        writeToDisk = DiskCache.persistentDiskCache(keySize+"tmp_sortFileA.dat");
         readFromDisk = DiskCache.temporaryDiskCache(keySize+"tmp_sortFileB.dat");
         writeToCursor = writeToDisk.getCursor(0, PagedFile.PF_EXCLUSIVE_LOCK);
     }
@@ -173,7 +173,12 @@ public class Sorter {
 
     private void flushBulkLoadedKeys() throws IOException {
         //dump sorted keys to page,
-        writeToCursor.putInt(byteRepSize);
+        NodeHeader.setNodeTypeLeaf(writeToCursor);
+        NodeHeader.setKeyLength(writeToCursor, keySize);
+        NodeHeader.setNumberOfKeys(writeToCursor, bulkLoadedKeys.size());
+        NodeHeader.setPrecedingId(writeToCursor, writeToCursor.getCurrentPageId() - 1);
+        NodeHeader.setFollowingID(writeToCursor, writeToCursor.getCurrentPageId() + 1);
+        writeToCursor.setOffset(NodeHeader.NODE_HEADER_LENGTH);
         while(bulkLoadedKeys.size() > 0){
             Long[] sortedKey = bulkLoadedKeys.poll();
             for (Long val : sortedKey) {
@@ -187,8 +192,12 @@ public class Sorter {
     }
 
     private void flushAfterSortedKey() throws IOException {
-        writeToCursor.setOffset(0);
-        writeToCursor.putInt(byteRepSize);
+        NodeHeader.setNodeTypeLeaf(writeToCursor);
+        NodeHeader.setKeyLength(writeToCursor, keySize);
+        NodeHeader.setNumberOfKeys(writeToCursor, bulkLoadedKeys.size());
+        NodeHeader.setPrecedingId(writeToCursor, writeToCursor.getCurrentPageId() - 1);
+        NodeHeader.setFollowingID(writeToCursor, writeToCursor.getCurrentPageId() + 1);
+        writeToCursor.setOffset(NodeHeader.NODE_HEADER_LENGTH);
         //dump sorted keys to page,
         while(bulkLoadedKeys.size() > 0){
             Long[] sortedKey = bulkLoadedKeys.poll();
@@ -219,7 +228,8 @@ public class Sorter {
         private void fillBuffer(long pageId) throws IOException {
             if(setIteratorCursor != null) {
                 setIteratorCursor.next(pageId);
-                int byteAmount = setIteratorCursor.getInt();
+                int byteAmount = NodeHeader.getNumberOfKeys(setIteratorCursor) * keySize * 8;
+                setIteratorCursor.setOffset(NodeHeader.NODE_HEADER_LENGTH);
                 if(byteAmount != byteRep.length){
                     byteRep = new byte[byteAmount];
                 }
@@ -228,7 +238,8 @@ public class Sorter {
             }
             else{
                 try(PageProxyCursor cursor = readFromDisk.getCursor(pageId, PagedFile.PF_SHARED_LOCK)){
-                    int byteAmount = cursor.getInt();
+                    int byteAmount = NodeHeader.getNumberOfKeys(cursor) * keySize * 8;
+                    cursor.setOffset(NodeHeader.NODE_HEADER_LENGTH);
                     if(byteAmount != byteRep.length){
                         byteRep = new byte[byteAmount];
                     }

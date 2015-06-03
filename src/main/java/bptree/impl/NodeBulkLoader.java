@@ -17,7 +17,7 @@ public class NodeBulkLoader {
     private PagedFile pagedFile;
     private DiskCache disk;
     public int keySize;
-    //public static int MAX_PAIRS = ((DiskCache.PAGE_SIZE - NodeHeader.NODE_HEADER_LENGTH) / ((keySize + 1)*8) ) / 2; //why did I do this? what is this??
+    public long finalLeafPage;
     public int MAX_PAIRS;
     private int RESERVED_CHILDREN_SPACE;
     private int currentPair = 0;
@@ -28,13 +28,14 @@ public class NodeBulkLoader {
     public PageProxyCursor cursor;
     public NodeTree tree;
 
-    public NodeBulkLoader(BulkLoadDataSource data, DiskCache disk, int keySize) throws IOException {
-        this.data = data;
+    public NodeBulkLoader(DiskCache disk, long finalPage, int keySize) throws IOException {
         this.disk = disk;
+        this.finalLeafPage = finalPage;
         this.pagedFile = this.disk.pagedFile;
+        AvailablePageIdPool.currentID = finalLeafPage + 1;
         this.tree = new NodeTree(this.disk);
         this.keySize = keySize;
-        this.MAX_PAIRS = ((DiskCache.PAGE_SIZE - NodeHeader.NODE_HEADER_LENGTH) / ((keySize + 1)*8) ) - 1; //why did I do this? what is this??
+        this.MAX_PAIRS = ((DiskCache.PAGE_SIZE - NodeHeader.NODE_HEADER_LENGTH) / ((keySize + 1)*8) ) - 1;
         this.RESERVED_CHILDREN_SPACE  = (MAX_PAIRS + 1) * 8;
         parentWriter = new ParentBufferWriter();
     }
@@ -46,8 +47,11 @@ public class NodeBulkLoader {
                     cursor.next(firstInternalNode);
                     NodeHeader.setKeyLength(cursor, keySize);
                     this.currentParent = firstInternalNode;
-                    while(data.hasNext()){
-                        insertKeys(cursor, data.nextPage());
+                    //while(data.hasNext()){
+                    //    insertKeys(cursor, data.nextPage());
+                    //}
+                    for(int i = 0; i < finalLeafPage; i++){
+                        addLeafToParent(cursor, i);
                     }
                     cursor.next(currentParent);
                     cursor.setOffset(NodeHeader.NODE_HEADER_LENGTH);

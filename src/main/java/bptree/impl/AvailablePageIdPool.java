@@ -7,7 +7,7 @@ import java.util.LinkedList;
  */
 public class AvailablePageIdPool {
     private static LinkedList<Long> pool = null;
-    private static long currentID = 0;
+    public static long currentID = 0;
     //private long maximumNumberOfPages;
 
     public AvailablePageIdPool(long maximumNumberOfPages){
