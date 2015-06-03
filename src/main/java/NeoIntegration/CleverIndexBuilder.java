@@ -57,10 +57,6 @@ public class CleverIndexBuilder {
             sorters.put(i + 2, new Sorter(i + 2));
         }
 
-        int[] A = new int[]{1,2,3,4};
-        Arrays.sort(A);
-        //System.arraycopy();
-
         enumerateSingleEdges();
         Sorter sorterK1 = sorters.get(3);
         System.out.println("\nSorting K = 1");
