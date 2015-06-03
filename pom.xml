@@ -51,7 +51,7 @@
                 </executions>
                 <configuration>
                     <executable>java</executable>
-                    <mainClass>NeoIntegration.BulkLUBMDataLoader</mainClass>
+                    <mainClass>NeoIntegration.CleverIndexBuilder</mainClass>
                     <arguments>
                         <argument>-Xmx7G -Xms7G</argument>
                         <argument>-XX:+UseFastAccessorMethods</argument>
