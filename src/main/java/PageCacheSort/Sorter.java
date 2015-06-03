@@ -40,6 +40,18 @@ public class Sorter {
         writeToCursor = writeToDisk.getCursor(0, PagedFile.PF_EXCLUSIVE_LOCK);
     }
 
+    public SetIterator finishWithoutSort() throws IOException {
+        flushBulkLoadedKeys();
+        writeToCursor.close();
+        setIteratorCursor = null;
+        postSortSet = new PageSet();
+        for(PageSet pageSet : writePageSets){
+            postSortSet.add(pageSet.pop());
+        }
+        finalPage = postSortSet.pagesInSet.getLast();
+        return getFinalIterator(writeToDisk);
+    }
+
     public SetIterator sort() throws IOException {
         flushBulkLoadedKeys(); //check the contents of last page
         writeToCursor.close();
@@ -54,7 +66,7 @@ public class Sorter {
 
     private void sortHelper() throws IOException {
         swapPageSets();
-        setIteratorCursor = readFromDisk.getCursor(0, PagedFile.PF_EXCLUSIVE_LOCK);
+        setIteratorCursor = readFromDisk.getCursor(0, PagedFile.PF_SHARED_LOCK);
         writeToCursor = writeToDisk.getCursor(0, PagedFile.PF_EXCLUSIVE_LOCK);
         while(!readPageSets.isEmpty()){
             int modifiedFanOut = Math.min(readPageSets.size(), FAN_IN);
@@ -75,7 +87,6 @@ public class Sorter {
         if(writePageSets.size() > 1){
             sortHelper();
         }
-
     }
 
     private void mergeSets(LinkedList<PageSet> pageSets) throws IOException {
@@ -140,7 +151,7 @@ public class Sorter {
         byteRepSize += key.length * 8;
         bulkLoadedKeys.add(key);
     }
-    public void addSortedKey(long[] key) throws IOException {
+    private void addSortedKey(long[] key) throws IOException {
         if(byteRepSize + (keySize * 8) > ALT_MAX_PAGE_SIZE){
             flushAfterSortedKey();
         }
@@ -150,6 +161,14 @@ public class Sorter {
             keyObj[i] = key[i];
         }
         bulkLoadedKeys.add(keyObj);
+    }
+
+    public void addSortedKeyBulk(Long[] key) throws IOException {
+        if(byteRepSize + (keySize * 8) > ALT_MAX_PAGE_SIZE){
+            flushBulkLoadedKeys();
+        }
+        byteRepSize += key.length * 8;
+        bulkLoadedKeys.add(key);
     }
 
     private void flushBulkLoadedKeys() throws IOException {
@@ -208,7 +227,7 @@ public class Sorter {
                 buffer = ByteBuffer.wrap(byteRep).asLongBuffer();
             }
             else{
-                try(PageProxyCursor cursor = readFromDisk.getCursor(pageId, PagedFile.PF_EXCLUSIVE_LOCK)){
+                try(PageProxyCursor cursor = readFromDisk.getCursor(pageId, PagedFile.PF_SHARED_LOCK)){
                     int byteAmount = cursor.getInt();
                     if(byteAmount != byteRep.length){
                         byteRep = new byte[byteAmount];

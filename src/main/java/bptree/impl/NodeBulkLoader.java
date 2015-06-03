@@ -25,7 +25,7 @@ public class NodeBulkLoader {
     private int currentOffset = 0;
     private long previousLeaf = -1;
     private ParentBufferWriter parentWriter;
-    public static PageProxyCursor cursor;
+    public PageProxyCursor cursor;
     public NodeTree tree;
 
     public NodeBulkLoader(BulkLoadDataSource data, DiskCache disk, int keySize) throws IOException {

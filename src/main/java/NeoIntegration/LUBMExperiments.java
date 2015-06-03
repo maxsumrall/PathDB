@@ -13,9 +13,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
 
 /**
  * Created by max on 5/28/15.
@@ -31,9 +29,12 @@ public class LUBMExperiments {
         int query;
         int index;
 
+
+
         query = experiments.query("MATCH (x)-[:memberOf]->(y) RETURN ID(x), ID(y)");
         index = experiments.index(3, 649439727, null);
         assert(query == index);
+
 
         query = experiments.query("MATCH (x)-[:memberOf]->(y) WHERE x.uri=\"http://www.Department0.University0.edu/UndergraduateStudent207\" RETURN ID(x), ID(y)");
         index = experiments.index(3, 649439727, new IndexConstraint(1, "uri", "http://www.Department0.University0.edu/UndergraduateStudent207"));
@@ -42,7 +43,7 @@ public class LUBMExperiments {
         query = experiments.query("MATCH (x)-[:worksFor]->(y) RETURN ID(x), ID(y)");
         index = experiments.index(3, 35729895, null);
         assert(query == index);
-
+/*
         query = experiments.query("MATCH (x)-[:takesCourse]->(y)<-[:teacherOf]-(z) RETURN ID(x), ID(y), ID(z)");
         index = experiments.index(4, 1136874830, null);
         assert(query == index);
@@ -50,11 +51,12 @@ public class LUBMExperiments {
         query = experiments.query("MATCH (x)-[:memberOf]->(y)<-[:subOrganizationOf]-(z) RETURN ID(x), ID(y), ID(z)");
         index = experiments.index(4, 1491269145, null);
         assert(query == index);
-
+*/
         query = experiments.query("MATCH (x)-[:memberOf]->(y)-[:subOrganizationOf]->(z) RETURN ID(x), ID(y), ID(z)");
-        index = experiments.index(4, 90603815, null);
+        //index = experiments.index(4, 90603815, null);
+        index = experiments.index(4, 649439727 + 1190990026, null);
         assert(query == index);
-
+/*
         query = experiments.query("MATCH (x)-[:undergraduateDegreeFrom]->(y)<-[:subOrganizationOf]-(z)<-[:memberOf]-(x) RETURN ID(x), ID(y), ID(z)");
         index = experiments.index(4, 1947276320, null);
         assert(query == index);
@@ -70,7 +72,7 @@ public class LUBMExperiments {
         query = experiments.query("MATCH (x)<-[:headOf]-(y)-[:worksFor]->(z)-[:subOrganizationOf]->(w) RETURN ID(x), ID(y), ID(z), ID(w)");
         index = experiments.index(5, 1084110810, null);
         assert(query == index);
-
+*/
 
         for(DiskCache disk : experiments.disks.values()){
             disk.shutdown();

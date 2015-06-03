@@ -30,7 +30,6 @@ public class SearchCursor {
             currentKeyIndex++;
         }
         return next;
-
     }
 
     private long[] getNext(PageProxyCursor cursor) throws IOException {
