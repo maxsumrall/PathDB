@@ -31,6 +31,7 @@ public class CleverIndexBuilder {
     HashMap<Integer, Sorter> sorters = new HashMap<>();
     Map<Integer, NodeTree> indexes = new HashMap<>();
     Map<String, Long> pathMap = new HashMap<>(); //relationship types to path ids
+    Map<String, Long> k2pathMap = new HashMap<>(); //relationship types to path ids
 
 
     public static void main(String[] args) throws IOException {
@@ -137,8 +138,8 @@ public class CleverIndexBuilder {
         for(long pathId : pathMap.values()) {
             long k2PathId = key[0] + pathId; //this is a new thing I'm doing, adding the hash codes of different edge labels.
             String combindedPathKey = key[0] + " + " + pathId;
-            if(!pathMap.containsKey(combindedPathKey)) {
-                pathMap.put(combindedPathKey, k2PathId);
+            if(!k2pathMap.containsKey(combindedPathKey)) {
+                k2pathMap.put(combindedPathKey, k2PathId);
             }
             long endNodeId = key[key.length - 1];
             long[] searchKey = new long[]{pathId, endNodeId};
