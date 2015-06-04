@@ -149,14 +149,14 @@ public class Sorter {
 
     public void addUnsortedKey(Long[] key) throws IOException {
         assert(key.length == keySize);
-        if(byteRepSize + (keySize * 8) > ALT_MAX_PAGE_SIZE){
+        if(byteRepSize + (keySize * 8) >= ALT_MAX_PAGE_SIZE){
             flushBulkLoadedKeys();
         }
         byteRepSize += key.length * 8;
         bulkLoadedKeys.add(key);
     }
     private void addSortedKey(long[] key) throws IOException {
-        if(byteRepSize + (keySize * 8) > ALT_MAX_PAGE_SIZE){
+        if(byteRepSize + (keySize * 8) >= ALT_MAX_PAGE_SIZE){
             flushAfterSortedKey();
         }
         byteRepSize += key.length * 8;
@@ -168,7 +168,7 @@ public class Sorter {
     }
 
     public void addSortedKeyBulk(Long[] key) throws IOException {
-        if(byteRepSize + (keySize * 8) > ALT_MAX_PAGE_SIZE){
+        if(byteRepSize + (keySize * 8) >= ALT_MAX_PAGE_SIZE){
             flushSortedBulkLoadedKeys();
         }
         byteRepSize += key.length * 8;
