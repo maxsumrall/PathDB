@@ -47,9 +47,9 @@ public class BulkLUBMDataLoader {
 
         BulkLUBMDataLoader bulkLUBMDataLoader = new BulkLUBMDataLoader();
 
-        //bulkLUBMDataLoader.bulkLoad();
+        bulkLUBMDataLoader.bulkLoad();
         //bulkLUBMDataLoader.doCypherQueries();
-        bulkLUBMDataLoader.getPathsRelationshipPerspective();
+        //bulkLUBMDataLoader.getPathsRelationshipPerspective();
         //bulkLUBMDataLoader.getPathsAll();
 
         bulkLUBMDataLoader.sortKeys();
