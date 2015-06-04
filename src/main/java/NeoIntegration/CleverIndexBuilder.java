@@ -32,6 +32,8 @@ public class CleverIndexBuilder {
     Map<Integer, NodeTree> indexes = new HashMap<>();
     TreeMap<Long, PathIDBuilder> relationshipMap = new TreeMap<>(); //relationship types to path ids
     TreeMap<Long, PathIDBuilder> k2RelationshipsMap = new TreeMap<>(); //relationship types to path ids
+    HashMap<Long, Long> shortOrderedPathIDs = new HashMap<>();
+    long currentShortPathID = 1;
 
 
     public static void main(String[] args) throws IOException {
@@ -49,9 +51,9 @@ public class CleverIndexBuilder {
                 System.out.println("Path: " + builder.prettyPrint() + " , pathID: " + builder.buildPath());
                 out.println("Path: " + builder.prettyPrint() + " , pathID: " + builder.buildPath());
             }
-            for (PathIDBuilder builder: indexBuilder.k2RelationshipsMap.values()) {
-                System.out.println("Path: " + builder.getPath() + " , pathID: " + builder.buildPath());
-                out.println("Path: " + builder.getPath() + " , pathID: " + builder.buildPath());
+            for (Long key: indexBuilder.k2RelationshipsMap.keySet()) {
+                System.out.println("Path: " + indexBuilder.k2RelationshipsMap.get(key).getPath() + " , pathID: " + key);
+                out.println("Path: " + indexBuilder.k2RelationshipsMap.get(key).getPath() + " , pathID: " + key);
             }
         }
     }
@@ -142,10 +144,12 @@ public class CleverIndexBuilder {
         Long[] combinedPath;
         for(long pathId : relationshipMap.keySet()) {
             PathIDBuilder builder = new PathIDBuilder( relationshipMap.get(key[0]).getPath(), relationshipMap.get(pathId).getPath() );
-            long k2PathId = builder.buildPath();
-            if(!k2RelationshipsMap.containsKey(k2PathId)) {
-                k2RelationshipsMap.put(k2PathId, builder);
+            if(!shortOrderedPathIDs.containsKey(builder.buildPath())){
+                shortOrderedPathIDs.put(builder.buildPath(), currentShortPathID++);
+                k2RelationshipsMap.put(shortOrderedPathIDs.get(builder.buildPath()), builder);
             }
+            long k2PathId = shortOrderedPathIDs.get(builder.buildPath());
+
             long endNodeId = key[key.length - 1];
             long[] searchKey = new long[]{pathId, endNodeId};
             SearchCursor result = indexes.get(1).find(searchKey);
@@ -156,7 +160,7 @@ public class CleverIndexBuilder {
                         continue;
                     }
                     combinedPath = new Long[]{k2PathId, key[1], key[2], secondPath[2]};
-                    sorters.get(4).addUnsortedKey(combinedPath);
+                    sorters.get(4).addSortedKeyBulk(combinedPath);
                     k2Count++;
                 }
             }

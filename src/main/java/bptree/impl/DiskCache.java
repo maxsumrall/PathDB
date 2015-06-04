@@ -15,7 +15,7 @@ import java.nio.ByteBuffer;
 public class DiskCache {
     public static int PAGE_SIZE = 8192; //size of a single page, in bytes.
     protected final static String DEFAULT_CACHE_FILE_NAME = "cache.bin";
-    protected int max_size_in_mb = 2048;
+    protected int max_size_in_mb = 5120;
     protected int maxPages = max_size_in_mb * (1000000 / PAGE_SIZE);
     protected DefaultFileSystemAbstraction fs;
     protected MuninnPageCache pageCache;

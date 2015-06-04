@@ -10,5 +10,8 @@ public class Runner {
         else if (args[0].equals("2")){
             CleverIndexBuilder.main(args);
         }
+        else if (args[0].equals("3")){
+            LUBMExperiments.main(args);
+        }
     }
 }
