@@ -69,9 +69,9 @@ public class BulkLUBMDataLoader {
         FileUtils.deleteFile(deleteIndex);
         owlFiles = new File(uriDir).listFiles();
 
-        sorters.put(3, new Sorter(3));
-        sorters.put(4, new Sorter(4));
-        sorters.put(5, new Sorter(5));
+        //sorters.put(3, new Sorter(3));
+        //sorters.put(4, new Sorter(4));
+        //sorters.put(5, new Sorter(5));
     }
 
     public void bulkLoad() throws IOException {
