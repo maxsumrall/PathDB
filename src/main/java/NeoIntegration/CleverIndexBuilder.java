@@ -16,7 +16,10 @@ import org.neo4j.io.pagecache.PagedFile;
 import org.neo4j.tooling.GlobalGraphOperations;
 
 import java.io.*;
-import java.util.*;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.Map;
+import java.util.TreeMap;
 
 /**
  * Created by max on 6/2/15.
@@ -122,52 +125,43 @@ public class CleverIndexBuilder {
 
     private void buildK2Paths() throws IOException {
         System.out.println("Building K2 Paths");
-        PageProxyCursor cursor;
+        PageProxyCursor cursorA;
         int pathCount = 0;
         int k2count = 0;
-        for(long pathId : relationshipMap.keySet()){
-            System.out.print("\rPaths complete: " + pathCount++ + "/" + relationshipMap.size());
-            SearchCursor result = indexes.get(1).find(new long[]{pathId});
-            cursor = indexes.get(1).disk.getCursor(result.pageID, PagedFile.PF_SHARED_LOCK);
-            while(result.hasNext(cursor)){
-                long[] entry = result.next(cursor);
-                cursor.close();
-                k2count += enumerateAllPathsFrom(entry);
-                cursor = indexes.get(1).disk.getCursor(result.pageID, PagedFile.PF_SHARED_LOCK);
-            }
-        }
-        System.out.println("Keys written: " + k2count);
-    }
-
-    private int enumerateAllPathsFrom(long[] key) throws IOException {
-        int k2Count = 0;
+        long prevK2PathId = 0;
         Long[] combinedPath;
-        for(long pathId : relationshipMap.keySet()) {
-            PathIDBuilder builder = new PathIDBuilder( relationshipMap.get(key[0]).getPath(), relationshipMap.get(pathId).getPath() );
-            if(!shortOrderedPathIDs.containsKey(builder.buildPath())){
-                shortOrderedPathIDs.put(builder.buildPath(), currentShortPathID++);
-                k2RelationshipsMap.put(shortOrderedPathIDs.get(builder.buildPath()), builder);
-            }
-            long k2PathId = shortOrderedPathIDs.get(builder.buildPath());
-
-            long endNodeId = key[key.length - 1];
-            long[] searchKey = new long[]{pathId, endNodeId};
-            SearchCursor result = indexes.get(1).find(searchKey);
-            try (PageProxyCursor cursor = indexes.get(1).disk.getCursor(result.pageID, PagedFile.PF_SHARED_LOCK)) {
-                while (result.hasNext(cursor)) {
-                    long[] secondPath = result.next(cursor);
-                    if(key[1] == secondPath[2] && key[2] != secondPath[1]){
-                        continue;
+        int total = relationshipMap.size() * relationshipMap.size();
+        for(long pathIdA : relationshipMap.keySet()){
+            for(long pathIdB: relationshipMap.keySet()){
+                System.out.print("\rPaths complete: " + pathCount++ + "/" + total);
+                SearchCursor resultA = indexes.get(1).find(new long[]{pathIdA});
+                cursorA = indexes.get(1).disk.getCursor(resultA.pageID, PagedFile.PF_SHARED_LOCK);
+                while(resultA.hasNext(cursorA)){
+                    long[] entry = resultA.next(cursorA);
+                    cursorA.close();
+                    SearchCursor resultB = indexes.get(1).find(new long[]{pathIdB,entry[2]});
+                    try (PageProxyCursor cursorB = indexes.get(1).disk.getCursor(resultB.pageID, PagedFile.PF_SHARED_LOCK)) {
+                        while (resultB.hasNext(cursorB)) {
+                            long[] secondPath = resultB.next(cursorB);
+                            if (entry[1] == secondPath[2] && entry[2] != secondPath[1]) {
+                                continue;
+                            }
+                            PathIDBuilder builder = new PathIDBuilder( relationshipMap.get(entry[0]).getPath(), relationshipMap.get(pathIdB).getPath() );
+                            if(!shortOrderedPathIDs.containsKey(builder.buildPath())){
+                                shortOrderedPathIDs.put(builder.buildPath(), currentShortPathID++);
+                                k2RelationshipsMap.put(shortOrderedPathIDs.get(builder.buildPath()), builder);
+                            }
+                            long k2PathId = shortOrderedPathIDs.get(builder.buildPath());
+                            prevK2PathId = k2PathId;
+                            combinedPath = new Long[]{k2PathId, entry[1], entry[2], secondPath[2]};
+                            sorters.get(4).addSortedKeyBulk(combinedPath);
+                        }
                     }
-                    combinedPath = new Long[]{k2PathId, key[1], key[2], secondPath[2]};
-                    sorters.get(4).addSortedKeyBulk(combinedPath);
-                    k2Count++;
+                    cursorA = indexes.get(1).disk.getCursor(resultA.pageID, PagedFile.PF_SHARED_LOCK);
                 }
             }
         }
-        return k2Count;
     }
-
     private void addPath(Node node1, Relationship relationship1, Node node2) throws IOException {
         PathIDBuilder builder = new PathIDBuilder(node1, relationship1, node2);
         Long[] key = new Long[]{builder.buildPath(), node1.getId(), node2.getId()};
