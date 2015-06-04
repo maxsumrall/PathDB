@@ -20,7 +20,7 @@ public class SorterTest {
 
     @Test
     public void smallestExample() throws IOException {
-        int count = 4840360;
+        int count = 1000000;
         writeUnsortedKeysToSorter(sorter, count);
         SetIterator itr = sorter.sort();
         long[] prev = new long[]{1,1,1,1};
@@ -37,7 +37,7 @@ public class SorterTest {
     }
     @Test
     public void reverseExample() throws IOException {
-        int count = 4840360;
+        int count = 1000000;
         writeReverseKeysToSorter(sorter, count);
         SetIterator itr = sorter.sort();
         long[] prev = new long[]{0,0,0,0};
@@ -54,7 +54,7 @@ public class SorterTest {
     }
     @Test
     public void randomSorting() throws IOException {
-        int count = 4840360;
+        int count = 1000000;
         writeRandomKeysToSorter(sorter, count);
         SetIterator itr = sorter.sort();
         long[] prev = new long[]{1,1,1,1};

@@ -49,6 +49,10 @@ public class CleverIndexBuilder {
                 System.out.println("Path: " + key + " , entries: " + indexBuilder.pathMap.get(key));
                 out.println("Path: " + key + " , entries: " + indexBuilder.pathMap.get(key));
             }
+            for (String key : indexBuilder.k2pathMap.keySet()) {
+                System.out.println("Path: " + key + " , entries: " + indexBuilder.pathMap.get(key));
+                out.println("Path: " + key + " , entries: " + indexBuilder.pathMap.get(key));
+            }
         }
     }
 
