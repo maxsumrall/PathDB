@@ -48,17 +48,19 @@ public class BulkLUBMDataLoader {
         BulkLUBMDataLoader bulkLUBMDataLoader = new BulkLUBMDataLoader();
 
         bulkLUBMDataLoader.bulkLoad();
-        //bulkLUBMDataLoader.doCypherQueries();
-        //bulkLUBMDataLoader.getPathsRelationshipPerspective();
-        //bulkLUBMDataLoader.getPathsAll();
+        /*
+        bulkLUBMDataLoader.doCypherQueries();
+        bulkLUBMDataLoader.getPathsRelationshipPerspective();
+        bulkLUBMDataLoader.getPathsAll();
 
         bulkLUBMDataLoader.sortKeys();
         try(PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(INDEX_METADATA_PATH, false)))) {
-            for (Sorter sorter : bulkLUBMDataLoader.sorters.values()) {
+        for (Sorter sorter : bulkLUBMDataLoader.sorters.values()) {
                 long root = bulkLUBMDataLoader.buildIndex(sorter);
                 out.println(sorter.keySize +","+root);
             }
         }
+        */
     }
 
     public BulkLUBMDataLoader() throws IOException {
