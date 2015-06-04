@@ -4,7 +4,7 @@ import bptree.impl.KeyImpl;
 import bptree.impl.Node;
 import bptree.impl.PathIndexImpl;
 import org.junit.Before;
-import org.junit.Test;
+import org.junit.Ignore;
 
 import java.io.File;
 import java.io.IOException;
@@ -29,7 +29,7 @@ public class InsertionTest {
                         .setSignaturesToDefault();
     }
 
-    @Test
+    @Ignore
     public void testInsertSequentialKeysIntoIndex() throws IOException {
         int number_of_keys_to_insert = 2000;
         ArrayList<Key> keys = exampleSequentialKeys(labelPaths, number_of_keys_to_insert);
@@ -44,7 +44,7 @@ public class InsertionTest {
         }
     }
 
-    @Test
+    @Ignore
     public void testInsertRandomKeysIntoIndex() throws IOException {
         int number_of_keys_to_insert = 1000;
         ArrayList<Key> keys = exampleRandomKeys(labelPaths, number_of_keys_to_insert);
@@ -58,7 +58,7 @@ public class InsertionTest {
             assert(Arrays.equals(cursor.next(), index.buildComposedKey(key))); //the empty set
         }
     }
-    @Test
+    @Ignore
     public void testInsertRandomKeysWithRandomLengthIntoIndex() throws IOException {
         int number_of_keys_to_insert = 2000;
         ArrayList<Long[]> different_length_paths  = exampleVariableLengthLabelPaths(number_of_keys_to_insert, 2, 4);
@@ -78,7 +78,7 @@ public class InsertionTest {
         }
     }
 
-    @Test
+    @Ignore
     public void testPrefixCheckingMultipleResults() throws IOException {
         int number_of_keys_to_insert = 4000;
         ArrayList<Long[]> different_length_paths = exampleVariableLengthRandomLabelPaths(50, 2, 4);
@@ -130,7 +130,7 @@ public class InsertionTest {
     }
 
 
-    @Test
+    @Ignore
     public void testVariablePrefixCheckingMultipleResults() throws IOException {
         int number_of_keys_to_insert = 2000;
         ArrayList<Long[]> different_length_paths = exampleVariableLengthRandomLabelPaths(50, 2, 4);

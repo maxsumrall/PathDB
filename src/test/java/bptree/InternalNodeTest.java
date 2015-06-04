@@ -4,8 +4,8 @@ import bptree.impl.InternalNode;
 import bptree.impl.PathIndexImpl;
 import bptree.impl.SplitResult;
 import bptree.impl.Tree;
+import jdk.nashorn.internal.ir.annotations.Ignore;
 import org.junit.Before;
-import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
@@ -38,7 +38,7 @@ public class InternalNodeTest {
                 .setSignaturesToDefault();
     }
 
-    @Test
+    @Ignore
     public void insertSplitTest() throws IOException {
         Tree tree = ((PathIndexImpl)index).tree;
         InternalNode node = tree.createInternalNode();
@@ -53,7 +53,7 @@ public class InternalNodeTest {
         }
 
     }
-    @Test
+    @Ignore
     public void insertSplitVariousLengthTest() throws IOException {
         Tree tree = ((PathIndexImpl)index).tree;
         Random random = new Random();

@@ -5,7 +5,7 @@ import bptree.impl.Node;
 import bptree.impl.PathIndexImpl;
 import bptree.impl.Tree;
 import org.junit.Before;
-import org.junit.Test;
+import org.junit.Ignore;
 
 import java.io.File;
 import java.io.IOException;
@@ -53,7 +53,7 @@ public class TypicalWorkloadTest {
         tree = (( PathIndexImpl)index).tree;
     }
 
-    @Test
+    @Ignore
     public void typicalWorkload(){
         int number_of_keys_to_insert = 10000;
         ArrayList<Key> keysMain = exampleSequentialKeys(labelPaths, number_of_keys_to_insert);

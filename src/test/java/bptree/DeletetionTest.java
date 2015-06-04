@@ -5,7 +5,7 @@ import bptree.impl.Node;
 import bptree.impl.PathIndexImpl;
 import bptree.impl.Tree;
 import org.junit.Before;
-import org.junit.Test;
+import org.junit.Ignore;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -29,7 +29,7 @@ public class DeletetionTest {
                 .setSignaturesToDefault();
     }
 
-    @Test
+    @Ignore
     public void testInsertSequentialKeysIntoIndexSmall() throws IOException {
         int number_of_keys_to_insert = 50;
         ArrayList<Key> keys = exampleSequentialKeys(labelPaths, number_of_keys_to_insert);
@@ -51,7 +51,7 @@ public class DeletetionTest {
         }
     }
 
-    @Test
+    @Ignore
     public void testInsertRandomKeysIntoIndexSmall() throws IOException {
         int number_of_keys_to_insert = 50;
         ArrayList<Key> keys = exampleRandomKeys(labelPaths, number_of_keys_to_insert);
@@ -73,7 +73,7 @@ public class DeletetionTest {
         }
     }
 
-    @Test
+    @Ignore
     public void testInsertSequentialKeysIntoIndex() throws IOException {
         int number_of_keys_to_insert = 3000;
         ArrayList<Key> keys = exampleSequentialKeys(labelPaths, number_of_keys_to_insert);
@@ -95,7 +95,7 @@ public class DeletetionTest {
         }
     }
 
-    @Test
+    @Ignore
     public void testInsertRandomKeysIntoIndex() throws IOException {
         int number_of_keys_to_insert = 5000;
         ArrayList<Key> keys = exampleRandomKeys(labelPaths, number_of_keys_to_insert);
@@ -116,7 +116,7 @@ public class DeletetionTest {
             assert(leafNodesAreConsistent(((PathIndexImpl) index).tree));
         }
     }
-    @Test
+    @Ignore
     public void testEnsureNoEmptyNodesRemain() throws IOException {
         int number_of_keys_to_insert = 5000;
         ArrayList<Key> keys = exampleRandomKeys(labelPaths, number_of_keys_to_insert);
