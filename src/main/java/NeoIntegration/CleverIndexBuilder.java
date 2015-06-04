@@ -136,25 +136,23 @@ public class CleverIndexBuilder {
         Long[] combinedPath;
         for(long pathId : pathMap.values()) {
             long k2PathId = key[0] + pathId; //this is a new thing I'm doing, adding the hash codes of different edge labels.
+            String combindedPathKey = key[0] + " + " + pathId;
+            if(!pathMap.containsKey(combindedPathKey)) {
+                pathMap.put(combindedPathKey, k2PathId);
+            }
             long endNodeId = key[key.length - 1];
             long[] searchKey = new long[]{pathId, endNodeId};
             SearchCursor result = indexes.get(1).find(searchKey);
             try (PageProxyCursor cursor = indexes.get(1).disk.getCursor(result.pageID, PagedFile.PF_SHARED_LOCK)) {
                 while (result.hasNext(cursor)) {
                     long[] secondPath = result.next(cursor);
-                    if(key[1] == secondPath[2]){
+                    /*
+                    (a)---(b)    (b)--(a)  (b)--(c)   (c)--(b)
+                     */
+                    if(key[1] == secondPath[2] && key[2] != secondPath[1]){
                         continue;
                     }
-                    combinedPath = new Long[2 + (key.length - 2) + (secondPath.length - 2)];
-                    combinedPath[0] = k2PathId;
-                    //System.arraycopy(key, 1, combinedPath, 1, key.length - 1);
-                    //System.arraycopy(secondPath, 2, combinedPath, key.length, secondPath.length - 2);
-                    for(int i = 1; i < key.length; i++) {
-                        combinedPath[i] = key[i];
-                    }
-                    for(int i = 0; i < secondPath.length - 2; i++){
-                        combinedPath[i + key.length ] = secondPath[i + 1];
-                    }
+                    combinedPath = new Long[]{k2PathId, key[1], key[2], secondPath[2]};
                     sorters.get(4).addSortedKeyBulk(combinedPath);
                     k2Count++;
                 }

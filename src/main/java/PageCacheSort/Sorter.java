@@ -31,7 +31,6 @@ public class Sorter {
     int byteRepSize = 0;
     PriorityQueue<Long[]> bulkLoadedKeys = new PriorityQueue<>(KeyImpl.getComparator());
 
-
     public Sorter(int keySize) throws IOException {
         this.keySize = keySize;
         this.keyByteSize = this.keySize * 8;

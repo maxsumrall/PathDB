@@ -29,7 +29,7 @@ public class LUBMExperiments {
         int query;
         int index;
 
-
+/*
 
         query = experiments.query("MATCH (x)-[:memberOf]->(y) RETURN ID(x), ID(y)");
         index = experiments.index(3, 649439727, null);
@@ -43,7 +43,7 @@ public class LUBMExperiments {
         query = experiments.query("MATCH (x)-[:worksFor]->(y) RETURN ID(x), ID(y)");
         index = experiments.index(3, 35729895, null);
         assert(query == index);
-/*
+
         query = experiments.query("MATCH (x)-[:takesCourse]->(y)<-[:teacherOf]-(z) RETURN ID(x), ID(y), ID(z)");
         index = experiments.index(4, 1136874830, null);
         assert(query == index);
@@ -54,7 +54,7 @@ public class LUBMExperiments {
 */
         query = experiments.query("MATCH (x)-[:memberOf]->(y)-[:subOrganizationOf]->(z) RETURN ID(x), ID(y), ID(z)");
         //index = experiments.index(4, 90603815, null);
-        index = experiments.index(4, 649439727 + 1190990026, null);
+        index = experiments.index(4, (649439727 + 1190990026), null);
         assert(query == index);
 /*
         query = experiments.query("MATCH (x)-[:undergraduateDegreeFrom]->(y)<-[:subOrganizationOf]-(z)<-[:memberOf]-(x) RETURN ID(x), ID(y), ID(z)");
@@ -82,20 +82,20 @@ public class LUBMExperiments {
     public LUBMExperiments() throws IOException {
 
 
-        BufferedReader bufferedReader = new BufferedReader(new FileReader(new File(BulkLUBMDataLoader.INDEX_METADATA_PATH)));
+        BufferedReader bufferedReader = new BufferedReader(new FileReader(new File(CleverIndexBuilder.INDEX_METADATA_PATH)));
         String line;
         while((line = bufferedReader.readLine()) != null) {
             List<String> entry = Arrays.asList(line.split(","));
             int k = new Integer(entry.get(0));
             long root = new Long(entry.get(1));
-            DiskCache disk = DiskCache.persistentDiskCache("K"+k+BulkLUBMDataLoader.LUBM_INDEX_PATH);
+            DiskCache disk = DiskCache.persistentDiskCache("K"+k+CleverIndexBuilder.LUBM_INDEX_PATH);
             indexes.put(k, new NodeTree(root, disk));
             disks.put(k, disk);
         }
         bufferedReader.close();
 
 
-        database = new GraphDatabaseFactory().newEmbeddedDatabaseBuilder(BulkLUBMDataLoader.DB_PATH).newGraphDatabase();
+        database = new GraphDatabaseFactory().newEmbeddedDatabaseBuilder(CleverIndexBuilder.DB_PATH).newGraphDatabase();
         ggo = GlobalGraphOperations.at(database);
     }
 
@@ -120,7 +120,7 @@ public class LUBMExperiments {
                 count++;
             }
             long timeToLastResult = System.nanoTime();
-            //System.out.println("Number of results found in Neo4j:" + count);
+            System.out.println("Number of results found in Neo4j:" + count);
             System.out.print("Neo4j: Time to first result(ms): " + (timeToFirstResult - startTime) / 1000000);
             System.out.println(", Time to last result(ms): " + (timeToLastResult - startTime) / 1000000);
         }
