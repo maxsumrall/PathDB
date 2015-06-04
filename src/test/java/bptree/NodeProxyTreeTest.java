@@ -4,7 +4,7 @@ import bptree.impl.DiskCache;
 import bptree.impl.NodeTree;
 import bptree.impl.SearchCursor;
 import org.junit.Before;
-import org.junit.Test;
+import org.junit.Ignore;
 import org.neo4j.io.pagecache.PagedFile;
 
 import java.io.IOException;
@@ -18,7 +18,6 @@ import static bptree.LabelsAndPathsGenerator.exampleLabelPaths;
  */
 public class NodeProxyTreeTest {
 
-    Index index;
     ArrayList<Long[]> labelPaths;
     NodeTree tree;
     DiskCache disk;
@@ -39,7 +38,7 @@ public class NodeProxyTreeTest {
         tree = new NodeTree(0, disk);
     }
 
-    @Test
+    @Ignore
     public void insertStuffTest() throws IOException {
         long[][] keys = new long[60000][4];
         int number_of_paths = 10000;
@@ -75,11 +74,5 @@ public class NodeProxyTreeTest {
         for(int i = 0; i < keys.length/2; i++){
             tree.remove(keys[i]);
             }
-        for(int i = keys.length/2; i < keys.length; i++){
-            //assert(pindex.tree.proxyFind(keys[i]).hasNext());
-        }
-        for(int i = 0; i < keys.length/2; i++){
-           // assert(!pindex.tree.proxyFind(keys[i]).hasNext());
-        }
     }
 }

@@ -41,6 +41,8 @@ public class Sorter {
 
     public SetIterator finishWithoutSort() throws IOException {
         flushBulkLoadedKeys();
+        writeToCursor.next(writeToCursor.getCurrentPageId() - 1);
+        NodeHeader.setFollowingID(writeToCursor, -1);
         writeToCursor.close();
         setIteratorCursor = null;
         postSortSet = new PageSet();
@@ -53,6 +55,8 @@ public class Sorter {
 
     public SetIterator sort() throws IOException {
         flushBulkLoadedKeys(); //check the contents of last page
+        writeToCursor.next(writeToCursor.getCurrentPageId() - 1);
+        NodeHeader.setFollowingID(writeToCursor, -1);
         writeToCursor.close();
 
         sortHelper();
