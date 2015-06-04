@@ -30,8 +30,8 @@ public class CleverIndexBuilder {
     LinkedList<String> prettyPaths = new LinkedList<>();
     HashMap<Integer, Sorter> sorters = new HashMap<>();
     Map<Integer, NodeTree> indexes = new HashMap<>();
-    Map<String, Long> pathMap = new HashMap<>(); //relationship types to path ids
-    Map<String, Long> k2pathMap = new HashMap<>(); //relationship types to path ids
+    TreeMap<Long, PathIDBuilder> relationshipMap = new TreeMap<>(); //relationship types to path ids
+    TreeMap<Long, PathIDBuilder> k2RelationshipsMap = new TreeMap<>(); //relationship types to path ids
 
 
     public static void main(String[] args) throws IOException {
@@ -40,18 +40,18 @@ public class CleverIndexBuilder {
         try(PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(INDEX_METADATA_PATH, false)))) {
             for(int i = 0; i < indexBuilder.indexes.size(); i++){
                 out.println(indexBuilder.sorters.get(i+3).keySize + "," + indexBuilder.indexes.get(i+1).rootNodeId);
-                indexBuilder.indexes.get(1).disk.shutdown();
+                indexBuilder.indexes.get(i+1).disk.shutdown();
             }
         }
         try(PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter("CleverLUBMLoaderLog" +".txt", false)))) {
             System.out.println("");
-            for (String key : indexBuilder.pathMap.keySet()) {
-                System.out.println("Path: " + key + " , entries: " + indexBuilder.pathMap.get(key));
-                out.println("Path: " + key + " , entries: " + indexBuilder.pathMap.get(key));
+            for (PathIDBuilder builder: indexBuilder.relationshipMap.values()) {
+                System.out.println("Path: " + builder.prettyPrint() + " , pathID: " + builder.buildPath());
+                out.println("Path: " + builder.prettyPrint() + " , pathID: " + builder.buildPath());
             }
-            for (String key : indexBuilder.k2pathMap.keySet()) {
-                System.out.println("Path: " + key + " , entries: " + indexBuilder.pathMap.get(key));
-                out.println("Path: " + key + " , entries: " + indexBuilder.pathMap.get(key));
+            for (PathIDBuilder builder: indexBuilder.k2RelationshipsMap.values()) {
+                System.out.println("Path: " + builder.getPath() + " , pathID: " + builder.buildPath());
+                out.println("Path: " + builder.getPath() + " , pathID: " + builder.buildPath());
             }
         }
     }
@@ -71,7 +71,8 @@ public class CleverIndexBuilder {
 
         buildK2Paths();
         Sorter sorterK2 = sorters.get(4);
-        sorterK2.finishWithoutSort();
+        //sorterK2.finishWithoutSort();
+        sorterK2.sort();
         NodeTree k2Index = buildIndex(sorterK2);
         indexes.put(2, k2Index);
     }
@@ -80,20 +81,19 @@ public class CleverIndexBuilder {
         System.out.println("Building Index");
         DiskCache sortedDisk = sorter.getSortedDisk();
         NodeBulkLoader bulkLoader = new NodeBulkLoader(sortedDisk, sorter.finalPageId(), sorter.keySize);
-        long root = bulkLoader.run();
+        NodeTree index = bulkLoader.run();
         sortedDisk.pageCacheFile.renameTo(new File(sorter.toString() + LUBM_INDEX_PATH));
-        System.out.println("Done. Root for this index: " + root);
-        return new NodeTree(root, sortedDisk);
+        System.out.println("Done. Root for this index: " + index.rootNodeId);
+        return index;
     }
 
-    private void printStats(Map<String, Long> pathMap, double count, double totalRels){
+    private void printStats(double count, double totalRels){
         if(strBulder != null){
             int b = strBulder.toString().length();
             for(int i = 0; i < b; i++){System.out.print("\b");}
         }
         strBulder = new StringBuilder();
-        Calendar cal = Calendar.getInstance();
-        strBulder.append("Progress: ").append(count).append("  |  ").append((int) ((count / totalRels) * 100)).append("% complete. Paths: ").append(pathMap.size()).append(", Last Updated: ").append(cal.get(Calendar.HOUR_OF_DAY)).append(":").append(cal.get(Calendar.MINUTE));
+        strBulder.append("Progress: ").append(count).append("  |  ").append((int) ((count / totalRels) * 100)).append("% complete. Paths: ").append(relationshipMap.size());
         System.out.print("\r" + strBulder.toString());
     }
 
@@ -107,7 +107,7 @@ public class CleverIndexBuilder {
             totalRels = IteratorUtil.count(ggo.getAllRelationships());
             for(Relationship edge : ggo.getAllRelationships()){
                 if (count % 1000 == 0) {
-                    printStats(pathMap, count, totalRels);
+                    printStats(count, totalRels);
                 }
                 addPath(edge.getStartNode(), edge, edge.getEndNode());
                 addPath(edge.getEndNode(), edge, edge.getStartNode());
@@ -122,8 +122,8 @@ public class CleverIndexBuilder {
         PageProxyCursor cursor;
         int pathCount = 0;
         int k2count = 0;
-        for(long pathId : pathMap.values()){
-            System.out.print("\rPaths complete: " + pathCount++ + "/" + pathMap.size());
+        for(long pathId : relationshipMap.keySet()){
+            System.out.print("\rPaths complete: " + pathCount++ + "/" + relationshipMap.size());
             SearchCursor result = indexes.get(1).find(new long[]{pathId});
             cursor = indexes.get(1).disk.getCursor(result.pageID, PagedFile.PF_SHARED_LOCK);
             while(result.hasNext(cursor)){
@@ -139,11 +139,11 @@ public class CleverIndexBuilder {
     private int enumerateAllPathsFrom(long[] key) throws IOException {
         int k2Count = 0;
         Long[] combinedPath;
-        for(long pathId : pathMap.values()) {
-            long k2PathId = key[0] + pathId; //this is a new thing I'm doing, adding the hash codes of different edge labels.
-            String combindedPathKey = key[0] + " + " + pathId;
-            if(!k2pathMap.containsKey(combindedPathKey)) {
-                k2pathMap.put(combindedPathKey, k2PathId);
+        for(long pathId : relationshipMap.keySet()) {
+            PathIDBuilder builder = new PathIDBuilder( relationshipMap.get(key[0]).getPath(), relationshipMap.get(pathId).getPath() );
+            long k2PathId = builder.buildPath();
+            if(!k2RelationshipsMap.containsKey(k2PathId)) {
+                k2RelationshipsMap.put(k2PathId, builder);
             }
             long endNodeId = key[key.length - 1];
             long[] searchKey = new long[]{pathId, endNodeId};
@@ -151,14 +151,11 @@ public class CleverIndexBuilder {
             try (PageProxyCursor cursor = indexes.get(1).disk.getCursor(result.pageID, PagedFile.PF_SHARED_LOCK)) {
                 while (result.hasNext(cursor)) {
                     long[] secondPath = result.next(cursor);
-                    /*
-                    (a)---(b)    (b)--(a)  (b)--(c)   (c)--(b)
-                     */
                     if(key[1] == secondPath[2] && key[2] != secondPath[1]){
                         continue;
                     }
                     combinedPath = new Long[]{k2PathId, key[1], key[2], secondPath[2]};
-                    sorters.get(4).addSortedKeyBulk(combinedPath);
+                    sorters.get(4).addUnsortedKey(combinedPath);
                     k2Count++;
                 }
             }
@@ -170,26 +167,24 @@ public class CleverIndexBuilder {
         PathIDBuilder builder = new PathIDBuilder(node1, relationship1, node2);
         Long[] key = new Long[]{builder.buildPath(), node1.getId(), node2.getId()};
         sorters.get(3).addUnsortedKey(key);
-        updateStats(pathMap, builder);
+        updateStats(builder);
     }
     private void addPath(Node node1, Relationship relationship1, Node node2, Relationship relationship2, Node node3) throws IOException {
         PathIDBuilder builder = new PathIDBuilder(node1, relationship1, node2, relationship2, node3);
         sorters.get(4).addUnsortedKey(new Long[]{builder.buildPath(), node1.getId(), node2.getId(), node3.getId()});
-        updateStats(pathMap, builder);
+        updateStats(builder);
     }
 
     private void addPath(Node node1, Relationship relationship1, Node node2, Relationship relationship2, Node node3, Relationship relationship3, Node node4) throws IOException {
         PathIDBuilder builder = new PathIDBuilder(node1, relationship1, node2, relationship2, node3, relationship3, node4);
         sorters.get(5).addUnsortedKey(new Long[]{builder.buildPath(), node1.getId(), node2.getId(), node3.getId(), node4.getId()});
-        updateStats(pathMap, builder);
+        updateStats(builder);
     }
 
-    private void updateStats(Map<String, Long> pathMap, PathIDBuilder builder){
-        if(!pathMap.containsKey(builder.toString())){
-            pathMap.put(builder.toString(), builder.buildPath());
-            prettyPaths.add(builder.prettyPrint());
+    private void updateStats(PathIDBuilder builder){
+        if(!relationshipMap.containsKey(builder.buildPath())){
+            relationshipMap.put(builder.buildPath(), builder);
         }
-        //pathMap.put(builder.toString(), pathMap.get(builder.toString()) + 1);
     }
 
 }

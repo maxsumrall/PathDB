@@ -20,9 +20,8 @@ public class NodeBulkLoaderTest {
         int numberOfPages = 40000; //100000 pages should roughly equal 20mil keys;
         SimpleDataGenerator dataGenerator = new SimpleDataGenerator(numberOfPages);
         NodeBulkLoader bulkLoader = new NodeBulkLoader(dataGenerator.disk, numberOfPages, 4);
-        long root = bulkLoader.run();
-        NodeTree proxy = new NodeTree(root, disk);
-        System.out.println("Done: " + root);
+        NodeTree tree = bulkLoader.run();
+        System.out.println("Done: " + tree.rootNodeId);
         /*
         for(long i = 0; i < dataGenerator.currentKey; i++){
             long[] key = new long[4];

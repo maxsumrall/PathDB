@@ -54,8 +54,7 @@ public class LUBMExperiments {
 */
         query = experiments.query("MATCH (x)-[:memberOf]->(y)-[:subOrganizationOf]->(z) RETURN ID(x), ID(y), ID(z)");
         //index = experiments.index(4, 90603815, null);
-        //index = experiments.index(4, (649439727 + 1190990026), null);
-        long pathId = 1235460551l + 1918060825l;
+        long pathId = 649439727l + 1190990026l;
         index = experiments.index(4, pathId, null);
         assert(query == index);
 /*
@@ -166,7 +165,7 @@ public class LUBMExperiments {
         //System.out.println("Number of results found in Index: " + count);
         System.out.print("Path Index: Time to first result(ms): " + (timeToFirstResult - startTime) / 1000000);
         System.out.println(", Time to last result(ms): " + (timeToLastResult - startTime) / 1000000);
-        System.out.println("Result Set Size: " + count);
+        System.out.println("Result Set Size index: " + count);
 
         if(tx != null){
             tx.close();

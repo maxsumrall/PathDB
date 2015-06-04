@@ -102,12 +102,12 @@ public class BulkLUBMDataLoader {
         BulkPageSource sortedDataSource = new BulkPageSource(sortedDisk, sorter.finalPageId());
 
         NodeBulkLoader bulkLoader = new NodeBulkLoader(disk, sorter.finalPageId(), sorter.keySize);
-        long root = bulkLoader.run();
-        System.out.println("Done. Root for this index (SAVE THIS VALUE!): " + root);
+        NodeTree tree = bulkLoader.run();
+        System.out.println("Done. Root for this index (SAVE THIS VALUE!): " + tree.rootNodeId);
 
         disk.shutdown();
         sortedDisk.shutdown();
-        return root;
+        return tree.rootNodeId;
     }
 
 
@@ -453,13 +453,13 @@ public class BulkLUBMDataLoader {
                         Node node3 = relationship2.getOtherNode(node2);
                         if (relationship1.getId() != relationship2.getId()) {
                             if (validPath(relationship1, relationship2, null)) {
-                               doInsertion(node1, node2, node3, relationship1, relationship2, pathMap);
+                               doInsertion(node1, node2, node3, relationship1, relationship2, relationshipMap);
                             }
                             for(Relationship relationship3 : node3.getRelationships()){
                                 Node node4 = relationship3.getOtherNode(node3);
                                 if(relationship2.getId() != relationship3.getId()){
                                     if (validPath(relationship1, relationship2, relationship3)) {
-                                        doInsertion(node1, node2, node3, node4, relationship1, relationship2, relationship3, pathMap);
+                                        doInsertion(node1, node2, node3, node4, relationship1, relationship2, relationship3, relationshipMap);
                                     }
                                 }
                             }
@@ -472,30 +472,30 @@ public class BulkLUBMDataLoader {
         //for(String pretty : prettyPaths){
         //    System.out.println(pretty);
         //}
-        for(String key : pathMap.keySet()){
-            System.out.println("PathID: " + key +  ", count: " + pathMap.get(key));
+        for(String key : relationshipMap.keySet()){
+            System.out.println("PathID: " + key +  ", count: " + relationshipMap.get(key));
         }
     }
-    private void doInsertion(Node node1, Node node2, Node node3, Relationship relationship1, Relationship relationship2, Map<String, Long> pathMap) throws IOException {
+    private void doInsertion(Node node1, Node node2, Node node3, Relationship relationship1, Relationship relationship2, Map<String, Long> relationshipMap) throws IOException {
         PathIDBuilder pathBuilder = new PathIDBuilder(node1, node2, relationship1, relationship2);
         Long pathId = pathBuilder.buildPath();
-        if(!pathMap.containsKey(pathId)){
-            pathMap.put(pathBuilder.toString(), 0l);
+        if(!relationshipMap.containsKey(pathId)){
+            relationshipMap.put(pathBuilder.toString(), 0l);
             prettyPaths.add(pathBuilder.prettyPrint());
         }
-        pathMap.put(pathBuilder.toString(), pathMap.get(pathId) + 1);
+        relationshipMap.put(pathBuilder.toString(), relationshipMap.get(pathId) + 1);
         Long[] key = new Long[]{pathId, node1.getId(), node2.getId(), node3.getId()};
         sorters.get(key.length).addUnsortedKey(key);
     }
 
-    private void doInsertion(Node node1, Node node2, Node node3, Node node4, Relationship relationship1, Relationship relationship2, Relationship relationship3, Map<String, Long> pathMap) throws IOException {
+    private void doInsertion(Node node1, Node node2, Node node3, Node node4, Relationship relationship1, Relationship relationship2, Relationship relationship3, Map<String, Long> relationshipMap) throws IOException {
         PathIDBuilder pathBuilder = new PathIDBuilder(node1, node2, node3, relationship1, relationship2, relationship3);
         Long pathId = pathBuilder.buildPath();
-        if(!pathMap.containsKey(pathId)){
-            pathMap.put(pathBuilder.toString(), 0l);
+        if(!relationshipMap.containsKey(pathId)){
+            relationshipMap.put(pathBuilder.toString(), 0l);
             prettyPaths.add(pathBuilder.prettyPrint());
         }
-        pathMap.put(pathBuilder.toString(), pathMap.get(pathId) + 1);
+        relationshipMap.put(pathBuilder.toString(), relationshipMap.get(pathId) + 1);
         Long[] key = new Long[]{pathId, node1.getId(), node2.getId(), node3.getId(), node4.getId()};
         sorters.get(key.length).addUnsortedKey(key);
     }

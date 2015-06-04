@@ -30,6 +30,7 @@ public class Sorter {
     LinkedList<PageSet> readPageSets = new LinkedList<>();
     int byteRepSize = 0;
     PriorityQueue<Long[]> bulkLoadedKeys = new PriorityQueue<>(KeyImpl.getComparator());
+    ArrayList<Long[]> sortedKeys = new ArrayList<>();
 
     public Sorter(int keySize) throws IOException {
         this.keySize = keySize;
@@ -40,7 +41,7 @@ public class Sorter {
     }
 
     public SetIterator finishWithoutSort() throws IOException {
-        flushBulkLoadedKeys();
+        flushAfterSortedKey();
         writeToCursor.next(writeToCursor.getCurrentPageId() - 1);
         NodeHeader.setFollowingID(writeToCursor, -1);
         writeToCursor.close();
@@ -163,15 +164,34 @@ public class Sorter {
         for(int i = 0; i < key.length; i++){
             keyObj[i] = key[i];
         }
-        bulkLoadedKeys.add(keyObj);
+        sortedKeys.add(keyObj);
     }
 
     public void addSortedKeyBulk(Long[] key) throws IOException {
         if(byteRepSize + (keySize * 8) > ALT_MAX_PAGE_SIZE){
-            flushBulkLoadedKeys();
+            flushSortedBulkLoadedKeys();
         }
         byteRepSize += key.length * 8;
-        bulkLoadedKeys.add(key);
+        sortedKeys.add(key);
+    }
+
+    private void flushSortedBulkLoadedKeys() throws IOException {
+        //dump sorted keys to page,
+        NodeHeader.setNodeTypeLeaf(writeToCursor);
+        NodeHeader.setKeyLength(writeToCursor, keySize);
+        NodeHeader.setNumberOfKeys(writeToCursor, sortedKeys.size());
+        NodeHeader.setPrecedingId(writeToCursor, writeToCursor.getCurrentPageId() - 1);
+        NodeHeader.setFollowingID(writeToCursor, writeToCursor.getCurrentPageId() + 1);
+        writeToCursor.setOffset(NodeHeader.NODE_HEADER_LENGTH);
+        for(Long[] sortedKey : sortedKeys){
+            for (Long val : sortedKey) {
+                writeToCursor.putLong(val);
+            }
+        }
+        sortedKeys.clear();
+        byteRepSize = 0;
+        writePageSets.add(new PageSet(writeToCursor.getCurrentPageId()));
+        writeToCursor.next(writeToCursor.getCurrentPageId() + 1);
     }
 
     private void flushBulkLoadedKeys() throws IOException {
@@ -197,19 +217,18 @@ public class Sorter {
     private void flushAfterSortedKey() throws IOException {
         NodeHeader.setNodeTypeLeaf(writeToCursor);
         NodeHeader.setKeyLength(writeToCursor, keySize);
-        NodeHeader.setNumberOfKeys(writeToCursor, bulkLoadedKeys.size());
+        NodeHeader.setNumberOfKeys(writeToCursor, sortedKeys.size());
         NodeHeader.setPrecedingId(writeToCursor, writeToCursor.getCurrentPageId() - 1);
         NodeHeader.setFollowingID(writeToCursor, writeToCursor.getCurrentPageId() + 1);
         writeToCursor.setOffset(NodeHeader.NODE_HEADER_LENGTH);
         //dump sorted keys to page,
-        while(bulkLoadedKeys.size() > 0){
-            Long[] sortedKey = bulkLoadedKeys.poll();
+        for(Long[] sortedKey : sortedKeys){
             for (Long val : sortedKey) {
                 writeToCursor.putLong(val);
             }
         }
         writeToCursor.next(writeToCursor.getCurrentPageId() + 1);
-        bulkLoadedKeys.clear();
+        sortedKeys.clear();
         byteRepSize = 0;
     }
     public String toString(){

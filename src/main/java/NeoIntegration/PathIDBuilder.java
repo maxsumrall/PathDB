@@ -79,6 +79,9 @@ public class PathIDBuilder {
         }
         return pathID;
     }
+    public String getPath(){
+        return path.toString();
+    }
 
     public boolean isOutgoing(Node node, Relationship rel){
         return rel.getStartNode().getId() == node.getId();
