@@ -29,7 +29,7 @@ public class LUBMExperiments {
         int query;
         int index;
 
-/*
+
 
         query = experiments.query("MATCH (x)-[:memberOf]->(y) RETURN ID(x), ID(y)");
         index = experiments.index(3, 649439727, null);
@@ -45,35 +45,35 @@ public class LUBMExperiments {
         assert(query == index);
 
         query = experiments.query("MATCH (x)-[:takesCourse]->(y)<-[:teacherOf]-(z) RETURN ID(x), ID(y), ID(z)");
-        index = experiments.index(4, 1136874830, null);
+        index = experiments.index(4, 64, null);
         assert(query == index);
 
         query = experiments.query("MATCH (x)-[:memberOf]->(y)<-[:subOrganizationOf]-(z) RETURN ID(x), ID(y), ID(z)");
-        index = experiments.index(4, 1491269145, null);
-        assert(query == index);
-*/
-        query = experiments.query("MATCH (x)-[:memberOf]->(y)-[:subOrganizationOf]->(z) RETURN ID(x), ID(y), ID(z)");
-        //index = experiments.index(4, 90603815, null);
-        long pathId = 649439727l + 1190990026l;
-        index = experiments.index(4, pathId, null);
-        assert(query == index);
-/*
-        query = experiments.query("MATCH (x)-[:undergraduateDegreeFrom]->(y)<-[:subOrganizationOf]-(z)<-[:memberOf]-(x) RETURN ID(x), ID(y), ID(z)");
-        index = experiments.index(4, 1947276320, null);
+        index = experiments.index(4, 52, null);
         assert(query == index);
 
+        query = experiments.query("MATCH (x)-[:memberOf]->(y)-[:subOrganizationOf]->(z) RETURN ID(x), ID(y), ID(z)");
+        index = experiments.index(4, 49, null);
+        assert(query == index);
+
+        System.out.println("Merge Join below:");
+        query = experiments.query("MATCH (x)-[:undergraduateDegreeFrom]->(y)<-[:subOrganizationOf]-(z)<-[:memberOf]-(x) RETURN ID(x), ID(y), ID(z)");
+        index = experiments.rectangleJoin(3, 1918060825, 4, 49);
+        assert(query == index);
+
+
         query = experiments.query("MATCH (x)-[:hasAdvisor]->(y)-[:teacherOf]->(z)<-[:takesCourse]-(x) RETURN ID(x), ID(y), ID(z)");
-        index = experiments.index(4, 1924021844, null);
+        index = experiments.rectangleJoin(3, 939155463, 4, 57);
         assert(query == index);
 
         query = experiments.query("MATCH (x)<-[:headOf]-(y)-[:worksFor]->(z)<-[:subOrganizationOf]-(w) RETURN ID(x), ID(y), ID(z), ID(w)");
-        index = experiments.index(5, 1628983526, null);
+        index = experiments.pathJoin(3, 1221271593, 4, 4);
         assert(query == index);
 
         query = experiments.query("MATCH (x)<-[:headOf]-(y)-[:worksFor]->(z)-[:subOrganizationOf]->(w) RETURN ID(x), ID(y), ID(z), ID(w)");
-        index = experiments.index(5, 1084110810, null);
+        index = experiments.pathJoin(3, 1221271593, 4, 1);
         assert(query == index);
-*/
+
 
         for(DiskCache disk : experiments.disks.values()){
             disk.shutdown();
@@ -146,7 +146,7 @@ public class LUBMExperiments {
         long[] foundKey;
         int count = 0;
         SearchCursor searchCursor = indexes.get(index).find(searchKey);
-        try (PageProxyCursor cursor = disks.get(index).getCursor(searchCursor.pageID, PagedFile.PF_EXCLUSIVE_LOCK)) {
+        try (PageProxyCursor cursor = disks.get(index).getCursor(searchCursor.pageID, PagedFile.PF_SHARED_LOCK)) {
             timeToFirstResult = System.nanoTime();
             while(searchCursor.hasNext(cursor)) {
                 foundKey = searchCursor.next(cursor);
@@ -172,5 +172,108 @@ public class LUBMExperiments {
         }
     return count;
     }
+
+
+    public int rectangleJoin(int indexA, long pathIDA, int indexB, long pathIDB) throws IOException {
+        long startTime = System.nanoTime();
+        long timeToFirstResult;
+        long timeToLastResult;
+        long[] searchKeyA = new long[]{pathIDA};
+        long[] searchKeyB = new long[]{pathIDB};
+
+        long[] resultA;
+        long[] resultB;
+        int count = 0;
+        SearchCursor searchCursorA = indexes.get(indexA).find(searchKeyA);
+        SearchCursor searchCursorB = indexes.get(indexB).find(searchKeyB);
+        try (PageProxyCursor cursorA = disks.get(indexA).getCursor(searchCursorA.pageID, PagedFile.PF_SHARED_LOCK)) {
+            try (PageProxyCursor cursorB = disks.get(indexB).getCursor(searchCursorB.pageID, PagedFile.PF_SHARED_LOCK)) {
+                timeToFirstResult = System.nanoTime();
+                if(searchCursorA.hasNext(cursorA) && searchCursorB.hasNext(cursorB)) {
+                    resultA = searchCursorA.next(cursorA);
+                    resultB = searchCursorB.next(cursorB);
+                    while (searchCursorA.hasNext(cursorA) && searchCursorB.hasNext(cursorB)) {
+                        if (resultA[1] == resultB[1]) {
+                            if(resultA[2] == resultB[3]) {
+                                count++;
+                                resultA = searchCursorA.next(cursorA);
+                                resultB = searchCursorB.next(cursorB);
+                            }
+                            else if(resultA[2] > resultB[3]){
+                                if (searchCursorB.hasNext(cursorB)) {
+                                    resultB = searchCursorB.next(cursorB);
+                                }
+                            }
+                            else{
+                                if (searchCursorA.hasNext(cursorA)) {
+                                    resultA = searchCursorA.next(cursorA);
+                                }
+                            }
+                        } else if (resultA[1] > resultB[1]) {
+                            if (searchCursorB.hasNext(cursorB)) {
+                                resultB = searchCursorB.next(cursorB);
+                            }
+                        } else {
+                            if (searchCursorA.hasNext(cursorA)) {
+                                resultA = searchCursorA.next(cursorA);
+                            }
+                        }
+                    }
+                }
+                timeToLastResult = System.nanoTime();
+            }
+        }
+        //System.out.println("Number of results found in Index: " + count);
+        System.out.print("Path Index: Time to first result(ms): " + (timeToFirstResult - startTime) / 1000000);
+        System.out.println(", Time to last result(ms): " + (timeToLastResult - startTime) / 1000000);
+        System.out.println("Result Set Size index: " + count);
+        return count;
+    }
+    public int pathJoin(int indexA, long pathIDA, int indexB, long pathIDB) throws IOException {
+        long startTime = System.nanoTime();
+        long timeToFirstResult;
+        long timeToLastResult;
+        long[] searchKeyA = new long[]{pathIDA};
+        long[] searchKeyB = new long[]{pathIDB};
+
+        long[] resultA;
+        long[] resultB;
+        int count = 0;
+        SearchCursor searchCursorA = indexes.get(indexA).find(searchKeyA);
+        SearchCursor searchCursorB = indexes.get(indexB).find(searchKeyB);
+        try (PageProxyCursor cursorA = disks.get(indexA).getCursor(searchCursorA.pageID, PagedFile.PF_SHARED_LOCK)) {
+            try (PageProxyCursor cursorB = disks.get(indexB).getCursor(searchCursorB.pageID, PagedFile.PF_SHARED_LOCK)) {
+                timeToFirstResult = System.nanoTime();
+                if(searchCursorA.hasNext(cursorA) && searchCursorB.hasNext(cursorB)) {
+                    resultA = searchCursorA.next(cursorA);
+                    resultB = searchCursorB.next(cursorB);
+                    while (searchCursorA.hasNext(cursorA) && searchCursorB.hasNext(cursorB)) {
+                        if (resultA[1] == resultB[1]) {
+                            count++;
+                            //resultA = searchCursorA.next(cursorA);
+                            resultB = searchCursorB.next(cursorB);
+                        } else if (resultA[1] > resultB[1]) {
+                            if (searchCursorB.hasNext(cursorB)) {
+                                resultB = searchCursorB.next(cursorB);
+                            }
+                        } else {
+                            if (searchCursorA.hasNext(cursorA)) {
+                                resultA = searchCursorA.next(cursorA);
+                            }
+                        }
+                    }
+                }
+                timeToLastResult = System.nanoTime();
+            }
+        }
+        //System.out.println("Number of results found in Index: " + count);
+        System.out.print("Path Index: Time to first result(ms): " + (timeToFirstResult - startTime) / 1000000);
+        System.out.println(", Time to last result(ms): " + (timeToLastResult - startTime) / 1000000);
+        System.out.println("Result Set Size index: " + count);
+        return count;
+    }
+
+
+
 }
 
