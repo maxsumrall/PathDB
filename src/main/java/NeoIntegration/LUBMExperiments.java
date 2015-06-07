@@ -6,13 +6,11 @@ import bptree.impl.NodeTree;
 import bptree.impl.SearchCursor;
 import org.neo4j.graphdb.*;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
+import org.neo4j.helpers.collection.IteratorUtil;
 import org.neo4j.io.pagecache.PagedFile;
 import org.neo4j.tooling.GlobalGraphOperations;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
+import java.io.*;
 import java.util.*;
 
 /**
@@ -23,6 +21,7 @@ public class LUBMExperiments {
     public HashMap<Integer, DiskCache> disks = new HashMap<>();
     public GraphDatabaseService database;
     public GlobalGraphOperations ggo;
+    StringBuilder stringBuilder;
 
     public static void main(String[] args) throws IOException {
         LUBMExperiments experiments = new LUBMExperiments();
@@ -30,6 +29,7 @@ public class LUBMExperiments {
         int index;
 
 
+        experiments.stats();
 
         query = experiments.query("MATCH (x)-[:memberOf]->(y) RETURN ID(x), ID(y)");
         index = experiments.index(3, 649439727, null);
@@ -56,7 +56,6 @@ public class LUBMExperiments {
         index = experiments.index(4, 49, null);
         assert(query == index);
 
-        System.out.println("Merge Join below:");
         query = experiments.query("MATCH (x)-[:undergraduateDegreeFrom]->(y)<-[:subOrganizationOf]-(z)<-[:memberOf]-(x) RETURN ID(x), ID(y), ID(z)");
         index = experiments.rectangleJoin(3, 1918060825, 4, 49);
         assert(query == index);
@@ -74,6 +73,9 @@ public class LUBMExperiments {
         index = experiments.pathJoin(3, 1221271593, 4, 1);
         assert(query == index);
 
+
+        System.out.println(experiments.stringBuilder.toString());
+        logToFile(experiments.stringBuilder.toString());
 
         for(DiskCache disk : experiments.disks.values()){
             disk.shutdown();
@@ -96,8 +98,28 @@ public class LUBMExperiments {
         bufferedReader.close();
 
 
+        stringBuilder = new StringBuilder();
+
         database = new GraphDatabaseFactory().newEmbeddedDatabaseBuilder(CleverIndexBuilder.DB_PATH).newGraphDatabase();
         ggo = GlobalGraphOperations.at(database);
+    }
+
+    public void stats(){
+        int totalRels;
+        int totalNodes;
+        long degreeCount = 0;
+        try(Transaction tx = database.beginTx()){
+            totalRels = IteratorUtil.count(ggo.getAllRelationships());
+            totalNodes = IteratorUtil.count(ggo.getAllNodes());
+            for(Node node : ggo.getAllNodes()){
+                degreeCount += node.getDegree();
+            }
+        }
+
+        double averageDegree = degreeCount / (double) totalNodes;
+        stringBuilder.append("Total nodes: ").append(totalNodes);
+        stringBuilder.append("Total edges: ").append(totalRels);
+        stringBuilder.append("Average degree per node: ").append(averageDegree);
     }
 
     public int query(String cypher){
@@ -106,7 +128,7 @@ public class LUBMExperiments {
             for(RelationshipType each : ggo.getAllRelationshipTypes()){
                 //System.out.println(each);
             }
-            System.out.println("\n" + cypher);
+            stringBuilder.append("\n").append(cypher);
             //System.out.println("Begin Neo4j Transaction");
             long startTime = System.nanoTime();
             Result queryAResult = database.execute(cypher);
@@ -121,9 +143,9 @@ public class LUBMExperiments {
                 count++;
             }
             long timeToLastResult = System.nanoTime();
-            System.out.println("Number of results found in Neo4j:" + count);
-            System.out.print("Neo4j: Time to first result(ms): " + (timeToFirstResult - startTime) / 1000000);
-            System.out.println(", Time to last result(ms): " + (timeToLastResult - startTime) / 1000000);
+            //System.out.println("Number of results found in Neo4j:" + count);
+            stringBuilder.append("Neo4j: Time to first result(ms): ").append((timeToFirstResult - startTime) / (double) 1000000);
+            stringBuilder.append(", Time to last result(ms): ").append((timeToLastResult - startTime) / (double) 1000000);
         }
         return count;
     }
@@ -136,12 +158,7 @@ public class LUBMExperiments {
         long startTime = System.nanoTime();
         long timeToFirstResult;
         long timeToLastResult;
-        //from last run: memberOfSubOrganizationOf = 90603815
-        //takesCourseteacherOf --> : 1050811698
-        //System.out.println("Index Searching Path: " + pathIDBuilder.path.toString());
-        //System.out.println("Path ID searching for: " + pathID);
         long[] searchKey = new long[]{pathID};
-        //System.out.println(disks.get(index).pageCacheFile);
 
         long[] foundKey;
         int count = 0;
@@ -163,9 +180,9 @@ public class LUBMExperiments {
             timeToLastResult = System.nanoTime();
         }
         //System.out.println("Number of results found in Index: " + count);
-        System.out.print("Path Index: Time to first result(ms): " + (timeToFirstResult - startTime) / 1000000);
-        System.out.println(", Time to last result(ms): " + (timeToLastResult - startTime) / 1000000);
-        System.out.println("Result Set Size index: " + count);
+        stringBuilder.append("Path Index: Time to first result(ms): ").append((timeToFirstResult - startTime) / (double) 1000000);
+        stringBuilder.append(", Time to last result(ms): ").append((timeToLastResult - startTime) / (double) 1000000);
+        //System.out.println("Result Set Size index: " + count);
 
         if(tx != null){
             tx.close();
@@ -224,9 +241,9 @@ public class LUBMExperiments {
             }
         }
         //System.out.println("Number of results found in Index: " + count);
-        System.out.print("Path Index: Time to first result(ms): " + (timeToFirstResult - startTime) / 1000000);
-        System.out.println(", Time to last result(ms): " + (timeToLastResult - startTime) / 1000000);
-        System.out.println("Result Set Size index: " + count);
+        stringBuilder.append("Path Index: Time to first result(ms): ").append((timeToFirstResult - startTime) / (double) 1000000);
+        stringBuilder.append(", Time to last result(ms): ").append((timeToLastResult - startTime) / (double) 1000000);
+        //System.out.println("Result Set Size index: " + count);
         return count;
     }
     public int pathJoin(int indexA, long pathIDA, int indexB, long pathIDB) throws IOException {
@@ -266,13 +283,20 @@ public class LUBMExperiments {
                 timeToLastResult = System.nanoTime();
             }
         }
-        //System.out.println("Number of results found in Index: " + count);
-        System.out.print("Path Index: Time to first result(ms): " + (timeToFirstResult - startTime) / 1000000);
-        System.out.println(", Time to last result(ms): " + (timeToLastResult - startTime) / 1000000);
-        System.out.println("Result Set Size index: " + count);
+        stringBuilder.append("Path Index: Time to first result(ms): ").append((timeToFirstResult - startTime) / (double) 1000000);
+        stringBuilder.append(", Time to last result(ms): ").append((timeToLastResult - startTime) / (double) 1000000);
+        //System.out.println("Result Set Size index: " + count);
         return count;
     }
 
+    public static void logToFile(String text){
+        try(PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter("LUBMExperimentsCold_results.txt", true)))) {
+            out.println(text);
+            System.out.println(text);
+        }catch (IOException e) {
+            //exception handling left as an exercise for the reader
+        }
+    }
 
 
 }
