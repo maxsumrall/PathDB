@@ -75,8 +75,6 @@ public class CleverIndexBuilder {
         buildK2Paths();
         Sorter sorterK2 = sorters.get(4);
         SetIterator k2Iterator = sorterK2.finishWithoutSort();
-        //System.out.println("\nSorting K = 2");
-        //sorterK2.sort();
         NodeTree k2Index = buildIndex(sorterK2, k2Iterator);
         indexes.put(2, k2Index);
 

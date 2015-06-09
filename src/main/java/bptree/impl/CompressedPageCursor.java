@@ -9,6 +9,7 @@ import java.util.Arrays;
 
 
 public class CompressedPageCursor extends PageProxyCursor{
+    CompressedPageCache fastCache;
     PageCursor cursor;
     int maxPageSize = DiskCache.PAGE_SIZE * 7;
     ByteBuffer dBuffer = ByteBuffer.allocate(maxPageSize);
@@ -16,6 +17,7 @@ public class CompressedPageCursor extends PageProxyCursor{
     boolean deferWriting = false;
 
     public CompressedPageCursor(DiskCache disk, long pageId, int lock) throws IOException {
+        this.fastCache = new CompressedPageCache();
         this.cursor = disk.pagedFile.io(pageId, lock);
         cursor.next();
         loadCursorFromDisk();
@@ -23,6 +25,7 @@ public class CompressedPageCursor extends PageProxyCursor{
 
     @Override
     public void next(long page) throws IOException {
+        fastCache.putByteBuffer(cursor.getCurrentPageId(), dBuffer);
         cursor.next(page);
         loadCursorFromDisk();
         dBuffer.position(0);
@@ -62,25 +65,6 @@ public class CompressedPageCursor extends PageProxyCursor{
         }
     }
 
-    /*
-    public byte[] compress(ByteBuffer dKeys, int offset, int length){
-        int keyLength = NodeHeader.getKeyLength(cursor);
-        int maxCompressedSize = length - offset;
-        byte[] compressed = new byte[maxCompressedSize];
-        ByteBuffer buffer = ByteBuffer.wrap(compressed);
-        long[][] keys = new long[(length - offset) / keyLength][keyLength];
-        dKeys.position(NodeHeader.NODE_HEADER_LENGTH);
-        for(int i = 0; i < keys.length; i++)
-            for(int j = 0; j < keyLength; j++)
-                keys[i][j] = dKeys.getLong();
-        buffer.put(encodeKey(keys[0], new long[keys[0].length]));
-        for(int i = 1; i < keys.length; i++)
-            buffer.put(encodeKey(keys[i], keys[i-1]));
-        byte[] truncatedCompressed = new byte[buffer.position()];
-        System.arraycopy(compressed, 0, truncatedCompressed, 0, truncatedCompressed.length);
-        return truncatedCompressed;
-    }
-    */
     public byte[] compress(){
         int keyLength = NodeHeader.getKeyLength(cursor);
         int numberOfKeys = NodeHeader.getNumberOfKeys(cursor);
@@ -192,14 +176,18 @@ public class CompressedPageCursor extends PageProxyCursor{
     }
 
     private void loadCursorFromDisk(){
-        if(NodeHeader.isUninitializedNode(cursor)){
-            return;
+        ByteBuffer possibleBuffer = fastCache.getByteBuffer(cursor.getCurrentPageId());
+        if(possibleBuffer != null){
+            dBuffer = possibleBuffer;
         }
-        else if(NodeHeader.isLeafNode(cursor))
-            decompressLeaf();
-        else
-            decompressInternalNode();
-
+        else {
+            if (NodeHeader.isUninitializedNode(cursor)) {
+                return;
+            } else if (NodeHeader.isLeafNode(cursor))
+                decompressLeaf();
+            else
+                decompressInternalNode();
+        }
     }
 
     private void decompressLeaf(){
