@@ -113,6 +113,15 @@ public class BasicPageCursor extends PageProxyCursor {
     public boolean leafNodeContainsSpaceForNewKey(long[] newKey){
         return NodeSize.leafNodeContainsSpaceForNewKey(this, newKey);
     }
+
+    @Override
+    public void deferWriting() {
+    }
+
+    @Override
+    public void resumeWriting() {
+    }
+
     @Override
     public boolean internalNodeContainsSpaceForNewKeyAndChild(long[] newKey){
         return NodeSize.internalNodeContainsSpaceForNewKeyAndChild(this, newKey);

@@ -21,6 +21,7 @@ public class DiskCache {
     protected MuninnPageCache pageCache;
     public transient PagedFile pagedFile;
     public File pageCacheFile;
+    private final boolean COMPRESSION = true;
 
     private DiskCache(File pageCacheFile) {
         this.pageCacheFile = pageCacheFile;
@@ -58,8 +59,13 @@ public class DiskCache {
     }
 
     public PageProxyCursor getCursor(long id, int lockType) throws IOException {
-        return new BasicPageCursor(this, id, lockType);
-        //return new ZLIBPageCursor(singleInstance, id, lockType);
+        if(COMPRESSION){
+            //return new LZ4PageCursor(this, id, lockType);
+            return new CompressedPageCursor(this, id, lockType);
+        }
+        else{
+            return new BasicPageCursor(this, id, lockType);
+        }
     }
 
     public ByteBuffer readPage(NodeTree tree, long id) {

@@ -33,6 +33,7 @@ The Header of the block when stored as bytes is:
     public static boolean isLeafNode(PageProxyCursor cursor){
         return cursor.getByte(BYTE_POSITION_NODE_TYPE) == LEAF_FLAG;
     }
+    public static boolean isUninitializedNode(PageCursor cursor){return cursor.getByte(BYTE_POSITION_NODE_TYPE) == 0;}
 
 
 
@@ -159,11 +160,13 @@ The Header of the block when stored as bytes is:
         cursor.putLong(NodeHeader.BYTE_POSITION_PRECEDING_ID, -1);
     }
     public static void initializeLeafNode(PageProxyCursor cursor){
+        cursor.deferWriting();
         cursor.putByte(NodeHeader.BYTE_POSITION_NODE_TYPE, (byte) 1);
         cursor.putInt(NodeHeader.BYTE_POSITION_KEY_LENGTH, 0);
         cursor.putInt(NodeHeader.BYTE_POSITION_KEY_COUNT, 0);
         cursor.putLong(NodeHeader.BYTE_POSITION_SIBLING_ID, -1);
         cursor.putLong(NodeHeader.BYTE_POSITION_PRECEDING_ID, -1);
+        cursor.resumeWriting();
     }
 
     public static void initializeInternalNode(PageCursor cursor){
@@ -174,11 +177,13 @@ The Header of the block when stored as bytes is:
         cursor.putLong(NodeHeader.BYTE_POSITION_PRECEDING_ID, -1);
     }
     public static void initializeInternalNode(PageProxyCursor cursor){
+        cursor.deferWriting();
         cursor.putByte(NodeHeader.BYTE_POSITION_NODE_TYPE, (byte) 2);
         cursor.putInt(NodeHeader.BYTE_POSITION_KEY_LENGTH, 0);
         cursor.putInt(NodeHeader.BYTE_POSITION_KEY_COUNT, 0);
         cursor.putLong(NodeHeader.BYTE_POSITION_SIBLING_ID, -1);
         cursor.putLong(NodeHeader.BYTE_POSITION_PRECEDING_ID, -1);
+        cursor.resumeWriting();
     }
 
 }

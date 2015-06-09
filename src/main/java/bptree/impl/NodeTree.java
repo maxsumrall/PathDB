@@ -33,6 +33,8 @@ public class NodeTree {
         this.disk = disk;
         rootNodeId = acquireNewLeafNode();
         this.nodeSearch = new NodeSearch(this);
+        this.nodeInsertion = new NodeInsertion(this);
+        this.nodeDeletion = new NodeDeletion(this);
     }
 
     public static void setPagedFile(PagedFile pagedFile){pagedFile = pagedFile;

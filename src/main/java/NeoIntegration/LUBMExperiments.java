@@ -22,15 +22,60 @@ public class LUBMExperiments {
     public GraphDatabaseService database;
     public GlobalGraphOperations ggo;
     StringBuilder stringBuilder;
+    String cypher;
 
     public static void main(String[] args) throws IOException {
         LUBMExperiments experiments = new LUBMExperiments();
         int query;
         int index;
 
+        //experiments.stats();
 
-        experiments.stats();
 
+        int experimentCount = 5;
+        for(int i = 0; i < experimentCount; i++) {
+            if(args.length == 2){
+                System.out.println(args[0] + " " + args[1]);
+                if(args[1].equals("1")){
+                    experiments.doExperiment1();
+                }
+                if(args[1].equals("2")){
+                    experiments.doExperiment2();
+                }
+                if(args[1].equals("3")){
+                    experiments.doExperiment3();
+                }
+                if(args[1].equals("4")){
+                    experiments.doExperiment4();
+                }
+                if(args[1].equals("5")){
+                    experiments.doExperiment5();
+                }
+                if(args[1].equals("6")){
+                    experiments.doExperiment6();
+                }
+                if(args[1].equals("7")){
+                    experiments.doExperiment7();
+                }
+                if(args[1].equals("8")){
+                    experiments.doExperiment8();
+                }
+                if(args[1].equals("9")){
+                    experiments.doExperiment9();
+                }
+                if(args[1].equals("10")){
+                    experiments.doExperiment10();
+                }
+                experiments.stringBuilder.append("\n");
+            }
+            else{
+                System.out.println("Argument mismatch");
+            }
+        }
+
+
+
+        /*
         query = experiments.query("MATCH (x)-[:memberOf]->(y) RETURN ID(x), ID(y)");
         index = experiments.index(3, 649439727, null);
         assert(query == index);
@@ -75,7 +120,9 @@ public class LUBMExperiments {
 
 
         System.out.println(experiments.stringBuilder.toString());
-        logToFile(experiments.stringBuilder.toString());
+        */
+
+        experiments.logToFile();
 
         for(DiskCache disk : experiments.disks.values()){
             disk.shutdown();
@@ -104,6 +151,51 @@ public class LUBMExperiments {
         ggo = GlobalGraphOperations.at(database);
     }
 
+
+    public void doExperiment1() throws IOException {
+
+        query("MATCH (x)-[:memberOf]->(y) RETURN ID(x), ID(y)");
+        index(3, 649439727, null);
+    }
+    public void doExperiment2() throws IOException {
+
+        query("MATCH (x)-[:memberOf]->(y) WHERE x.uri=\"http://www.Department0.University0.edu/UndergraduateStudent207\" RETURN ID(x), ID(y)");
+        index(3, 649439727, new IndexConstraint(1, "uri", "http://www.Department0.University0.edu/UndergraduateStudent207"));
+    }
+    public void doExperiment3() throws IOException {
+        query("MATCH (x)-[:worksFor]->(y) RETURN ID(x), ID(y)");
+        index(3, 35729895, null);
+    }
+    public void doExperiment4() throws IOException {
+        query("MATCH (x)-[:takesCourse]->(y)<-[:teacherOf]-(z) RETURN ID(x), ID(y), ID(z)");
+        index(4, 64, null);
+    }
+    public void doExperiment5() throws IOException {
+        query("MATCH (x)-[:memberOf]->(y)<-[:subOrganizationOf]-(z) RETURN ID(x), ID(y), ID(z)");
+        index(4, 52, null);
+    }
+    public void doExperiment6() throws IOException {
+        query("MATCH (x)-[:memberOf]->(y)-[:subOrganizationOf]->(z) RETURN ID(x), ID(y), ID(z)");
+        index(4, 49, null);
+    }
+    public void doExperiment7() throws IOException {
+        query("MATCH (x)-[:undergraduateDegreeFrom]->(y)<-[:subOrganizationOf]-(z)<-[:memberOf]-(x) RETURN ID(x), ID(y), ID(z)");
+        rectangleJoin(3, 1918060825, 4, 49);
+    }
+    public void doExperiment8() throws IOException {
+
+        query("MATCH (x)-[:hasAdvisor]->(y)-[:teacherOf]->(z)<-[:takesCourse]-(x) RETURN ID(x), ID(y), ID(z)");
+        rectangleJoin(3, 939155463, 4, 57);
+    }
+    public void doExperiment9() throws IOException {
+        query("MATCH (x)<-[:headOf]-(y)-[:worksFor]->(z)<-[:subOrganizationOf]-(w) RETURN ID(x), ID(y), ID(z), ID(w)");
+        pathJoin(3, 1221271593, 4, 4);
+    }
+    public void doExperiment10() throws IOException {
+        query("MATCH (x)<-[:headOf]-(y)-[:worksFor]->(z)-[:subOrganizationOf]->(w) RETURN ID(x), ID(y), ID(z), ID(w)");
+        pathJoin(3, 1221271593, 4, 1);
+    }
+
     public void stats(){
         int totalRels;
         int totalNodes;
@@ -124,11 +216,12 @@ public class LUBMExperiments {
 
     public int query(String cypher){
         int count = 0;
+        this.cypher = cypher;
         try(Transaction tx = database.beginTx()){
             for(RelationshipType each : ggo.getAllRelationshipTypes()){
                 //System.out.println(each);
             }
-            stringBuilder.append("\n").append(cypher);
+            //stringBuilder.append("\n").append(cypher);
             //System.out.println("Begin Neo4j Transaction");
             long startTime = System.nanoTime();
             Result queryAResult = database.execute(cypher);
@@ -144,8 +237,8 @@ public class LUBMExperiments {
             }
             long timeToLastResult = System.nanoTime();
             //System.out.println("Number of results found in Neo4j:" + count);
-            stringBuilder.append("Neo4j: Time to first result(ms): ").append((timeToFirstResult - startTime) / (double) 1000000);
-            stringBuilder.append(", Time to last result(ms): ").append((timeToLastResult - startTime) / (double) 1000000);
+            stringBuilder.append((timeToFirstResult - startTime) / (double) 1000000).append(",");
+            stringBuilder.append((timeToLastResult - startTime) / (double) 1000000).append(",");;
         }
         return count;
     }
@@ -180,8 +273,8 @@ public class LUBMExperiments {
             timeToLastResult = System.nanoTime();
         }
         //System.out.println("Number of results found in Index: " + count);
-        stringBuilder.append("Path Index: Time to first result(ms): ").append((timeToFirstResult - startTime) / (double) 1000000);
-        stringBuilder.append(", Time to last result(ms): ").append((timeToLastResult - startTime) / (double) 1000000);
+        stringBuilder.append((timeToFirstResult - startTime) / (double) 1000000).append(",");
+        stringBuilder.append((timeToLastResult - startTime) / (double) 1000000);
         //System.out.println("Result Set Size index: " + count);
 
         if(tx != null){
@@ -241,8 +334,8 @@ public class LUBMExperiments {
             }
         }
         //System.out.println("Number of results found in Index: " + count);
-        stringBuilder.append("Path Index: Time to first result(ms): ").append((timeToFirstResult - startTime) / (double) 1000000);
-        stringBuilder.append(", Time to last result(ms): ").append((timeToLastResult - startTime) / (double) 1000000);
+        stringBuilder.append((timeToFirstResult - startTime) / (double) 1000000).append(",");
+        stringBuilder.append((timeToLastResult - startTime) / (double) 1000000);
         //System.out.println("Result Set Size index: " + count);
         return count;
     }
@@ -283,16 +376,17 @@ public class LUBMExperiments {
                 timeToLastResult = System.nanoTime();
             }
         }
-        stringBuilder.append("Path Index: Time to first result(ms): ").append((timeToFirstResult - startTime) / (double) 1000000);
-        stringBuilder.append(", Time to last result(ms): ").append((timeToLastResult - startTime) / (double) 1000000);
+        stringBuilder.append((timeToFirstResult - startTime) / (double) 1000000).append(",");
+        stringBuilder.append((timeToLastResult - startTime) / (double) 1000000);
         //System.out.println("Result Set Size index: " + count);
         return count;
     }
 
-    public static void logToFile(String text){
-        try(PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter("LUBMExperimentsCold_results.txt", true)))) {
-            out.println(text);
-            System.out.println(text);
+    public void logToFile(){
+        try(PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter("LUBMExperiments_results.txt", true)))) {
+            out.println(this.cypher+"\n");
+            out.println(stringBuilder.toString());
+            System.out.println(stringBuilder.toString());
         }catch (IOException e) {
             //exception handling left as an exercise for the reader
         }

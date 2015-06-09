@@ -136,11 +136,11 @@ public class NodeDeletion {
     private static void removeKeyAtOffset(PageProxyCursor cursor, int offset, long[] key){
         byte[] tmp_bytes;
         if(NodeHeader.isNodeWithSameLengthKeys(cursor)) {
-            tmp_bytes = new byte[DiskCache.PAGE_SIZE - offset - key.length * 8];
+            tmp_bytes = new byte[cursor.capacity()- offset - key.length * 8];
             cursor.setOffset(offset + (key.length * 8));
         }
         else{
-            tmp_bytes = new byte[DiskCache.PAGE_SIZE - offset - (key.length + 1) * 8];
+            tmp_bytes = new byte[cursor.capacity() - offset - (key.length + 1) * 8];
             cursor.setOffset(offset);
             long tmp = cursor.getLong();
             while(tmp != -1l){
@@ -164,7 +164,7 @@ public class NodeDeletion {
         int keyLength = NodeHeader.getKeyLength(cursor);
         if(NodeHeader.isNodeWithSameLengthKeys(cursor)) {
             offset = nodeHeaderOffset + (index * (keyLength * 8));
-            tmp_bytes = new byte[DiskCache.PAGE_SIZE - offset - keyLength * 8];
+            tmp_bytes = new byte[cursor.capacity() - offset - keyLength * 8];
             cursor.setOffset(offset + (keyLength * 8));
         }
         else{
@@ -176,7 +176,7 @@ public class NodeDeletion {
                 }
             }
             offset = cursor.getOffset();
-            tmp_bytes = new byte[DiskCache.PAGE_SIZE - offset - (keyLength + 1) * 8];
+            tmp_bytes = new byte[cursor.capacity() - offset - (keyLength + 1) * 8];
             long tmp = cursor.getLong();
             while (tmp != -1l) {
                 cursor.getLong();
@@ -195,7 +195,7 @@ public class NodeDeletion {
     public static void removeChildAtIndex(PageProxyCursor cursor, int index){
         byte[] tmp_bytes;
         int offset = NodeHeader.NODE_HEADER_LENGTH + (index * 8);
-        tmp_bytes = new byte[DiskCache.PAGE_SIZE - offset - 8];
+        tmp_bytes = new byte[cursor.capacity() - offset - 8];
         cursor.setOffset(offset + 8);
 
         cursor.getBytes(tmp_bytes);

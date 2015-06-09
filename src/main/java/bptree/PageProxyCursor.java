@@ -46,8 +46,12 @@ public abstract class PageProxyCursor implements Closeable{
 
     abstract public void putInt(int offset, int val);
 
-    abstract public boolean internalNodeContainsSpaceForNewKeyAndChild(long[] newKey);
+    abstract public boolean internalNodeContainsSpaceForNewKeyAndChild(long[] newKey) throws IOException;
 
-    abstract public boolean leafNodeContainsSpaceForNewKey(long[] newKey);
+    abstract public boolean leafNodeContainsSpaceForNewKey(long[] newKey) throws IOException;
+
+    abstract public void deferWriting();
+
+    abstract public void resumeWriting();
 
 }

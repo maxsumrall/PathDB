@@ -1,16 +1,16 @@
 package Benchmark;
 
+import bptree.PageProxyCursor;
 import bptree.impl.DiskCache;
 import bptree.impl.NodeTree;
+import bptree.impl.SearchCursor;
+import org.neo4j.io.pagecache.PagedFile;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.Date;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 
 
 public class Benchmark {
@@ -24,11 +24,11 @@ public class Benchmark {
         //System.out.println("------ 1000 -------");
         //runInsertionExperiment(1000);
 
-        //System.out.println("------ 10000 -------");
-        //runInsertionExperiment(10000);
+        System.out.println("------ 10000 -------");
+        runExperiment(10000);
 
-        //System.out.println("------ 100000 -------");
-        //runExperiment(100000);
+        System.out.println("------ 100000 -------");
+        runExperiment(100000);
 
         System.out.println("------ 1,000,000 -------");
         runExperiment(1000000);
@@ -47,36 +47,19 @@ public class Benchmark {
     }
 
     public static void runExperiment(int items_to_insert) throws IOException {
-        //labelPaths = exampleLabelPaths(2, 2);
-        /*index = PathIndexImpl.getTemporaryPathIndex()
-                .setRangeOfPathLengths(2, 2)
-                .setLabelPaths(labelPaths)
-                .setSignaturesToDefault();
-*/
-        //pindex = ((PathIndexImpl) index);
-        DiskCache disk = DiskCache.persistentDiskCache();
+        DiskCache disk = DiskCache.temporaryDiskCache(items_to_insert + "experiment.dat");
         proxy = new NodeTree(disk);
 
         int number_of_paths = 10000;
 
-        /*
-        long[][] keys = new long[items_to_insert][4];
-        for (int i = 0; i < keys.length; i++) {
-            keys[i][0] = (long) (i % number_of_paths);
-            keys[i][1] = (long) i;
-            keys[i][2] = (long) i;
-            keys[i][3] = (long) i;
-        }
-*/
-        int disk_size = 0;
+
 
         double totalSumInsert = performInsertionExperiment(proxy, items_to_insert, number_of_paths);
-        //disk_size = index.indexSize();
-        //int depth = index.getDepthOfTree();
         double totalSumSearch = performSearchExperiment(proxy, items_to_insert, number_of_paths);
-        //double totalSumDelete = performDeletionExperiment(proxy, keys, items_to_insert, number_of_paths);
-        //index.shutdown();
+        double totalSumDelete = performDeletionExperiment(proxy, items_to_insert, number_of_paths);
 
+        disk.shutdown();
+        long disk_size = disk.pageCacheFile.length();
 
         StringBuilder strBuilder = new StringBuilder();
         strBuilder.append("\n -------").append(items_to_insert).append("-------").append((new Date().toString()));
@@ -84,8 +67,8 @@ public class Benchmark {
         strBuilder.append("\n Sum Insertion time(minutes): ").append(totalSumInsert / 60000000000d);
         strBuilder.append("\n Average Insertion time(micro seconds): ").append(totalSumInsert / items_to_insert);
         strBuilder.append("\n Average Search time(micro seconds): ").append(totalSumSearch / items_to_insert);
-        //strBuilder.append("\n Average Deletion time(micro seconds): ").append(totalSumDelete / items_to_insert);
-        strBuilder.append("\n Disk Size(mb): ").append(disk_size);
+        strBuilder.append("\n Average Deletion time(micro seconds): ").append(totalSumDelete / items_to_insert);
+        strBuilder.append("\n Disk Size(mb): ").append(disk_size / 1000000.0);
 
         logToFile(strBuilder.toString());
     }
@@ -93,7 +76,7 @@ public class Benchmark {
     public static double performInsertionExperiment(NodeTree tree, int items_to_insert, int number_of_paths){
         double totalSum = 0;
         long[] key = new long[4];
-        for (int i = 0; i < items_to_insert; i++) {
+        for (int i = 1; i < items_to_insert; i++) {
             key[0] = (long) (i % number_of_paths);
             key[1] = (long) i;
             key[2] = (long) i;
@@ -114,7 +97,7 @@ public class Benchmark {
     public static double performSearchExperiment(NodeTree tree, int items_to_insert, int number_of_paths){
         double totalSum = 0;
         long[] key = new long[4];
-        for (int i = 0; i < items_to_insert; i++) {
+        for (int i = 1; i < items_to_insert; i++) {
             key[0] = (long) (i % number_of_paths);
             key[1] = (long) i;
             key[2] = (long) i;
@@ -122,8 +105,12 @@ public class Benchmark {
             long startTime = System.nanoTime();
             //Do timed operation here
 
-            tree.find(key);
-
+            SearchCursor result = tree.find(key);
+            try(PageProxyCursor cursor = tree.disk.getCursor(result.pageID, PagedFile.PF_SHARED_LOCK)) {
+                assert Arrays.equals(key, result.next(cursor));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
             long endTime = System.nanoTime();
 
             long duration = (endTime - startTime);
@@ -132,10 +119,10 @@ public class Benchmark {
         return totalSum;
     }
 
-    public static double performDeletionExperiment(NodeTree index, int items_to_insert, int number_of_paths){
+    public static double performDeletionExperiment(NodeTree tree, int items_to_insert, int number_of_paths){
         double totalSum = 0;
         long[] key = new long[4];
-        for (int i = 0; i < items_to_insert; i++) {
+        for (int i = 1; i < items_to_insert; i++) {
             key[0] = (long) (i % number_of_paths);
             key[1] = (long) i;
             key[2] = (long) i;
@@ -144,7 +131,8 @@ public class Benchmark {
             long startTime = System.nanoTime();
             //Do timed operation here
 
-            //index.remove(key);
+            tree.remove(key);
+            //SearchCursor result = tree.find(key);
 
             long endTime = System.nanoTime();
 
