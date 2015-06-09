@@ -11,7 +11,7 @@ public class SimpleDataGenerator {
     public int numberOfPages;
     public int keyLength = 4;
     public int keysPerPage = (((DiskCache.PAGE_SIZE - NodeHeader.NODE_HEADER_LENGTH) / Long.BYTES) / keyLength) ;
-    public DiskCache disk = DiskCache.temporaryDiskCache();
+    public DiskCache disk = DiskCache.temporaryDiskCache(false);
 
     public SimpleDataGenerator(int numberOfPages) throws IOException {
         this.numberOfPages = numberOfPages;

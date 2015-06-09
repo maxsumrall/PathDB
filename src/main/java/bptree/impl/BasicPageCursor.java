@@ -69,7 +69,7 @@ public class BasicPageCursor extends PageProxyCursor {
 
     @Override
     public void putByte(int offset, byte val){
-        cursor.putByte(val);
+        cursor.putByte(offset, val);
     }
 
     @Override

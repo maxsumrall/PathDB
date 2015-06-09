@@ -43,15 +43,14 @@ public class NodeBulkLoader {
             cursor.next(firstInternalNode);
             NodeHeader.setKeyLength(cursor, keySize);
             this.currentParent = firstInternalNode;
-            //while(data.hasNext()){
-            //    insertKeys(cursor, data.nextPage());
-            //}
+
             for (int i = 0; i < finalLeafPage; i++) {
                 addLeafToParent(cursor, i);
             }
             cursor.next(currentParent);
             cursor.setOffset(NodeHeader.NODE_HEADER_LENGTH);
-            cursor.putBytes(parentWriter.getChildren());
+            byte[] children = parentWriter.getChildren();
+            cursor.putBytes(children);
             byte[] keys = parentWriter.getKeys();
             cursor.putBytes(keys);
             NodeHeader.setNumberOfKeys(cursor, ((keys.length / keySize) / 8));
@@ -84,10 +83,12 @@ public class NodeBulkLoader {
 
     private void addLeafToParent(PageProxyCursor cursor, long leaf) throws IOException {
         if(currentPair > MAX_PAIRS){
+            cursor.deferWriting();
             cursor.next(this.currentParent);
             cursor.setOffset(NodeHeader.NODE_HEADER_LENGTH);
             cursor.putBytes(parentWriter.getChildren());
             cursor.putBytes(parentWriter.getKeys());
+            cursor.resumeWriting();
             NodeHeader.setNumberOfKeys(cursor, MAX_PAIRS);
             long newParent = NodeTree.acquireNewInternalNode(cursor);
             cursor.next(newParent);
@@ -128,12 +129,14 @@ public class NodeBulkLoader {
             nextNode = NodeHeader.getSiblingID(cursor);
         }
         copyUpLeafToParent(cursor, currentNode);
+        cursor.deferWriting();
         cursor.next(currentParent);
         cursor.setOffset(NodeHeader.NODE_HEADER_LENGTH);
         cursor.putBytes(parentWriter.getChildren());
         byte[] keys = parentWriter.getKeys();
         cursor.putBytes(keys);
         NodeHeader.setNumberOfKeys(cursor, ((keys.length/ keySize) / 8));
+        cursor.resumeWriting();
 
         if(firstParent != this.currentParent){
             return buildUpperLeaves(cursor, firstParent);
@@ -146,6 +149,7 @@ public class NodeBulkLoader {
 
     private void copyUpLeafToParent(PageProxyCursor cursor, long leaf) throws IOException {
         if(currentPair > MAX_PAIRS){
+            cursor.deferWriting();
             cursor.next(this.currentParent);
             cursor.setOffset(NodeHeader.NODE_HEADER_LENGTH);
             cursor.putBytes(parentWriter.getChildren());
@@ -155,6 +159,7 @@ public class NodeBulkLoader {
             cursor.next(newParent);
             NodeHeader.setKeyLength(cursor, keySize);
             NodeTree.updateSiblingAndFollowingIdsInsertion(cursor, this.currentParent, newParent);
+            cursor.resumeWriting();
             this.currentParent = newParent;
             this.currentOffset = 0;
             this.currentPair = 0;

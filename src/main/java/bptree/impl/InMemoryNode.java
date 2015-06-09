@@ -106,8 +106,8 @@ public class InMemoryNode {
     }
 
     protected void leafNodeSameLengthKeyDeserialization(PageProxyCursor cursor){
-        int keyLength = NodeHeader.getKeyLength(cursor);
-        int numberOfKeys = NodeHeader.getNumberOfKeys(cursor);
+        this.keyLength = NodeHeader.getKeyLength(cursor);
+        this.numberOfKeys = NodeHeader.getNumberOfKeys(cursor);
         ArrayList<Long[]> deserialize_keys = new ArrayList<>();
         //LinkedList<Long> newKey = new LinkedList<>();
         cursor.setOffset(NodeHeader.NODE_HEADER_LENGTH);

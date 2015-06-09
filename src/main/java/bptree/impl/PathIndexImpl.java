@@ -46,7 +46,7 @@ public class PathIndexImpl implements Index, Closeable, Serializable, ObjectInpu
      */
     public static Index getPersistentPathIndex() throws IOException {
         PathIndexImpl index = new PathIndexImpl(getUniqueFile());
-        DiskCache diskCache = DiskCache.temporaryDiskCache();
+        DiskCache diskCache = DiskCache.temporaryDiskCache(false);
         index.tree = Tree.initializeNewTree(Tree.DEFAULT_TREE_FILE_NAME, diskCache);
         return index;
     }

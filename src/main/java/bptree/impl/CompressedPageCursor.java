@@ -10,7 +10,7 @@ import java.util.Arrays;
 
 public class CompressedPageCursor extends PageProxyCursor{
     PageCursor cursor;
-    int maxPageSize = DiskCache.PAGE_SIZE * 3;
+    int maxPageSize = DiskCache.PAGE_SIZE * 7;
     ByteBuffer dBuffer = ByteBuffer.allocate(maxPageSize);
     int mostRecentCompressedLeafSize = DiskCache.PAGE_SIZE;//the default value
     boolean deferWriting = false;
@@ -25,14 +25,19 @@ public class CompressedPageCursor extends PageProxyCursor{
     public void next(long page) throws IOException {
         cursor.next(page);
         loadCursorFromDisk();
+        dBuffer.position(0);
     }
 
     public void pushChangesToDisk(){
-        if(!deferWriting)
-            if(NodeHeader.isLeafNode(cursor))
+        if(!deferWriting) {
+            int mark = dBuffer.position();
+            if (NodeHeader.isLeafNode(dBuffer))
                 compressAndWriteLeaf();
             else
                 writeInternal();
+            dBuffer.position(mark);
+        }
+
     }
 
     private void writeInternal(){
@@ -50,13 +55,14 @@ public class CompressedPageCursor extends PageProxyCursor{
         //will just check if the path id is zero, if so, this is the end of this block.
         int decompressedSize = getLastUsedLeafBufferPosition() - NodeHeader.NODE_HEADER_LENGTH;
         if(decompressedSize != 0) {
-            byte[] compresedMinusHeader = compress(dBuffer, NodeHeader.NODE_HEADER_LENGTH, decompressedSize);
+            byte[] compresedMinusHeader = compress();
             writeHeaderToCursor();
             cursor.setOffset(NodeHeader.NODE_HEADER_LENGTH);
             cursor.putBytes(compresedMinusHeader);
         }
     }
 
+    /*
     public byte[] compress(ByteBuffer dKeys, int offset, int length){
         int keyLength = NodeHeader.getKeyLength(cursor);
         int maxCompressedSize = length - offset;
@@ -72,6 +78,25 @@ public class CompressedPageCursor extends PageProxyCursor{
             buffer.put(encodeKey(keys[i], keys[i-1]));
         byte[] truncatedCompressed = new byte[buffer.position()];
         System.arraycopy(compressed, 0, truncatedCompressed, 0, truncatedCompressed.length);
+        return truncatedCompressed;
+    }
+    */
+    public byte[] compress(){
+        int keyLength = NodeHeader.getKeyLength(cursor);
+        int numberOfKeys = NodeHeader.getNumberOfKeys(cursor);
+        ByteBuffer buffer = ByteBuffer.allocate(DiskCache.PAGE_SIZE - NodeHeader.NODE_HEADER_LENGTH);
+        long[] next = new long[keyLength];
+        long[] prev = new long[keyLength];
+        dBuffer.position(NodeHeader.NODE_HEADER_LENGTH);
+        for(int i = 0; i < numberOfKeys; i++) {
+            for (int j = 0; j < keyLength; j++) {
+                next[j] = dBuffer.getLong();
+            }
+            buffer.put(encodeKey(next, prev));
+            prev = next;
+        }
+        byte[] truncatedCompressed = new byte[buffer.position()];
+        System.arraycopy(buffer.array(), 0, truncatedCompressed, 0, truncatedCompressed.length);
         return truncatedCompressed;
     }
 
@@ -190,18 +215,14 @@ public class CompressedPageCursor extends PageProxyCursor{
 
         int position = NodeHeader.NODE_HEADER_LENGTH;
         int reqBytes = cursor.getByte(position);
-        position += 1 + (reqBytes * keyLength);
+       // position += 1 + (reqBytes * keyLength);
         long val;
         long[] prev = new long[keyLength];
-        for(int i = 0; i < keyLength; i++) {
-            val = toLong(cursor, i + 1, reqBytes);
-            prev[i] = val;
-            dBuffer.putLong(val);
-        }
-        for(int i = 1; i < numberOfKeys; i++){
+        for(int i = 0; i < numberOfKeys; i++){
             reqBytes = cursor.getByte(position++);
             for(int j = 0; j < keyLength; j++){
                 val = prev[j] + toLong(cursor, position, reqBytes);
+                dBuffer.putLong(val);
                 prev[j] = val;
                 position += reqBytes;
             }
@@ -268,7 +289,7 @@ public class CompressedPageCursor extends PageProxyCursor{
 
     @Override
     public void putByte(int offset, byte val){
-        dBuffer.put(val);
+        dBuffer.put(offset, val);
         pushChangesToDisk();
     }
 

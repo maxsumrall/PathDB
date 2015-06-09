@@ -104,6 +104,9 @@ The Header of the block when stored as bytes is:
     public static void setNodeTypeLeaf(PageProxyCursor cursor){
         cursor.putByte(BYTE_POSITION_NODE_TYPE, (byte) 1);
     }
+    public static void setNodeTypeLeaf(ByteBuffer buffer){
+        buffer.put(BYTE_POSITION_NODE_TYPE, (byte) 1);
+    }
 
 
 
@@ -143,6 +146,9 @@ The Header of the block when stored as bytes is:
     public static void setFollowingID(PageProxyCursor cursor, long followingId){
         cursor.putLong(BYTE_POSITION_SIBLING_ID, followingId);
     }
+    public static void setFollowingID(ByteBuffer buffer, long followingId){
+        buffer.putLong(BYTE_POSITION_SIBLING_ID, followingId);
+    }
 
     public static void setPrecedingId(PageCursor cursor, long precedingId){
         cursor.putLong(BYTE_POSITION_PRECEDING_ID, precedingId);
@@ -150,6 +156,10 @@ The Header of the block when stored as bytes is:
 
     public static void setPrecedingId(PageProxyCursor cursor, long precedingId){
         cursor.putLong(BYTE_POSITION_PRECEDING_ID, precedingId);
+    }
+
+    public static void setPrecedingId(ByteBuffer buffer, long precedingId){
+        buffer.putLong(BYTE_POSITION_PRECEDING_ID, precedingId);
     }
 
     public static void initializeLeafNode(PageCursor cursor){

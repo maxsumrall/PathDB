@@ -1,11 +1,9 @@
 package NeoIntegration;
 
+import PageCacheSort.SetIterator;
 import PageCacheSort.Sorter;
 import bptree.PageProxyCursor;
-import bptree.impl.DiskCache;
-import bptree.impl.NodeBulkLoader;
-import bptree.impl.NodeTree;
-import bptree.impl.SearchCursor;
+import bptree.impl.*;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
@@ -70,25 +68,28 @@ public class CleverIndexBuilder {
         enumerateSingleEdges();
         Sorter sorterK1 = sorters.get(3);
         System.out.println("\nSorting K = 1");
-        sorterK1.sort();
-        NodeTree k1Index = buildIndex(sorterK1);
+        SetIterator k1Iterator = sorterK1.sort();
+        NodeTree k1Index = buildIndex(sorterK1, k1Iterator);
         indexes.put(1, k1Index);
 
         buildK2Paths();
         Sorter sorterK2 = sorters.get(4);
-        sorterK2.finishWithoutSort();
+        SetIterator k2Iterator = sorterK2.finishWithoutSort();
         //System.out.println("\nSorting K = 2");
         //sorterK2.sort();
-        NodeTree k2Index = buildIndex(sorterK2);
+        NodeTree k2Index = buildIndex(sorterK2, k2Iterator);
         indexes.put(2, k2Index);
+
     }
 
-    public NodeTree buildIndex(Sorter sorter) throws IOException {
+    public NodeTree buildIndex(Sorter sorter, SetIterator finalIterator) throws IOException {
         System.out.println("Building Index");
-        DiskCache sortedDisk = sorter.getSortedDisk();
-        NodeBulkLoader bulkLoader = new NodeBulkLoader(sortedDisk, sorter.finalPageId(), sorter.keySize);
+        DiskCache sortedDisk;
+        System.out.println("Compressing...");
+        DiskCache compressedSortedDisk = DiskCompressor.convertDiskToCompressed(finalIterator, sorter.keySize);//returns a DiskCache object containing the same data but compressed.
+        NodeBulkLoader bulkLoader = new NodeBulkLoader(compressedSortedDisk, DiskCompressor.finalPageID, sorter.keySize);
         NodeTree index = bulkLoader.run();
-        sortedDisk.pageCacheFile.renameTo(new File(sorter.toString() + LUBM_INDEX_PATH));
+        compressedSortedDisk.pageCacheFile.renameTo(new File(sorter.toString() + LUBM_INDEX_PATH));
         System.out.println("Done. Root for this index: " + index.rootNodeId);
         return index;
     }

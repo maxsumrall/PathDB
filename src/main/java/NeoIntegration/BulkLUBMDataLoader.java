@@ -98,7 +98,7 @@ public class BulkLUBMDataLoader {
 
     public long buildIndex(Sorter sorter) throws IOException {
         DiskCache sortedDisk = sorter.getSortedDisk();
-        DiskCache disk = DiskCache.persistentDiskCache(sorter.toString() + LUBM_INDEX_PATH);
+        DiskCache disk = DiskCache.persistentDiskCache(sorter.toString() + LUBM_INDEX_PATH, false);
         BulkPageSource sortedDataSource = new BulkPageSource(sortedDisk, sorter.finalPageId());
 
         NodeBulkLoader bulkLoader = new NodeBulkLoader(disk, sorter.finalPageId(), sorter.keySize);

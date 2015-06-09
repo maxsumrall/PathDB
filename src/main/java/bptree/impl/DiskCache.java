@@ -21,9 +21,10 @@ public class DiskCache {
     protected MuninnPageCache pageCache;
     public transient PagedFile pagedFile;
     public File pageCacheFile;
-    private final boolean COMPRESSION = true;
+    public boolean COMPRESSION = true;
 
-    private DiskCache(File pageCacheFile) {
+    private DiskCache(File pageCacheFile, boolean compression) {
+        this.COMPRESSION = compression;
         this.pageCacheFile = pageCacheFile;
         try {
             initializePageCache();
@@ -40,22 +41,22 @@ public class DiskCache {
         pagedFile = pageCache.map(this.pageCacheFile, PAGE_SIZE);
     }
 
-    public static DiskCache temporaryDiskCache(){
-        return temporaryDiskCache(DEFAULT_CACHE_FILE_NAME);
+    public static DiskCache temporaryDiskCache(boolean compression){
+        return temporaryDiskCache(DEFAULT_CACHE_FILE_NAME, compression);
     }
 
-    public static DiskCache temporaryDiskCache(String filename){
+    public static DiskCache temporaryDiskCache(String filename, boolean compression){
         File cache_file = new File(filename);
         cache_file.deleteOnExit();
-        return new DiskCache(cache_file);
+        return new DiskCache(cache_file, compression);
     }
 
-    public static DiskCache persistentDiskCache(){
-        return  persistentDiskCache(DEFAULT_CACHE_FILE_NAME);
+    public static DiskCache persistentDiskCache(boolean compression){
+        return  persistentDiskCache(DEFAULT_CACHE_FILE_NAME, compression);
     }
 
-    public static DiskCache persistentDiskCache(String filename){
-        return new DiskCache(new File(filename));
+    public static DiskCache persistentDiskCache(String filename, boolean compression){
+        return new DiskCache(new File(filename), compression);
     }
 
     public PageProxyCursor getCursor(long id, int lockType) throws IOException {

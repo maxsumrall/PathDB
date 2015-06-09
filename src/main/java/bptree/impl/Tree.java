@@ -24,7 +24,6 @@ public class Tree implements Closeable, Serializable, ObjectInputValidation {
 
     /**
      * Constructs a new Tree object
-     * @param file The file where the tree should be based.
      * @throws IOException
      */
     private Tree(String tree_filename, DiskCache diskCache) throws IOException {
@@ -36,10 +35,10 @@ public class Tree implements Closeable, Serializable, ObjectInputValidation {
         proxy = new NodeTree(0, diskCache);
     }
     public static Tree initializeTemporaryNewTree() throws IOException {
-        return initializeNewTree(DEFAULT_TREE_FILE_NAME, DiskCache.temporaryDiskCache()); //Delete on exit
+        return initializeNewTree(DEFAULT_TREE_FILE_NAME, DiskCache.temporaryDiskCache(false)); //Delete on exit
     }
     public static Tree initializePersistentNewTree() throws IOException {
-        return initializeNewTree(DEFAULT_TREE_FILE_NAME, DiskCache.persistentDiskCache()); //Delete on exit
+        return initializeNewTree(DEFAULT_TREE_FILE_NAME, DiskCache.persistentDiskCache(false)); //Delete on exit
     }
 
     public static Tree initializeNewTree(String tree_filename, DiskCache diskCache) throws IOException {

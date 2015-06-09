@@ -138,7 +138,7 @@ public class LUBMExperiments {
             List<String> entry = Arrays.asList(line.split(","));
             int k = new Integer(entry.get(0));
             long root = new Long(entry.get(1));
-            DiskCache disk = DiskCache.persistentDiskCache("K"+k+CleverIndexBuilder.LUBM_INDEX_PATH);
+            DiskCache disk = DiskCache.persistentDiskCache("K"+k+CleverIndexBuilder.LUBM_INDEX_PATH, false);
             indexes.put(k, new NodeTree(root, disk));
             disks.put(k, disk);
         }

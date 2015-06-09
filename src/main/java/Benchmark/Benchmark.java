@@ -47,7 +47,7 @@ public class Benchmark {
     }
 
     public static void runExperiment(int items_to_insert) throws IOException {
-        DiskCache disk = DiskCache.temporaryDiskCache(items_to_insert + "experiment.dat");
+        DiskCache disk = DiskCache.temporaryDiskCache(items_to_insert + "experiment.dat", true);
         proxy = new NodeTree(disk);
 
         int number_of_paths = 10000;

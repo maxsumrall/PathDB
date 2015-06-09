@@ -15,7 +15,7 @@ public class NodeBulkLoaderTest {
     @Test
     public void loadTest() throws IOException {
 
-        DiskCache disk = DiskCache.temporaryDiskCache();
+        DiskCache disk = DiskCache.temporaryDiskCache(false);
         //tree = Tree.initializeNewTree("tmp_tree_yo.dat", disk); //used for debugging
         int numberOfPages = 40000; //100000 pages should roughly equal 20mil keys;
         SimpleDataGenerator dataGenerator = new SimpleDataGenerator(numberOfPages);

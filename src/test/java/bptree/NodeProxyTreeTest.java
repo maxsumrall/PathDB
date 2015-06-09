@@ -34,7 +34,7 @@ public class NodeProxyTreeTest {
     public void initializeIndex() throws IOException {
         labelPaths = exampleLabelPaths(2, 2);
 
-        disk = DiskCache.temporaryDiskCache();
+        disk = DiskCache.temporaryDiskCache(false);
         tree = new NodeTree(0, disk);
     }
 
