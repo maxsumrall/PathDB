@@ -9,7 +9,7 @@ import java.util.Arrays;
 
 
 public class CompressedPageCursor extends PageProxyCursor{
-    CompressedPageCache fastCache;
+    //CompressedPageCache fastCache;
     PageCursor cursor;
     int maxPageSize = DiskCache.PAGE_SIZE * 7;
     ByteBuffer dBuffer = ByteBuffer.allocate(maxPageSize);
@@ -17,7 +17,7 @@ public class CompressedPageCursor extends PageProxyCursor{
     boolean deferWriting = false;
 
     public CompressedPageCursor(DiskCache disk, long pageId, int lock) throws IOException {
-        this.fastCache = new CompressedPageCache();
+        //this.fastCache = new CompressedPageCache();
         this.cursor = disk.pagedFile.io(pageId, lock);
         cursor.next();
         loadCursorFromDisk();
@@ -25,7 +25,7 @@ public class CompressedPageCursor extends PageProxyCursor{
 
     @Override
     public void next(long page) throws IOException {
-        fastCache.putByteBuffer(cursor.getCurrentPageId(), dBuffer);
+        //fastCache.putByteBuffer(cursor.getCurrentPageId(), dBuffer);
         cursor.next(page);
         loadCursorFromDisk();
         dBuffer.position(0);
@@ -176,11 +176,12 @@ public class CompressedPageCursor extends PageProxyCursor{
     }
 
     private void loadCursorFromDisk(){
-        ByteBuffer possibleBuffer = fastCache.getByteBuffer(cursor.getCurrentPageId());
-        if(possibleBuffer != null){
-            dBuffer = possibleBuffer;
-        }
-        else {
+        //ByteBuffer possibleBuffer = fastCache.getByteBuffer(cursor.getCurrentPageId());
+        //if(possibleBuffer != null){
+        //    dBuffer = possibleBuffer;
+       // }
+       // else {
+      //      dBuffer = ByteBuffer.allocate(maxPageSize);
             if (NodeHeader.isUninitializedNode(cursor)) {
                 return;
             } else if (NodeHeader.isLeafNode(cursor))
@@ -188,13 +189,13 @@ public class CompressedPageCursor extends PageProxyCursor{
             else
                 decompressInternalNode();
         }
-    }
+    //}
 
     private void decompressLeaf(){
         int keyLength = NodeHeader.getKeyLength(cursor);
         int numberOfKeys = NodeHeader.getNumberOfKeys(cursor);
         dBuffer.limit(maxPageSize);
-        Arrays.fill(dBuffer.array(), (byte)0);
+        //Arrays.fill(dBuffer.array(), (byte)0);
         dBuffer.position(0);
         cursor.setOffset(0);
         for(int i = 0; i < NodeHeader.NODE_HEADER_LENGTH; i++){
@@ -235,7 +236,10 @@ public class CompressedPageCursor extends PageProxyCursor{
 
     @Override
     public int capacity() {
-        return dBuffer.limit();
+        if(NodeHeader.isLeafNode(this))
+            return maxPageSize;
+        else
+            return DiskCache.PAGE_SIZE;
     }
 
     @Override

@@ -26,6 +26,7 @@ class simpleLUBMExperiments {
         int query;
         int index;
 
+        /*
         query = experiments.query("MATCH (x)-[:memberOf]->(y) RETURN ID(x), ID(y)");
         index = experiments.index(3, 649439727, null);
         assert(query == index);
@@ -38,7 +39,8 @@ class simpleLUBMExperiments {
         index = experiments.index(3, 35729895, null);
         assert(query == index);
 
-        /*
+
+
         query = experiments.query("MATCH (x)-[:takesCourse]->(y)<-[:teacherOf]-(z) RETURN ID(x), ID(y), ID(z)");
         index = experiments.index(4, 64, null);
         assert(query == index);
@@ -55,23 +57,18 @@ class simpleLUBMExperiments {
         index = experiments.rectangleJoin(3, 1918060825, 4, 49);
         assert(query == index);
 
-
+*/
         query = experiments.query("MATCH (x)-[:hasAdvisor]->(y)-[:teacherOf]->(z)<-[:takesCourse]-(x) RETURN ID(x), ID(y), ID(z)");
         index = experiments.rectangleJoin(3, 939155463, 4, 57);
         assert(query == index);
 
         query = experiments.query("MATCH (x)<-[:headOf]-(y)-[:worksFor]->(z)<-[:subOrganizationOf]-(w) RETURN ID(x), ID(y), ID(z), ID(w)");
-        index = experiments.pathJoin(3, 1221271593, 4, 4);
+        index = experiments.pathJoinAlpha(3, 1221271593, 4, 4);
         assert(query == index);
 
         query = experiments.query("MATCH (x)<-[:headOf]-(y)-[:worksFor]->(z)-[:subOrganizationOf]->(w) RETURN ID(x), ID(y), ID(z), ID(w)");
-        index = experiments.pathJoin(3, 1221271593, 4, 1);
+        index = experiments.pathJoinAlpha(3, 1221271593, 4, 1);
         assert(query == index);
-
-*/
-
-
-
 
         for(DiskCache disk : experiments.disks.values()){
             disk.shutdown();
@@ -80,14 +77,18 @@ class simpleLUBMExperiments {
 
     public simpleLUBMExperiments() throws IOException {
 
+        String folder = "LUBM50IndexCompressed/";
+        //String folder = "LUBM50Index/";
+        //String folder = "";
 
-        BufferedReader bufferedReader = new BufferedReader(new FileReader(new File(CleverIndexBuilder.INDEX_METADATA_PATH)));
+        BufferedReader bufferedReader = new BufferedReader(new FileReader(new File(folder + CleverIndexBuilder.INDEX_METADATA_PATH)));
         String line;
         while((line = bufferedReader.readLine()) != null) {
             List<String> entry = Arrays.asList(line.split(","));
             int k = new Integer(entry.get(0));
             long root = new Long(entry.get(1));
-            DiskCache disk = DiskCache.persistentDiskCache("K"+k+CleverIndexBuilder.LUBM_INDEX_PATH, true);
+            boolean compressed = entry.get(2).equals("true");
+            DiskCache disk = DiskCache.persistentDiskCache(folder +"K"+k+CleverIndexBuilder.LUBM_INDEX_PATH, compressed);
             indexes.put(k, new NodeTree(root, disk));
             disks.put(k, disk);
         }
@@ -158,10 +159,10 @@ class simpleLUBMExperiments {
             }
             timeToLastResult = System.nanoTime();
         }
-        System.out.println("Number of results found in Index: " + count);
+        //System.out.println("Number of results found in Index: " + count);
         stringBuilder.append((timeToFirstResult - startTime) / (double) 1000000).append(",");
         stringBuilder.append((timeToLastResult - startTime) / (double) 1000000);
-        //System.out.println("Result Set Size index: " + count);
+        System.out.println("Result Set Size index: " + count);
 
         if(tx != null){
             tx.close();
@@ -186,9 +187,9 @@ class simpleLUBMExperiments {
             try (PageProxyCursor cursorB = disks.get(indexB).getCursor(searchCursorB.pageID, PagedFile.PF_SHARED_LOCK)) {
                 timeToFirstResult = System.nanoTime();
                 if(searchCursorA.hasNext(cursorA) && searchCursorB.hasNext(cursorB)) {
-                    resultA = searchCursorA.next(cursorA);
-                    resultB = searchCursorB.next(cursorB);
                     while (searchCursorA.hasNext(cursorA) && searchCursorB.hasNext(cursorB)) {
+                        resultA = searchCursorA.next(cursorA);
+                        resultB = searchCursorB.next(cursorB);
                         if (resultA[1] == resultB[1]) {
                             if(resultA[2] == resultB[3]) {
                                 count++;
@@ -219,12 +220,13 @@ class simpleLUBMExperiments {
                 timeToLastResult = System.nanoTime();
             }
         }
-        //System.out.println("Number of results found in Index: " + count);
         stringBuilder.append((timeToFirstResult - startTime) / (double) 1000000).append(",");
         stringBuilder.append((timeToLastResult - startTime) / (double) 1000000);
-        //System.out.println("Result Set Size index: " + count);
+        System.out.println("Result Set Size index: " + count);
         return count;
     }
+
+
     public int pathJoin(int indexA, long pathIDA, int indexB, long pathIDB) throws IOException {
         long startTime = System.nanoTime();
         long timeToFirstResult;
@@ -264,9 +266,38 @@ class simpleLUBMExperiments {
         }
         stringBuilder.append((timeToFirstResult - startTime) / (double) 1000000).append(",");
         stringBuilder.append((timeToLastResult - startTime) / (double) 1000000);
-        //System.out.println("Result Set Size index: " + count);
+        System.out.println("Result Set Size index: " + count);
         return count;
     }
+    public int pathJoinAlpha(int indexA, long pathIDA, int indexB, long pathIDB) throws IOException {
+        long startTime = System.nanoTime();
+        long timeToFirstResult;
+        long timeToLastResult;
+        long[] searchKeyA = new long[]{pathIDA};
+
+        long[] resultA;
+        long[] resultB;
+        int count = 0;
+        SearchCursor searchCursorA = indexes.get(indexA).find(searchKeyA);
+        try (PageProxyCursor cursorA = disks.get(indexA).getCursor(searchCursorA.pageID, PagedFile.PF_SHARED_LOCK)) {
+            while(searchCursorA.hasNext(cursorA)) {
+                resultA = searchCursorA.next(cursorA);
+                long[] searchKeyB = new long[]{pathIDB, resultA[1]};
+                SearchCursor searchCursorB = indexes.get(indexB).find(searchKeyB);
+                try (PageProxyCursor cursorB = disks.get(indexB).getCursor(searchCursorB.pageID, PagedFile.PF_SHARED_LOCK)) {
+                        while (searchCursorB.hasNext(cursorB)) {
+                            resultB = searchCursorB.next(cursorB);
+                                count++;
+                            }
+                        }
+                    }
+                }
+        //stringBuilder.append((timeToFirstResult - startTime) / (double) 1000000).append(",");
+        //stringBuilder.append((timeToLastResult - startTime) / (double) 1000000);
+        System.out.println("Result Set Size index: " + count);
+        return count;
+    }
+
 
     public void logToFile(){
         try(PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter("LUBMExperiments_results.txt", true)))) {

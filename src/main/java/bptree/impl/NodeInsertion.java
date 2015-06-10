@@ -113,12 +113,10 @@ public class NodeInsertion {
             result.primkey = insertAndBalanceKeysBetweenLeafNodes(cursor, result.left, result.right, key);
         }
         else{
-            cursor.deferWriting();
             checkIfNodeRequiresDifferentLengthConversion(cursor, key);
             int[] searchResult = NodeSearch.search(cursor, key);
             insertKeyAtIndex(cursor, searchResult[1], key);
             updateHeader(cursor, key);
-            cursor.resumeWriting();
         }
         return result;
     }
@@ -207,17 +205,21 @@ public class NodeInsertion {
             //Do it for delimited node
 
         }
+        cursor.deferWriting();
         NodeHeader.setNumberOfKeys(cursor, keysInclInsert / 2);
         cursor.setOffset(NodeHeader.NODE_HEADER_LENGTH);
         cursor.putBytes(childrenA);
         cursor.putBytes(keysA);
+        cursor.resumeWriting();
 
         cursor.next(emptyNode);
+        cursor.deferWriting();
         NodeHeader.setNumberOfKeys(cursor, originalNumberOfKeys / 2);
         NodeHeader.setKeyLength(cursor, keyLength);
         cursor.setOffset(NodeHeader.NODE_HEADER_LENGTH);
         cursor.putBytes(childrenB);
         cursor.putBytes(keysB);
+        cursor.resumeWriting();
 
         return returnedKey;
     }
@@ -317,6 +319,7 @@ public class NodeInsertion {
         cursor.setOffset(offset);
         cursor.getBytes(tmp_bytes);
         cursor.setOffset(offset);
+        cursor.deferWriting();
         for(long item : key){
             cursor.putLong(item);
         }
@@ -326,9 +329,11 @@ public class NodeInsertion {
         cursor.putBytes(tmp_bytes);
 
         NodeHeader.setNumberOfKeys(cursor, NodeHeader.getNumberOfKeys(cursor) + 1);
+        cursor.resumeWriting();
     }
 
     private static void insertChildAtIndex(PageProxyCursor cursor, int index, long child){
+        cursor.deferWriting();
         int childInsertionOffset = NodeHeader.NODE_HEADER_LENGTH + (index * 8);
         byte[] shiftDownBytes = new byte[DiskCache.PAGE_SIZE - childInsertionOffset - 8];
         cursor.setOffset(childInsertionOffset);
@@ -336,6 +341,7 @@ public class NodeInsertion {
         cursor.setOffset(childInsertionOffset);
         cursor.putLong(child);
         cursor.putBytes(shiftDownBytes);
+        cursor.resumeWriting();
     }
 
     private static byte[] insertKeyAtIndex(byte[] keys, long[] newKey, int index, long[] returnedKey){

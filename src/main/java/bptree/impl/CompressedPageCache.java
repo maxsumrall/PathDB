@@ -6,7 +6,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 public class CompressedPageCache {
-    int max_cache_size_mb = 1024;
+    int max_cache_size_mb = 2048;
     private int max_cache_size;
     private LRUCache<Long, ByteBuffer> cache;
     public CompressedPageCache(){
@@ -31,12 +31,6 @@ public class CompressedPageCache {
             super(cacheSize, 0.75f, true);
             this.cacheSize = cacheSize;
         }
-
-        @Override
-        public ByteBuffer get(Object id){
-            return null;
-        }
-
         protected boolean removeEldestEntry(Map.Entry<Long, ByteBuffer> eldest) {
             return this.size() >= cacheSize;
         }
