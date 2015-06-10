@@ -18,13 +18,13 @@ public class DiskCompressor {
         long[] prev = new long[keyLength];
         byte[] encodedKey;
         int keyCount = 0;
-        DiskCache compressedDisk = DiskCache.persistentDiskCache("compressed_disk.dat", false); //I'm handling compression here, so I don't want the cursor to get confused.
+        DiskCache compressedDisk = DiskCache.persistentDiskCache( keyLength + "compressed_disk.dat", false); //I'm handling compression here, so I don't want the cursor to get confused.
         try(PageProxyCursor compressedCursor = compressedDisk.getCursor(0, PagedFile.PF_EXCLUSIVE_LOCK)) {
             compressedCursor.setOffset(NodeHeader.NODE_HEADER_LENGTH);
             while(iterator.hasNext()){
                 next = iterator.getNext();
                 encodedKey = encodeKey(next, prev);
-                prev = next;
+                System.arraycopy(next, 0, prev, 0, prev.length);
                 keyCount++;
                 compressedCursor.putBytes(encodedKey);
                 if(compressedCursor.getOffset() + (keyLength * Long.BYTES) > DiskCache.PAGE_SIZE){
@@ -64,7 +64,7 @@ public class DiskCompressor {
             maxNumBytes = Math.max(maxNumBytes, numberOfBytes(diff[i]));
         }
 
-        byte[] encoded = new byte[1 + (maxNumBytes * 3 )];
+        byte[] encoded = new byte[1 + (maxNumBytes * key.length )];
         encoded[0] = (byte)maxNumBytes;
         for(int i = 0; i < key.length; i++){
             toBytes(diff[i], encoded, 1 + (i * maxNumBytes), maxNumBytes);
@@ -76,7 +76,7 @@ public class DiskCompressor {
         return (int) (Math.ceil(Math.log(value) / Math.log(2)) / 8) + 1;
     }
 
-    public static void toBytes(long val, byte[] dest,int position, int numberOfBytes) { //rewrite this to put bytes in a already made array at the right position.
+    public static void toBytes(long val, byte[] dest, int position, int numberOfBytes) { //rewrite this to put bytes in a already made array at the right position.
         for (int i = numberOfBytes - 1; i > 0; i--) {
             dest[position + i] = (byte) val;
             val >>>= 8;

@@ -14,10 +14,7 @@ import org.neo4j.io.pagecache.PagedFile;
 import org.neo4j.tooling.GlobalGraphOperations;
 
 import java.io.*;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.*;
 
 /**
  * Created by max on 6/2/15.
@@ -42,7 +39,7 @@ public class CleverIndexBuilder {
 
         try(PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(INDEX_METADATA_PATH, false)))) {
             for(int i = 0; i < indexBuilder.indexes.size(); i++){
-                out.println(indexBuilder.sorters.get(i+3).keySize + "," + indexBuilder.indexes.get(i+1).rootNodeId);
+                out.println(indexBuilder.sorters.get(i+3).keySize + "," + indexBuilder.indexes.get(i+1).rootNodeId + "," + indexBuilder.indexes.get(i+1).disk.COMPRESSION);
                 indexBuilder.indexes.get(i+1).disk.shutdown();
             }
         }
@@ -65,28 +62,59 @@ public class CleverIndexBuilder {
             sorters.put(i + 2, new Sorter(i + 2));
         }
 
+        long startTime = System.nanoTime();
         enumerateSingleEdges();
+        long endTime = System.nanoTime();
+        logToFile("Time to enumerate K1 edges(ns): " + (endTime - startTime));
         Sorter sorterK1 = sorters.get(3);
         System.out.println("\nSorting K = 1");
+
+        startTime = System.nanoTime();
         SetIterator k1Iterator = sorterK1.sort();
+        endTime = System.nanoTime();
+        logToFile("Time to sort K1 edges(ns): " + (endTime - startTime));
+
+        startTime = System.nanoTime();
         NodeTree k1Index = buildIndex(sorterK1, k1Iterator);
+        endTime = System.nanoTime();
+        logToFile("Time to bulk load K1 edges into index(ns): " + (endTime - startTime));
+
         indexes.put(1, k1Index);
 
-        buildK2Paths();
-        Sorter sorterK2 = sorters.get(4);
-        SetIterator k2Iterator = sorterK2.finishWithoutSort();
-        NodeTree k2Index = buildIndex(sorterK2, k2Iterator);
-        indexes.put(2, k2Index);
-
+        if(MAX_K > 1) {
+            startTime = System.nanoTime();
+            buildK2Paths();
+            endTime = System.nanoTime();
+            logToFile("Time to build K2 edges(ns): " + (endTime - startTime));
+            Sorter sorterK2 = sorters.get(4);
+            SetIterator k2Iterator = sorterK2.finishWithoutSort();
+            NodeTree k2Index = buildIndex(sorterK2, k2Iterator);
+            indexes.put(2, k2Index);
+        }
     }
-
     public NodeTree buildIndex(Sorter sorter, SetIterator finalIterator) throws IOException {
         System.out.println("Building Index");
-        DiskCache sortedDisk;
-        System.out.println("Compressing...");
-        DiskCache compressedSortedDisk = DiskCompressor.convertDiskToCompressed(finalIterator, sorter.keySize);//returns a DiskCache object containing the same data but compressed.
-        NodeBulkLoader bulkLoader = new NodeBulkLoader(compressedSortedDisk, DiskCompressor.finalPageID, sorter.keySize);
+        DiskCache sortedDisk = sorter.getSortedDisk();
+        NodeBulkLoader bulkLoader = new NodeBulkLoader(sortedDisk, sorter.finalPageId(), sorter.keySize);
         NodeTree index = bulkLoader.run();
+        sortedDisk.pageCacheFile.renameTo(new File(sorter.toString() + LUBM_INDEX_PATH));
+        System.out.println("Done. Root for this index: " + index.rootNodeId);
+        logToFile("index K= " + sorter.keySize + " root: " + index.rootNodeId);
+        return index;
+    }
+
+    public NodeTree buildCompressedIndex(Sorter sorter, SetIterator finalIterator) throws IOException {
+        System.out.println("Building Index");
+        System.out.println("Compressing...");
+        long startTime = System.nanoTime();
+        DiskCache compressedSortedDisk = DiskCompressor.convertDiskToCompressed(finalIterator, sorter.keySize);//returns a DiskCache object containing the same data but compressed.
+        long endTime = System.nanoTime();
+        logToFile("Time to compress K2 edges(ns): " + (endTime - startTime));
+        NodeBulkLoader bulkLoader = new NodeBulkLoader(compressedSortedDisk, DiskCompressor.finalPageID, sorter.keySize);
+        startTime = System.nanoTime();
+        NodeTree index = bulkLoader.run();
+        endTime = System.nanoTime();
+        logToFile("Time to bulk load K2 edges(ns): " + (endTime - startTime));
         compressedSortedDisk.pageCacheFile.renameTo(new File(sorter.toString() + LUBM_INDEX_PATH));
         System.out.println("Done. Root for this index: " + index.rootNodeId);
         return index;
@@ -122,31 +150,36 @@ public class CleverIndexBuilder {
         System.out.println("Keys written: " + count);
     }
 
+
+
     private void buildK2Paths() throws IOException {
         System.out.println("Building K2 Paths");
-        PageProxyCursor cursorA;
         int pathCount = 0;
         int k2count = 0;
         long prevK2PathId = 0;
         Long[] combinedPath;
         int total = relationshipMap.size() * relationshipMap.size();
         for(long pathIdA : relationshipMap.keySet()){
-            for(long pathIdB: relationshipMap.keySet()){
+            for(long pathIdB: relationshipMap.keySet()) {
                 System.out.print("\rPaths complete: " + pathCount++ + "/" + total);
-                SearchCursor resultA = indexes.get(1).find(new long[]{pathIdA});
-                cursorA = indexes.get(1).disk.getCursor(resultA.pageID, PagedFile.PF_SHARED_LOCK);
-                while(resultA.hasNext(cursorA)){
-                    long[] entry = resultA.next(cursorA);
-                    cursorA.close();
-                    SearchCursor resultB = indexes.get(1).find(new long[]{pathIdB,entry[2]});
+
+                ArrayList<Long[]> entries = new ArrayList<>();
+                SearchCursorObjectReturner resultA = new SearchCursorObjectReturner(indexes.get(1).find(new long[]{pathIdA}));
+                try (PageProxyCursor cursorA = indexes.get(1).disk.getCursor(resultA.pageID, PagedFile.PF_SHARED_LOCK)) {
+                    while (resultA.hasNext(cursorA)) {
+                        entries.add(resultA.next(cursorA));
+                    }
+                }
+                for (Long[] entry : entries) {
+                    SearchCursor resultB = indexes.get(1).find(new long[]{pathIdB, entry[2]});
                     try (PageProxyCursor cursorB = indexes.get(1).disk.getCursor(resultB.pageID, PagedFile.PF_SHARED_LOCK)) {
                         while (resultB.hasNext(cursorB)) {
                             long[] secondPath = resultB.next(cursorB);
                             if (entry[1] == secondPath[2] && entry[2] != secondPath[1]) {
                                 continue;
                             }
-                            PathIDBuilder builder = new PathIDBuilder( relationshipMap.get(entry[0]).getPath(), relationshipMap.get(pathIdB).getPath() );
-                            if(!shortOrderedPathIDs.containsKey(builder.buildPath())){
+                            PathIDBuilder builder = new PathIDBuilder(relationshipMap.get(entry[0]).getPath(), relationshipMap.get(pathIdB).getPath());
+                            if (!shortOrderedPathIDs.containsKey(builder.buildPath())) {
                                 shortOrderedPathIDs.put(builder.buildPath(), currentShortPathID++);
                                 k2RelationshipsMap.put(shortOrderedPathIDs.get(builder.buildPath()), builder);
                             }
@@ -156,7 +189,6 @@ public class CleverIndexBuilder {
                             sorters.get(4).addSortedKeyBulk(combinedPath);
                         }
                     }
-                    cursorA = indexes.get(1).disk.getCursor(resultA.pageID, PagedFile.PF_SHARED_LOCK);
                 }
             }
         }
@@ -182,6 +214,15 @@ public class CleverIndexBuilder {
     private void updateStats(PathIDBuilder builder){
         if(!relationshipMap.containsKey(builder.buildPath())){
             relationshipMap.put(builder.buildPath(), builder);
+        }
+    }
+
+    public static void logToFile(String text){
+        try(PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter("index_building_times_clever.txt", true)))) {
+            out.println(text);
+            System.out.println(text);
+        }catch (IOException e) {
+            //exception handling left as an exercise for the reader
         }
     }
 
