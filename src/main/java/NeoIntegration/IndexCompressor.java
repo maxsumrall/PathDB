@@ -24,7 +24,7 @@ public class IndexCompressor {
     }
 
     public IndexCompressor(int keyLength) {
-        String diskPath = "K4Cleverlubm50Index.db";
+        String diskPath = "LUBM50Index/K4Cleverlubm50Index.db";
         this.uncompressedDisk = DiskCache.persistentDiskCache(diskPath, false);
         this.compressedDisk = DiskCache.persistentDiskCache(keyLength + "compressed_disk.db", false); //I'm handling compression here, so I don't want the cursor to get confused.
     }
@@ -33,6 +33,7 @@ public class IndexCompressor {
         NodeBulkLoader bulkLoader = new NodeBulkLoader(compressedDisk, finalPageID, keyLength);
         NodeTree index = bulkLoader.run();
         System.out.println("Compressed index root: " + index.rootNodeId);
+        compressedDisk.shutdown();
     }
 
     public long compressDisk(int keyLength) throws IOException {
@@ -54,6 +55,8 @@ public class IndexCompressor {
                     for (int i = 0; i < NodeHeader.getNumberOfKeys(uncompressedCursor); i++) {
                         for (int j = 0; j < keyLength; j++)
                             next[j] = uncompressedCursor.getLong();
+                        if(next[0] == 57 && next[1] == 36983 && next[2] == 0 && next[3] == 558097)
+                            System.out.println("shit the bed");
                         encodedKey = encodeKey(next, prev);
                         System.arraycopy(next, 0, prev, 0, prev.length);
                         keyCount++;
@@ -82,6 +85,7 @@ public class IndexCompressor {
         }
         compressedDisk.COMPRESSION = true;
         return finalPageID;
+        //336674
     }
 
 
@@ -109,13 +113,35 @@ public class IndexCompressor {
     }
 
     public static int numberOfBytes(long value){
-        return (int) (Math.ceil(Math.log(value) / Math.log(2)) / 8) + 1;
+        long abs = Math.abs(value);
+        int minBytes = 8;
+        if(abs <= 127){
+            minBytes = 1;
+        }
+        else if(abs <= 32768){
+            minBytes = 2;
+        }
+        else if(abs <= 8388608){
+            minBytes = 3;
+        }
+        else if(abs <= 2147483648l){
+            minBytes = 4;
+        }
+        else if(abs <= 549755813888l){
+            minBytes = 5;
+        }
+        else if(abs <= 140737488355328l){
+            minBytes = 6;
+        }
+        else if(abs <= 36028797018963968l){
+            minBytes = 7;
+        }
+        return minBytes;
     }
-
     public static void toBytes(long val, byte[] dest, int position, int numberOfBytes) { //rewrite this to put bytes in a already made array at the right position.
         for (int i = numberOfBytes - 1; i > 0; i--) {
             dest[position + i] = (byte) val;
-            val >>>= 8;
+            val >>= 8;
         }
         dest[position] = (byte) val;
     }

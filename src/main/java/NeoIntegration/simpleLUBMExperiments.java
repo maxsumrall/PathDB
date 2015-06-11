@@ -26,7 +26,7 @@ class simpleLUBMExperiments {
         int query;
         int index;
 
-        /*
+
         query = experiments.query("MATCH (x)-[:memberOf]->(y) RETURN ID(x), ID(y)");
         index = experiments.index(3, 649439727, null);
         assert(query == index);
@@ -38,8 +38,6 @@ class simpleLUBMExperiments {
         query = experiments.query("MATCH (x)-[:worksFor]->(y) RETURN ID(x), ID(y)");
         index = experiments.index(3, 35729895, null);
         assert(query == index);
-
-
 
         query = experiments.query("MATCH (x)-[:takesCourse]->(y)<-[:teacherOf]-(z) RETURN ID(x), ID(y), ID(z)");
         index = experiments.index(4, 64, null);
@@ -57,7 +55,6 @@ class simpleLUBMExperiments {
         index = experiments.rectangleJoin(3, 1918060825, 4, 49);
         assert(query == index);
 
-*/
         query = experiments.query("MATCH (x)-[:hasAdvisor]->(y)-[:teacherOf]->(z)<-[:takesCourse]-(x) RETURN ID(x), ID(y), ID(z)");
         index = experiments.rectangleJoin(3, 939155463, 4, 57);
         assert(query == index);
@@ -67,7 +64,7 @@ class simpleLUBMExperiments {
         assert(query == index);
 
         query = experiments.query("MATCH (x)<-[:headOf]-(y)-[:worksFor]->(z)-[:subOrganizationOf]->(w) RETURN ID(x), ID(y), ID(z), ID(w)");
-        index = experiments.pathJoinAlpha(3, 1221271593, 4, 1);
+        index = experiments.pathJoin(3, 1221271593, 4, 1);
         assert(query == index);
 
         for(DiskCache disk : experiments.disks.values()){
@@ -77,9 +74,9 @@ class simpleLUBMExperiments {
 
     public simpleLUBMExperiments() throws IOException {
 
-        String folder = "LUBM50IndexCompressed/";
+        //String folder = "LUBM50IndexCompressed/";
         //String folder = "LUBM50Index/";
-        //String folder = "";
+        String folder = "";
 
         BufferedReader bufferedReader = new BufferedReader(new FileReader(new File(folder + CleverIndexBuilder.INDEX_METADATA_PATH)));
         String line;
@@ -187,12 +184,13 @@ class simpleLUBMExperiments {
             try (PageProxyCursor cursorB = disks.get(indexB).getCursor(searchCursorB.pageID, PagedFile.PF_SHARED_LOCK)) {
                 timeToFirstResult = System.nanoTime();
                 if(searchCursorA.hasNext(cursorA) && searchCursorB.hasNext(cursorB)) {
-                    while (searchCursorA.hasNext(cursorA) && searchCursorB.hasNext(cursorB)) {
                         resultA = searchCursorA.next(cursorA);
                         resultB = searchCursorB.next(cursorB);
+                    while (searchCursorA.hasNext(cursorA) && searchCursorB.hasNext(cursorB)) {
                         if (resultA[1] == resultB[1]) {
                             if(resultA[2] == resultB[3]) {
                                 count++;
+                                resultsToFile(Arrays.toString(resultA) + ", " + Arrays.toString(resultB));
                                 resultA = searchCursorA.next(cursorA);
                                 resultB = searchCursorB.next(cursorB);
                             }
@@ -248,7 +246,7 @@ class simpleLUBMExperiments {
                     while (searchCursorA.hasNext(cursorA) && searchCursorB.hasNext(cursorB)) {
                         if (resultA[1] == resultB[1]) {
                             count++;
-                            //resultA = searchCursorA.next(cursorA);
+                            resultA = searchCursorA.next(cursorA);
                             resultB = searchCursorB.next(cursorB);
                         } else if (resultA[1] > resultB[1]) {
                             if (searchCursorB.hasNext(cursorB)) {
@@ -304,6 +302,14 @@ class simpleLUBMExperiments {
             out.println(this.cypher+"\n");
             out.println(stringBuilder.toString());
             System.out.println(stringBuilder.toString());
+        }catch (IOException e) {
+            //exception handling left as an exercise for the reader
+        }
+    }
+    public void resultsToFile(String result){
+        try(PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter("rectangleJoin.txt", true)))) {
+            //out.println(result + "\n");
+            //System.out.println(stringBuilder.toString());
         }catch (IOException e) {
             //exception handling left as an exercise for the reader
         }

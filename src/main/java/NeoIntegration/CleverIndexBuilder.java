@@ -88,7 +88,7 @@ public class CleverIndexBuilder {
             logToFile("Time to build K2 edges(ns): " + (endTime - startTime));
             Sorter sorterK2 = sorters.get(4);
             SetIterator k2Iterator = sorterK2.finishWithoutSort();
-            NodeTree k2Index = buildIndex(sorterK2, k2Iterator);
+            NodeTree k2Index = buildCompressedIndex(sorterK2, k2Iterator);
             indexes.put(2, k2Index);
         }
     }

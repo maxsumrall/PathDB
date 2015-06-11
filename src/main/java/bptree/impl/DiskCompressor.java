@@ -23,6 +23,8 @@ public class DiskCompressor {
             compressedCursor.setOffset(NodeHeader.NODE_HEADER_LENGTH);
             while(iterator.hasNext()){
                 next = iterator.getNext();
+                if(next[0] == 57 && next[1] == 36983 && next[2] == 0 && next[3] == 558097)
+                    System.out.println("shit the bed");
                 encodedKey = encodeKey(next, prev);
                 System.arraycopy(next, 0, prev, 0, prev.length);
                 keyCount++;
@@ -79,36 +81,8 @@ public class DiskCompressor {
     public static void toBytes(long val, byte[] dest, int position, int numberOfBytes) { //rewrite this to put bytes in a already made array at the right position.
         for (int i = numberOfBytes - 1; i > 0; i--) {
             dest[position + i] = (byte) val;
-            val >>>= 8;
+            val >>= 8;
         }
         dest[position] = (byte) val;
-    }
-    public static byte[] toBytes(long val) {
-        int numberOfBytes = (int) (Math.ceil(Math.log(val) / Math.log(2)) / 8) + 1;
-        byte [] b = new byte[numberOfBytes];
-        for (int i = numberOfBytes - 1; i > 0; i--) {
-            b[i] = (byte) val;
-            val >>>= 8;
-        }
-        b[0] = (byte) val;
-        return b;
-    }
-
-    public static long toLong(byte[] bytes) {
-        long l = 0;
-        for(int i = 0; i < bytes.length; i++) {
-            l <<= 8;
-            l ^= bytes[i] & 0xFF;
-        }
-        return l;
-    }
-
-    public static long toLong(byte[] bytes, int offset, int length) {
-        long l = 0;
-        for(int i = offset; i < offset + length; i++) {
-            l <<= 8;
-            l ^= bytes[i] & 0xFF;
-        }
-        return l;
     }
 }

@@ -17,200 +17,248 @@ import java.util.Arrays;
  */
 public class LZ4PageCursor extends PageProxyCursor{
     public static PagedFile pagedFile;
-    byte[] compressed = new byte[DiskCache.PAGE_SIZE*6];
-    byte[] decompressed = new byte[DiskCache.PAGE_SIZE * 6];
-    byte[] tmp_buffer = new byte[DiskCache.PAGE_SIZE];
     LZ4Factory factory = LZ4Factory.fastestInstance();
     LZ4Compressor compressor = factory.fastCompressor();
     LZ4FastDecompressor decompressor = factory.fastDecompressor();
-    ByteBuffer buffer;
     PageCursor cursor;
-    int SIZE = 0;
-    private boolean dirty = true;
+    int maxPageSize = DiskCache.PAGE_SIZE * 7;
+    ByteBuffer dBuffer = ByteBuffer.allocate(maxPageSize);
+    int mostRecentCompressedLeafSize = DiskCache.PAGE_SIZE;//the default value
+    boolean deferWriting = false;
 
     public LZ4PageCursor(DiskCache disk, long pageId, int lock) throws IOException {
-        pagedFile = disk.getPagedFile();
-        this.cursor = pagedFile.io(pageId, lock);
-        this.cursor.next();
-        loadDataFromCursor();
-        buffer = ByteBuffer.wrap(decompressed);
-    }
-
-    private LZ4PageCursor(){
-
-    }
-
-    public int getSize(){
-        return SIZE;
-    }
-
-    public int capacity(){
-        return buffer.capacity();
-        //return DiskCache.PAGE_SIZE;
-    }
-
-    public void initNewLeaf(byte[] leafData) throws IOException {
-        this.decompressed = leafData;
-        buffer = ByteBuffer.wrap(this.decompressed);
-        compress();
-    }
-
-    private void loadDataFromCursor() throws IOException {
-        cursor.setOffset(0);
-        cursor.getBytes(tmp_buffer);
-        decompress();
-    }
-
-    private void writeDataToCursor(){
-     try {
-         compress();
-     } catch (IOException e) {
-         e.printStackTrace();
-     }
-        System.arraycopy(compressed, 0, tmp_buffer, 0, SIZE);
-        cursor.setOffset(0);
-        cursor.putBytes(tmp_buffer);
-    }
-
-    public void compress() throws IOException {
-        int maxCompressedSize = compressor.maxCompressedLength(decompressed.length);
-        byte[] tmp_compressed = new byte[maxCompressedSize];
-        this.SIZE = compressor.compress(decompressed, 0, decompressed.length, compressed, 0, maxCompressedSize);
-        compressed = Arrays.copyOfRange(tmp_compressed,0 , this.SIZE);
-
-
-        //System.out.println("Original: " + decompressed.length + " b");
-        //System.out.println("Compressed: " + SIZE + " b");
-    }
-
-    public void decompress(){
-        try {
-            int size = decompressor.decompress(tmp_buffer, 0, decompressed, 0, decompressed.length);
-            this.SIZE = size;
-        }
-        catch(Exception e){
-            SIZE = 0;
-            //System.out.println("Caught exception in decompression.");
-        }
-        //System.out.println("Original: " + data.length);
-        //System.out.println("Compressed: " + output.length);
+        this.cursor = disk.pagedFile.io(pageId, lock);
+        cursor.next();
+        loadCursorFromDisk();
     }
 
     @Override
     public void next(long page) throws IOException {
-        writeDataToCursor();
-        Arrays.fill(this.decompressed, (byte) 0);
-        this.buffer.position(0);
         cursor.next(page);
-        loadDataFromCursor();
+        loadCursorFromDisk();
+        dBuffer.position(0);
+    }
+
+    public void pushChangesToDisk(){
+        if(!deferWriting) {
+            int mark = dBuffer.position();
+            if (NodeHeader.isLeafNode(dBuffer))
+                compressAndWriteLeaf();
+            else
+                writeInternal();
+            dBuffer.position(mark);
+        }
+
+    }
+
+    private void writeInternal(){
+        dBuffer.position(0);
+        cursor.setOffset(0);
+        for(int i = 0; i < DiskCache.PAGE_SIZE; i++){
+            cursor.putByte(dBuffer.get());
+        }
+    }
+
+
+    private void compressAndWriteLeaf(){
+        //compress the contents of dBuffer. Must first determine how big dBuffer actually is.
+        //assumption that this is a leaf node.
+        //will just check if the path id is zero, if so, this is the end of this block.
+        int decompressedSize = getLastUsedLeafBufferPosition() - NodeHeader.NODE_HEADER_LENGTH;
+        if(decompressedSize != 0) {
+            byte[] compresedMinusHeader = compress(decompressedSize);
+            writeHeaderToCursor();
+            cursor.setOffset(NodeHeader.NODE_HEADER_LENGTH);
+            cursor.putBytes(compresedMinusHeader);
+        }
+    }
+
+    public byte[] compress(int decompressedSize){
+        int keyLength = NodeHeader.getKeyLength(cursor);
+        int numberOfKeys = NodeHeader.getNumberOfKeys(cursor);
+        byte[] compressed = new byte[DiskCache.PAGE_SIZE - NodeHeader.NODE_HEADER_LENGTH];
+        byte[] data = new byte[decompressedSize];
+        System.arraycopy(dBuffer.array(), NodeHeader.NODE_HEADER_LENGTH, data, 0, data.length);
+        compressor.compress(data, 0, decompressedSize, compressed, 0, data.length);
+        return data;
+    }
+
+
+
+    private int getLastUsedLeafBufferPosition(){
+        int keyLength = NodeHeader.getKeyLength(cursor);
+        int numberOfKeys = NodeHeader.getNumberOfKeys(cursor);
+        if(keyLength == 0 || numberOfKeys == 0)
+            return NodeHeader.NODE_HEADER_LENGTH;
+        dBuffer.position(NodeHeader.NODE_HEADER_LENGTH);
+        while(dBuffer.remaining() > keyLength * Long.BYTES){
+            if(dBuffer.getLong() == 0l){
+                dBuffer.position(dBuffer.position() - Long.BYTES);
+                break;
+            }
+            dBuffer.position(dBuffer.position() + (keyLength -1) * Long.BYTES);
+        }
+        return dBuffer.position();
+    }
+
+    private void writeHeaderToCursor(){
+        cursor.setOffset(0);
+        for(int i = 0; i < NodeHeader.NODE_HEADER_LENGTH; i++)
+            cursor.putByte(dBuffer.get(i));
+    }
+
+    private void loadCursorFromDisk(){
+        //ByteBuffer possibleBuffer = fastCache.getByteBuffer(cursor.getCurrentPageId());
+        //if(possibleBuffer != null){
+        //    dBuffer = possibleBuffer;
+        // }
+        // else {
+        //      dBuffer = ByteBuffer.allocate(maxPageSize);
+        if (NodeHeader.isUninitializedNode(cursor)) {
+            return;
+        } else if (NodeHeader.isLeafNode(cursor))
+            decompressLeaf();
+        else
+            decompressInternalNode();
+    }
+    //}
+
+    private void decompressLeaf(){
+        byte[] compressed = new byte[DiskCache.PAGE_SIZE - NodeHeader.NODE_HEADER_LENGTH];
+        cursor.setOffset(NodeHeader.NODE_HEADER_LENGTH);
+        cursor.getBytes(compressed);
+        byte[] restored = new byte[maxPageSize];
+        decompressor.decompress(compressed, 0, restored, 0, maxPageSize);
+
+    }
+
+    private void decompressInternalNode(){
+        Arrays.fill(dBuffer.array(), (byte)0);
+        dBuffer.position(0);
+        cursor.setOffset(0);
+        dBuffer.limit(DiskCache.PAGE_SIZE);
+        for(int i = 0; i < DiskCache.PAGE_SIZE; i++){
+            dBuffer.put(cursor.getByte());
+        }
     }
 
     @Override
     public long getCurrentPageId() {
-        return this.cursor.getCurrentPageId();
+        return cursor.getCurrentPageId();
+    }
+
+    @Override
+    public int capacity() {
+        if(NodeHeader.isLeafNode(this))
+            return maxPageSize;
+        else
+            return DiskCache.PAGE_SIZE;
+    }
+
+    @Override
+    public int getSize(){
+        return DiskCache.PAGE_SIZE;
     }
 
     @Override
     public void setOffset(int offset) {
-        this.buffer.position(offset);
+        dBuffer.position(offset);
     }
 
     @Override
     public int getOffset() {
-        return this.buffer.position();
+        return dBuffer.position();
     }
 
     @Override
     public void getBytes(byte[] dest) {
-        this.buffer.get(dest);
+        dBuffer.get(dest);
     }
 
     @Override
     public byte getByte(int offset) {
-        return this.buffer.get(offset);
+        return dBuffer.get(offset);
     }
 
     @Override
     public void putBytes(byte[] src) {
-        this.buffer.put(src);
-        writeDataToCursor();
+        dBuffer.put(src);
+        pushChangesToDisk();
     }
 
     @Override
-    public void putByte(byte val) {
-        this.buffer.put(val);
-        writeDataToCursor();
+    public void putByte(byte val){
+        dBuffer.put(val);
+        pushChangesToDisk();
     }
 
     @Override
-    public void putByte(int offset, byte val) {
-        this.buffer.put(offset, val);
-        writeDataToCursor();
+    public void putByte(int offset, byte val){
+        dBuffer.put(offset, val);
+        pushChangesToDisk();
     }
 
     @Override
     public long getLong() {
-        return this.buffer.getLong();
+        return dBuffer.getLong();
     }
 
     @Override
     public long getLong(int offset) {
-        return this.buffer.getLong(offset);
+        return dBuffer.getLong(offset);
     }
 
     @Override
-    public void putLong(long val) {
-        this.buffer.putLong(val);
-        writeDataToCursor();
+    public void putLong(long val){
+        dBuffer.putLong(val);
+        pushChangesToDisk();
     }
-
     @Override
-    public void putLong(int offset, long val) {
-        this.buffer.putLong(offset, val);
-        writeDataToCursor();
+    public void putLong(int offset, long val){
+        dBuffer.putLong(offset, val);
+        pushChangesToDisk();
     }
 
     @Override
     public int getInt() {
-        return this.buffer.getInt();
+        return dBuffer.getInt();
     }
 
     @Override
     public int getInt(int offset) {
-        return this.buffer.getInt(offset);
+        return dBuffer.getInt(offset);
     }
 
     @Override
-    public void putInt(int val) {
-        this.buffer.putInt(val);
-        writeDataToCursor();
-
+    public void putInt(int val){
+        dBuffer.putInt(val);
+        pushChangesToDisk();
     }
-
     @Override
-    public void putInt(int offset, int val) {
-        this.buffer.putInt(offset, val);
-        writeDataToCursor();
+    public void putInt(int offset, int val){
+        dBuffer.putInt(offset, val);
+        pushChangesToDisk();
     }
-
     @Override
-    public boolean internalNodeContainsSpaceForNewKeyAndChild(long[] newKey) throws IOException {
-        return (this.SIZE + (newKey.length + 1) * 8) <= DiskCache.PAGE_SIZE - 50;
-    }
-
-    @Override
-    public boolean leafNodeContainsSpaceForNewKey(long[] newKey) throws IOException {
-        return (this.SIZE + newKey.length * 8 ) <= DiskCache.PAGE_SIZE - 50;
+    public boolean leafNodeContainsSpaceForNewKey(long[] newKey){
+        //return NodeSize.leafNodeContainsSpaceForNewKey(this, newKey);
+        return mostRecentCompressedLeafSize + (newKey.length * Long.BYTES) < DiskCache.PAGE_SIZE;
     }
 
     @Override
     public void deferWriting() {
-
+        deferWriting = true;
     }
 
     @Override
     public void resumeWriting() {
+        deferWriting = false;
+        pushChangesToDisk();//maybe not necessary, and this is maybe redundant.
+    }
 
+    @Override
+    public boolean internalNodeContainsSpaceForNewKeyAndChild(long[] newKey){
+        return NodeSize.internalNodeContainsSpaceForNewKeyAndChild(this, newKey);
     }
 
     @Override
