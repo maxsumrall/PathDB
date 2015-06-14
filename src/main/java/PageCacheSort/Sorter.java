@@ -167,6 +167,7 @@ public class Sorter {
         sortedKeys.add(keyObj);
     }
 
+    /* Testing for compressed pages.
     public void addSortedKeyBulk(Long[] key) throws IOException {
         if(byteRepSize + (keySize * 8) >= ALT_MAX_PAGE_SIZE){
             flushSortedBulkLoadedKeys();
@@ -174,6 +175,16 @@ public class Sorter {
         byteRepSize += key.length * 8;
         sortedKeys.add(key);
     }
+    */
+
+    public void addSortedKeyBulk(Long[] key) throws IOException {
+        if(byteRepSize + (keySize * 8) >= ALT_MAX_PAGE_SIZE){
+            flushSortedBulkLoadedKeys();
+        }
+        byteRepSize += key.length * 8;
+        sortedKeys.add(key);
+    }
+
 
     private void flushSortedBulkLoadedKeys() throws IOException {
         //dump sorted keys to page,
