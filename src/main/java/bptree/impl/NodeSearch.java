@@ -18,7 +18,7 @@ public class NodeSearch {
         long[] entry = null;
         SearchCursor resultsCursor = null;
         int[] searchResult;
-        try (PageProxyCursor cursor = tree.disk.getCursor(tree.rootNodeId, PagedFile.PF_EXCLUSIVE_LOCK)) {
+        try (PageProxyCursor cursor = tree.disk.getCursor(tree.rootNodeId, PagedFile.PF_SHARED_LOCK)) {
                     searchResult = find(cursor, key);
                     long currentNode = cursor.getCurrentPageId();
                     if(searchResult[0] == 0) {
@@ -50,7 +50,7 @@ public class NodeSearch {
 
     public int[] search(long nodeId, long[] key) {
         int[] result = new int[]{-1, -1};
-        try (PageProxyCursor cursor = tree.disk.getCursor(nodeId, PagedFile.PF_EXCLUSIVE_LOCK)) {
+        try (PageProxyCursor cursor = tree.disk.getCursor(nodeId, PagedFile.PF_SHARED_LOCK)) {
                     result = search(cursor, key);
 
         } catch (IOException e) {
@@ -117,7 +117,7 @@ public class NodeSearch {
         for(int i = 0; i < numberOfKeys; i++) {
             lastKeyLength = 1;
             currKey = cursor.getLong();
-            while(currKey != Node.KEY_DELIMITER) {
+            while(currKey != NodeHeader.KEY_DELIMITER) {
                 arrayUtil.put(currKey);
                 currKey = cursor.getLong();
                 lastKeyLength++;
@@ -169,7 +169,7 @@ public class NodeSearch {
         for(int i = 0; i < numberOfKeys; i++) {
             lastKeyLength = 1;
             currKey = cursor.getLong();
-            while(currKey != Node.KEY_DELIMITER) {
+            while(currKey != NodeHeader.KEY_DELIMITER) {
                 arrayUtil.put(currKey);
                 currKey = cursor.getLong();
                 lastKeyLength++;

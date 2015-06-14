@@ -10,17 +10,19 @@ import java.io.IOException;
 /**
  * Takes a normal index, compresses the leaves, builds the new index on it, and saves it.
  */
-public class FillSortedDisk {
+public class SuperFillSortedDisk {
     public DiskCache compressedDisk;
     long finalPageID;
     long[] prev;
     byte[] encodedKey;
     int keyCount = 0;
     int keyLength;
-    int maxNumBytes;
     PageProxyCursor compressedCursor;
+    int maxNumBytes;
+    final int sameID = 128;
+    final int sameFirstNode = 64;
 
-    public FillSortedDisk(int keyLength) throws IOException {
+    public SuperFillSortedDisk(int keyLength) throws IOException {
         this.keyLength = keyLength;
         this.prev = new long[keyLength];
         this.compressedDisk = DiskCache.persistentDiskCache(keyLength + "compressed_disk.db", false); //I'm handling compression here, so I don't want the cursor to get confused.
@@ -66,18 +68,34 @@ public class FillSortedDisk {
 
     public byte[] encodeKey(long[] key, long[] prev){
 
-        maxNumBytes = 0;
-        for(int i = 0; i < key.length; i++){
+        this.maxNumBytes = 0;
+        int firstEncodedIndex = 0;
+        byte header = (byte)0;
+        if(key[0] == prev[0]) {
+            //set first bit
+            firstEncodedIndex++;
+            header |= sameID;
+
+            if (key[1] == prev[1]) {
+                //set second bit
+                firstEncodedIndex++;
+                header |= sameFirstNode;
+            }
+        }
+
+        for(int i = firstEncodedIndex; i < key.length; i++){
             maxNumBytes = Math.max(maxNumBytes, numberOfBytes(key[i] - prev[i]));
         }
 
-        byte[] encoded = new byte[1 + (maxNumBytes * key.length )];
-        encoded[0] = (byte) maxNumBytes;
-        for(int i = 0; i < key.length; i++){
-            toBytes(key[i] - prev[i], encoded, 1 + (i * maxNumBytes), maxNumBytes);
+        byte[] encoded = new byte[1 + (maxNumBytes * (key.length - firstEncodedIndex))];
+        header |=  maxNumBytes;
+        encoded[0] = header;
+        for(int i = 0; i < key.length - firstEncodedIndex; i++){
+            toBytes(key[i + firstEncodedIndex] - prev[i + firstEncodedIndex], encoded, 1 + (i * maxNumBytes), maxNumBytes);
         }
         return encoded;
     }
+
 
     public static int numberOfBytes(long value){
         long abs = Math.abs(value);

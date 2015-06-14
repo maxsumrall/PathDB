@@ -1,18 +1,17 @@
 package bptree.impl;
 
-import bptree.Key;
-
 import java.util.Arrays;
 import java.util.Comparator;
 
 /**
  * Implements Comparator for sorting keys.
  */
-public class KeyImpl implements Key, Comparator<long[]> {
+public class KeyImpl implements Comparator<long[]> {
 
     private Long[] composed_key;
     private Long[] labelPath;
     private Long[] nodes;
+    private static KeyImpl comparator;
 
     public KeyImpl(Long[] labelPath, Long[] nodes){
         this.labelPath = labelPath;
@@ -24,7 +23,10 @@ public class KeyImpl implements Key, Comparator<long[]> {
     }
 
     public static KeyImpl getComparator(){
-        return new KeyImpl();
+        if(comparator == null){
+            comparator = new KeyImpl();
+        }
+        return comparator;
     }
 
     public Long[] getLabelPath(){
@@ -48,10 +50,8 @@ public class KeyImpl implements Key, Comparator<long[]> {
     public int compare(Long[] a, Long[] b) {
 
         if(a.length != b.length){ return a.length - b.length; }
-        long temp;
         for (int i = 0; i < a.length; i++) {
-            temp = a[i] - b[i];
-            if (temp != 0) {
+            if (a[i] - b[i] != 0) {
                 return a[i].compareTo(b[i]);
             }
         }
@@ -83,13 +83,8 @@ public class KeyImpl implements Key, Comparator<long[]> {
         return 0;
     }
     public int prefixCompare(long[] search_key, long[] key) {
-        long temp;
-        //if(search_key.length != key.length){
-        //    return search_key.length - key.length;
-        //}
         for (int i = 0; i < search_key.length; i++) {
-            temp = search_key[i] - key[i];
-            if (temp != 0) {
+            if (search_key[i] - key[i] != 0) {
                 return (int) (search_key[i] - (key[i]));
             }
         }

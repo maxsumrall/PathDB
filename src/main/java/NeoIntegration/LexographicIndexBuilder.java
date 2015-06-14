@@ -33,6 +33,8 @@ public class LexographicIndexBuilder {
     TreeMap<Long, PathIDBuilder> k3RelationshipsMap = new TreeMap<>(); //relationship types to path ids
     HashMap<Long, Long> k2PathIds = new HashMap<>();
     HashMap<Long, Long> k3PathIds = new HashMap<>();
+    SuperFillSortedDisk k2DiskFiller = new SuperFillSortedDisk(4);
+    SuperFillSortedDisk k3DiskFiller = new SuperFillSortedDisk(5);
     long currentShortPathID = 1;
 
 
@@ -70,9 +72,7 @@ public class LexographicIndexBuilder {
 
     public LexographicIndexBuilder() throws IOException {
 
-        for(int i = 1; i <= MAX_K; i++){
-            sorters.put(i + 2, new Sorter(i + 2));
-        }
+        sorters.put(3, new Sorter(3));
 
         long startTime = System.nanoTime();
         enumerateSingleEdges();
@@ -96,25 +96,37 @@ public class LexographicIndexBuilder {
         if(MAX_K > 1) {
             startTime = System.nanoTime();
             buildK2Paths();
+            k2DiskFiller.finish();
             endTime = System.nanoTime();
             logToFile("Time to build K2 edges(ns): " + (endTime - startTime));
-            Sorter sorterK2 = sorters.get(4);
-            SetIterator k2Iterator = sorterK2.finishWithoutSort();
-            NodeTree k2Index = buildIndex(sorterK2, k2Iterator);
+            NodeTree k2Index = buildIndex(k2DiskFiller);
             indexes.put(2, k2Index);
         }
 
         if(MAX_K > 2) {
             startTime = System.nanoTime();
             buildK3Paths();
+            k3DiskFiller.finish();
             endTime = System.nanoTime();
             logToFile("Time to build K3 edges(ns): " + (endTime - startTime));
-            Sorter sorterK3 = sorters.get(5);
-            SetIterator k3Iterator = sorterK3.finishWithoutSort();
-            NodeTree k3Index = buildIndex(sorterK3, k3Iterator);
+            NodeTree k3Index = buildIndex(k3DiskFiller);
             indexes.put(3, k3Index);
         }
     }
+
+    public NodeTree buildIndex(SuperFillSortedDisk filler) throws IOException {
+        System.out.println("Building Index");
+        DiskCache sortedDisk = filler.compressedDisk;
+        NodeBulkLoader bulkLoader = new NodeBulkLoader(sortedDisk, filler.finalPageID, filler.keyLength);
+        NodeTree index = bulkLoader.run();
+        File newFile = new File("K" + filler.keyLength + LUBM_INDEX_PATH);
+        sortedDisk.pageCacheFile.renameTo(newFile);
+        index.disk.pageCacheFile = newFile;
+        System.out.println("Done. Root for this index: " + index.rootNodeId);
+        logToFile("index K= " + filler.keyLength+ " root: " + index.rootNodeId);
+        return index;
+    }
+
     public NodeTree buildIndex(Sorter sorter, SetIterator finalIterator) throws IOException {
         System.out.println("Building Index");
         DiskCache sortedDisk = sorter.getSortedDisk();
@@ -163,29 +175,28 @@ public class LexographicIndexBuilder {
         int pathCount = 0;
         int k2count = 0;
         long prevK2PathId = 0;
-        Long[] combinedPath;
+        long[] combinedPath;
         int total = relationshipMap.size() * relationshipMap.size();
         for(long pathIdA : relationshipMap.keySet()){
             for(long pathIdB: relationshipMap.keySet()) {
+                System.out.print("\rPaths complete: " + pathCount++ + "/" + total);
                 if(!PathIDBuilder.lexographicallyFirst(relationshipMap.get(pathIdA), relationshipMap.get(pathIdB))){
                     continue;
                 }
-                System.out.print("\rPaths complete: " + pathCount++ + "/" + total);
 
-                ArrayList<Long[]> entries = new ArrayList<>();
-                SearchCursorObjectReturner resultA = new SearchCursorObjectReturner(indexes.get(1).find(new long[]{pathIdA}));
+                ArrayList<long[]> entries = new ArrayList<>();
+                SearchCursor resultA = indexes.get(1).find(new long[]{pathIdA});
                 try (PageProxyCursor cursorA = indexes.get(1).disk.getCursor(resultA.pageID, PagedFile.PF_SHARED_LOCK)) {
                     while (resultA.hasNext(cursorA)) {
                         entries.add(resultA.next(cursorA));
                     }
                 }
-                for (Long[] entry : entries) {
+                for (long[] entry : entries) {
                     SearchCursor resultB = indexes.get(1).find(new long[]{pathIdB, entry[2]});
                     try (PageProxyCursor cursorB = indexes.get(1).disk.getCursor(resultB.pageID, PagedFile.PF_SHARED_LOCK)) {
                         while (resultB.hasNext(cursorB)) {
                             long[] secondPath = resultB.next(cursorB);
-                            //if (entry[1].equals(secondPath[2]) && entry[2] != secondPath[1]) {
-                            if (entry[1].equals(secondPath[2])) {//TODO test if this is correct
+                            if (entry[1] == secondPath[2]) {//TODO test if this is correct
                                 continue;
                             }
                             PathIDBuilder builder = new PathIDBuilder(relationshipMap.get(entry[0]).getPath(), relationshipMap.get(pathIdB).getPath());
@@ -194,9 +205,8 @@ public class LexographicIndexBuilder {
                                 k2RelationshipsMap.put(k2PathIds.get(builder.buildPath()), builder);
                             }
                             long k2PathId = k2PathIds.get(builder.buildPath());
-                            prevK2PathId = k2PathId;
-                            combinedPath = new Long[]{k2PathId, entry[1], entry[2], secondPath[2]};
-                            sorters.get(4).addSortedKeyBulk(combinedPath);
+                            combinedPath = new long[]{k2PathId, entry[1], entry[2], secondPath[2]};
+                            k2DiskFiller.addKey(combinedPath);
                         }
                     }
                 }
@@ -209,20 +219,22 @@ public class LexographicIndexBuilder {
         int pathCount = 0;
         int k2count = 0;
         long prevK2PathId = 0;
-        Long[] combinedPath;
+        long[] combinedPath;
         int total = relationshipMap.size() * k2PathIds.size();
         for(long pathIdK1 : relationshipMap.keySet()){
             for(long pathIdK2: k2RelationshipsMap.keySet()) {
                 System.out.print("\rPaths complete: " + pathCount++ + "/" + total);
-
-                ArrayList<Long[]> entries = new ArrayList<>();
-                SearchCursorObjectReturner resultA = new SearchCursorObjectReturner(indexes.get(1).find(new long[]{pathIdK1}));
+                if(!PathIDBuilder.lexographicallyFirst(relationshipMap.get(pathIdK1), k2RelationshipsMap.get(pathIdK2))){
+                    continue;
+                }
+                ArrayList<long[]> entries = new ArrayList<>();
+                SearchCursor resultA = indexes.get(1).find(new long[]{pathIdK1});
                 try (PageProxyCursor cursorA = indexes.get(1).disk.getCursor(resultA.pageID, PagedFile.PF_SHARED_LOCK)) {
                     while (resultA.hasNext(cursorA)) {
                         entries.add(resultA.next(cursorA));
                     }
                 }
-                for (Long[] entry : entries) {
+                for (long[] entry : entries) {
                     SearchCursor resultB = indexes.get(2).find(new long[]{pathIdK2, entry[2]});
                     try (PageProxyCursor cursorB = indexes.get(2).disk.getCursor(resultB.pageID, PagedFile.PF_SHARED_LOCK)) {
                         while (resultB.hasNext(cursorB)) {
@@ -233,8 +245,8 @@ public class LexographicIndexBuilder {
                                 k3RelationshipsMap.put(k3PathIds.get(builder.buildPath()), builder);
                             }
                             long k3PathId = k3PathIds.get(builder.buildPath());
-                            combinedPath = new Long[]{k3PathId, entry[1], entry[2], secondPath[2], secondPath[3]};
-                            sorters.get(5).addSortedKeyBulk(combinedPath);
+                            combinedPath = new long[]{k3PathId, entry[1], entry[2], secondPath[2], secondPath[3]};
+                            k3DiskFiller.addKey(combinedPath);
                         }
                     }
                 }
@@ -245,7 +257,7 @@ public class LexographicIndexBuilder {
 
     private void addPath(Node node1, Relationship relationship1, Node node2) throws IOException {
         PathIDBuilder builder = new PathIDBuilder(node1, relationship1, node2);
-        Long[] key = new Long[]{builder.buildPath(), node1.getId(), node2.getId()};
+        long[] key = new long[]{builder.buildPath(), node1.getId(), node2.getId()};
         sorters.get(3).addUnsortedKey(key);
         updateStats(builder);
     }

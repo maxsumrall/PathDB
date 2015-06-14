@@ -9,7 +9,6 @@ import java.io.IOException;
  * Created by max on 5/8/15.
  */
 public class NodeBulkLoaderTest {
-    static Tree tree;
     NodeTree proxy;
 
     @Test

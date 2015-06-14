@@ -76,16 +76,17 @@ class simpleLUBMExperiments {
 
         //String folder = "LUBM50IndexCompressed/";
         //String folder = "LUBM50Index/";
-        String folder = "";
+        String folder = "LUBM50IndexLexographic/";
+        //String folder = "";
 
-        BufferedReader bufferedReader = new BufferedReader(new FileReader(new File(folder + CleverIndexBuilder.INDEX_METADATA_PATH)));
+        BufferedReader bufferedReader = new BufferedReader(new FileReader(new File(folder + LexographicIndexBuilder.INDEX_METADATA_PATH)));
         String line;
         while((line = bufferedReader.readLine()) != null) {
             List<String> entry = Arrays.asList(line.split(","));
             int k = new Integer(entry.get(0));
             long root = new Long(entry.get(1));
             boolean compressed = entry.get(2).equals("true");
-            DiskCache disk = DiskCache.persistentDiskCache(folder +"K"+k+CleverIndexBuilder.LUBM_INDEX_PATH, compressed);
+            DiskCache disk = DiskCache.persistentDiskCache(folder +"K"+k+LexographicIndexBuilder.LUBM_INDEX_PATH, compressed);
             indexes.put(k, new NodeTree(root, disk));
             disks.put(k, disk);
         }

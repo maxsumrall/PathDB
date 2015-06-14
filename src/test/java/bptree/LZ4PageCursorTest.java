@@ -11,8 +11,6 @@ import java.io.IOException;
  */
 public class LZ4PageCursorTest {
 
-    Tree tree;
-
     @Test
     public void loadTest() throws IOException {
 

@@ -247,7 +247,7 @@ public class NodeInsertion {
         }
         else{
             long currKey = cursor.getLong();
-            while(currKey != Node.KEY_DELIMITER) {
+            while(currKey != NodeHeader.KEY_DELIMITER) {
                 arrayUtil.put(currKey);
                 currKey = cursor.getLong();
             }
@@ -272,7 +272,7 @@ public class NodeInsertion {
         }
         else{
             long currKey = cursor.getLong();
-            while(currKey != Node.KEY_DELIMITER) {
+            while(currKey != NodeHeader.KEY_DELIMITER) {
                 arrayUtil.put(currKey);
                 currKey = cursor.getLong();
             }
@@ -298,7 +298,7 @@ public class NodeInsertion {
         }
         else{
             long currKey = cursor.getLong();
-            while(currKey != Node.KEY_DELIMITER) {
+            while(currKey != NodeHeader.KEY_DELIMITER) {
                 arrayUtil.put(currKey);
                 currKey = cursor.getLong();
             }

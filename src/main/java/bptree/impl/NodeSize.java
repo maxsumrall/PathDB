@@ -44,7 +44,7 @@ public class NodeSize {
             for(int i = 0; i < numberOfKeys; i++) {
                 currKey = cursor.getLong();
                 byteSize+=8;
-                while(currKey != Node.KEY_DELIMITER) {
+                while(currKey != NodeHeader.KEY_DELIMITER) {
                     byteSize += 8;
                     currKey = cursor.getLong();
                 }
@@ -87,7 +87,7 @@ public class NodeSize {
             for(int i = 0; i < numberOfKeys; i++) {
                 currKey = cursor.getLong();
                 byteSize+=8;
-                while(currKey != Node.KEY_DELIMITER) {
+                while(currKey != NodeHeader.KEY_DELIMITER) {
                     byteSize += 8;
                     currKey = cursor.getLong();
                 }

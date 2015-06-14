@@ -1,7 +1,5 @@
 package NeoIntegration;
 
-import bptree.Index;
-import bptree.impl.PathIndexImpl;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Result;
@@ -18,7 +16,6 @@ import java.util.Map;
  * Created by max on 5/7/15.
  */
 public class IndexLoader {
-    static Index index;
     private static final String DB_PATH = "/Users/max/Desktop/datasets/recommendations/graph.db";
     String resultString;
     String columnsString;
@@ -26,11 +23,7 @@ public class IndexLoader {
     String rows = "";
 
     public static void main(String[] args) throws IOException {
-        index = PathIndexImpl.getPersistentPathIndex()
-                .setRangeOfPathLengths(2, 2)
-                .setSignaturesToDefault();
-        IndexLoader indexLoader = new IndexLoader();
-        indexLoader.run();
+
     }
     void run()
     {

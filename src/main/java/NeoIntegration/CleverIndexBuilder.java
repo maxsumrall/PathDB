@@ -4,9 +4,6 @@ import PageCacheSort.SetIterator;
 import PageCacheSort.Sorter;
 import bptree.PageProxyCursor;
 import bptree.impl.*;
-import org.apache.commons.io.FileUtils;
-import org.neo4j.collection.primitive.Primitive;
-import org.neo4j.collection.primitive.PrimitiveLongLongMap;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
@@ -17,6 +14,7 @@ import org.neo4j.io.pagecache.PagedFile;
 import org.neo4j.tooling.GlobalGraphOperations;
 
 import java.io.*;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
@@ -36,8 +34,8 @@ public class CleverIndexBuilder {
     HashMap<Long, PathIDBuilder> relationshipMap = new HashMap<>(); //relationship types to path ids
     HashMap<Long, PathIDBuilder> k2RelationshipsMap = new HashMap<>();
     HashMap<Long, PathIDBuilder> k3RelationshipsMap = new HashMap<>();
-    PrimitiveLongLongMap k2PathIds = Primitive.offHeapLongLongMap();
-    PrimitiveLongLongMap k3PathIds = Primitive.offHeapLongLongMap();
+    HashMap<Long, Long> k2PathIds = new HashMap<>();
+    HashMap<Long, Long> k3PathIds = new HashMap<>();
     long currentShortPathID = 1;
     FillSortedDisk k2DiskFiller = new FillSortedDisk(4);
     FillSortedDisk k3DiskFiller = new FillSortedDisk(5);
@@ -80,9 +78,10 @@ public class CleverIndexBuilder {
 
     public CleverIndexBuilder() throws IOException {
 
-        for(int i = 1; i <= MAX_K; i++){
+        /*for(int i = 1; i <= MAX_K; i++){
             sorters.put(i + 2, new Sorter(i + 2));
-        }
+        }*/
+        sorters.put(3, new Sorter(3));
 
         long startTime = System.nanoTime();
         enumerateSingleEdges();
@@ -109,9 +108,6 @@ public class CleverIndexBuilder {
             k2DiskFiller.finish();
             endTime = System.nanoTime();
             logToFile("Time to build K2 edges(ns): " + (endTime - startTime));
-            //Sorter sorterK2 = sorters.get(4);
-            //SetIterator k2Iterator = sorterK2.finishWithoutSort();
-
             NodeTree k2Index = buildIndex(k2DiskFiller);
             indexes.put(2, k2Index);
         }
@@ -122,8 +118,6 @@ public class CleverIndexBuilder {
             k3DiskFiller.finish();
             endTime = System.nanoTime();
             logToFile("Time to build K3 edges(ns): " + (endTime - startTime));
-            //Sorter sorterK3 = sorters.get(5);
-            //SetIterator k3Iterator = sorterK3.finishWithoutSort();
             NodeTree k3Index = buildIndex(k3DiskFiller);
             indexes.put(3, k3Index);
         }
@@ -207,77 +201,76 @@ public class CleverIndexBuilder {
     private void buildK2Paths() throws IOException {
         System.out.println("Building K2 Paths");
         int pathCount = 0;
+
         long[] combinedPath;
-
-        File tmp_file = new File("tmp_file.db");
-        tmp_file.deleteOnExit();
-        indexes.get(1).disk.shutdown();
-        FileUtils.copyFile(indexes.get(1).disk.pageCacheFile, tmp_file);
-        indexes.get(1).disk = DiskCache.persistentDiskCache(indexes.get(1).disk.pageCacheFile.getName(), indexes.get(1).disk.COMPRESSION);
-        DiskCache tmp_cp_disk = DiskCache.persistentDiskCache(tmp_file.getName(), indexes.get(1).disk.COMPRESSION);
-        NodeTree index_tmp = new NodeTree(indexes.get(1).rootNodeId, tmp_cp_disk);
-
+        ArrayList<long[]> entries = new ArrayList<>();
 
         int total = relationshipMap.size() * relationshipMap.size();
-        try (PageProxyCursor cursorA = indexes.get(1).disk.getCursor(0, PagedFile.PF_SHARED_LOCK)) {
-            try (PageProxyCursor cursorB = index_tmp.disk.getCursor(0, PagedFile.PF_SHARED_LOCK)) {
-                for (Long pathIdA : relationshipMap.keySet()) {
-                    for (Long pathIdB : relationshipMap.keySet()) {
-                        System.out.print("\rPaths complete: " + pathCount++ + "/" + total);
-                        SearchCursor resultA = indexes.get(1).find(new long[]{pathIdA});
+        for(long pathIdA : relationshipMap.keySet()){
+            for(long pathIdB: relationshipMap.keySet()) {
+                System.out.print("\rPaths complete: " + pathCount++ + "/" + total);
 
-                        while (resultA.hasNext(cursorA)) {
-                            long[] entry = resultA.next(cursorA);
-                            SearchCursor resultB = index_tmp.find(new long[]{pathIdB, entry[2]});
-                            while (resultB.hasNext(cursorB)) {
-                                long[] secondPath = resultB.next(cursorB);
-                                //if (entry[1].equals(secondPath[2]) && entry[2] != secondPath[1]) {
-                                if (entry[1] == secondPath[2]) {//TODO test if this is correct
-                                    continue;
-                                }
-                                PathIDBuilder builder = new PathIDBuilder(relationshipMap.get(entry[0]).getPath(), relationshipMap.get(pathIdB).getPath());
-                                if (!k2PathIds.containsKey(builder.buildPath())) {
-                                    k2PathIds.put(builder.buildPath(), currentShortPathID++);
-                                    k2RelationshipsMap.put(k2PathIds.get(builder.buildPath()), builder);
-                                }
-                                long k2PathId = k2PathIds.get(builder.buildPath());
-                                combinedPath = new long[]{k2PathId, entry[1], entry[2], secondPath[2]};
-                                k2DiskFiller.addKey(combinedPath);
+                entries.clear();
+                SearchCursor resultA = indexes.get(1).find(new long[]{pathIdA});
+                try (PageProxyCursor cursorA = indexes.get(1).disk.getCursor(resultA.pageID, PagedFile.PF_SHARED_LOCK)) {
+                    while (resultA.hasNext(cursorA)) {
+                        entries.add(resultA.next(cursorA));
+                    }
+                }
+                for (long[] entry : entries) {
+                    SearchCursor resultB = indexes.get(1).find(new long[]{pathIdB, entry[2]});
+                    try (PageProxyCursor cursorB = indexes.get(1).disk.getCursor(resultB.pageID, PagedFile.PF_SHARED_LOCK)) {
+                        while (resultB.hasNext(cursorB)) {
+                            long[] secondPath = resultB.next(cursorB);
+                            if (entry[1] == secondPath[2]) {//TODO test if this is correct
+                                continue;
                             }
+                            PathIDBuilder builder = new PathIDBuilder(relationshipMap.get(entry[0]).getPath(), relationshipMap.get(pathIdB).getPath());
+                            if (!k2PathIds.containsKey(builder.buildPath())) {
+                                k2PathIds.put(builder.buildPath(), currentShortPathID++);
+                                k2RelationshipsMap.put(k2PathIds.get(builder.buildPath()), builder);
                             }
+                            long k2PathId = k2PathIds.get(builder.buildPath());
+                            combinedPath = new long[]{k2PathId, entry[1], entry[2], secondPath[2]};
+                            k2DiskFiller.addKey(combinedPath);
                         }
                     }
                 }
+            }
         }
     }
 
     private void buildK3Paths() throws IOException {
         System.out.println("Building K3 Paths");
         int pathCount = 0;
-        int k2count = 0;
-        long prevK2PathId = 0;
+
         long[] combinedPath;
+        ArrayList<long[]> entries = new ArrayList<>();
+
         int total = relationshipMap.size() * k2PathIds.size();
-        for(Long pathIdK1 : relationshipMap.keySet()) {
-            for(Long pathIdK2 : k2RelationshipsMap.keySet()) {
+        for(long pathIdK1 : relationshipMap.keySet()){
+            for(long pathIdK2: k2RelationshipsMap.keySet()) {
                 System.out.print("\rPaths complete: " + pathCount++ + "/" + total);
-                 SearchCursor resultA = indexes.get(1).find(new long[]{pathIdK1});
+                entries.clear();
+                SearchCursor resultA = indexes.get(1).find(new long[]{pathIdK1});
                 try (PageProxyCursor cursorA = indexes.get(1).disk.getCursor(resultA.pageID, PagedFile.PF_SHARED_LOCK)) {
                     while (resultA.hasNext(cursorA)) {
-                        long[] entry = resultA.next(cursorA);
-                        SearchCursor resultB = indexes.get(2).find(new long[]{pathIdK2, entry[2]});
-                        try (PageProxyCursor cursorB = indexes.get(2).disk.getCursor(resultB.pageID, PagedFile.PF_SHARED_LOCK)) {
-                            while (resultB.hasNext(cursorB)) {
-                                long[] secondPath = resultB.next(cursorB);
-                                PathIDBuilder builder = new PathIDBuilder(((PathIDBuilder) relationshipMap.get(entry[0])).getPath(), ((PathIDBuilder) k2RelationshipsMap.get(pathIdK2)).getPath());
-                                if (!k3PathIds.containsKey(builder.buildPath())) {
-                                    k3PathIds.put(builder.buildPath(), currentShortPathID++);
-                                    k3RelationshipsMap.put(k3PathIds.get(builder.buildPath()), builder);
-                                }
-                                long k3PathId = k3PathIds.get(builder.buildPath());
-                                combinedPath = new long[]{k3PathId, entry[1], entry[2], secondPath[2], secondPath[3]};
-                                k3DiskFiller.addKey(combinedPath);
+                        entries.add(resultA.next(cursorA));
+                    }
+                }
+                for (long[] entry : entries) {
+                    SearchCursor resultB = indexes.get(2).find(new long[]{pathIdK2, entry[2]});
+                    try (PageProxyCursor cursorB = indexes.get(2).disk.getCursor(resultB.pageID, PagedFile.PF_SHARED_LOCK)) {
+                        while (resultB.hasNext(cursorB)) {
+                            long[] secondPath = resultB.next(cursorB);
+                            PathIDBuilder builder = new PathIDBuilder(relationshipMap.get(entry[0]).getPath(), k2RelationshipsMap.get(pathIdK2).getPath());
+                            if (!k3PathIds.containsKey(builder.buildPath())) {
+                                k3PathIds.put(builder.buildPath(), currentShortPathID++);
+                                k3RelationshipsMap.put(k3PathIds.get(builder.buildPath()), builder);
                             }
+                            long k3PathId = k3PathIds.get(builder.buildPath());
+                            combinedPath = new long[]{k3PathId, entry[1], entry[2], secondPath[2], secondPath[3]};
+                            k3DiskFiller.addKey(combinedPath);
                         }
                     }
                 }
@@ -286,21 +279,11 @@ public class CleverIndexBuilder {
     }
 
 
+
     private void addPath(Node node1, Relationship relationship1, Node node2) throws IOException {
         PathIDBuilder builder = new PathIDBuilder(node1, relationship1, node2);
         long[] key = new long[]{builder.buildPath(), node1.getId(), node2.getId()};
         sorters.get(3).addUnsortedKey(key);
-        updateStats(builder);
-    }
-    private void addPath(Node node1, Relationship relationship1, Node node2, Relationship relationship2, Node node3) throws IOException {
-        PathIDBuilder builder = new PathIDBuilder(node1, relationship1, node2, relationship2, node3);
-        sorters.get(4).addUnsortedKey(new long[]{builder.buildPath(), node1.getId(), node2.getId(), node3.getId()});
-        updateStats(builder);
-    }
-
-    private void addPath(Node node1, Relationship relationship1, Node node2, Relationship relationship2, Node node3, Relationship relationship3, Node node4) throws IOException {
-        PathIDBuilder builder = new PathIDBuilder(node1, relationship1, node2, relationship2, node3, relationship3, node4);
-        sorters.get(5).addUnsortedKey(new long[]{builder.buildPath(), node1.getId(), node2.getId(), node3.getId(), node4.getId()});
         updateStats(builder);
     }
 
@@ -315,7 +298,7 @@ public class CleverIndexBuilder {
             out.println(text);
             System.out.println(text);
         }catch (IOException e) {
-            //exception handling left as an exercise for the reader
+            System.out.println(e.getStackTrace());
         }
     }
 

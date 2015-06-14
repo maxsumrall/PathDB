@@ -1,6 +1,5 @@
 package bptree;
 
-import jdk.nashorn.internal.ir.annotations.Ignore;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;
@@ -10,13 +9,18 @@ import java.util.Arrays;
  * Created by max on 6/10/15.
  */
 public class CompressionExample {
+    int maxNumBytes;
+    final int sameID = 128;
+    final int sameFirstNode = 64;
     @Test
     public void multipleTests(){
         int keyLength = 4;
         long[][] keys = new long[][]{
                 {1,0,3,4},
                 {57,36983,0,558259},
-                {57,36984,0,558034}
+                {57,36984,0,558034},
+                {57,36985,1000000,558034},
+                {57,36986,0,658033}
         };
 
         int uncompressedLength = keys.length * 4 * 8;
@@ -34,14 +38,44 @@ public class CompressionExample {
         long[][] dKeys = new long[keys.length][4];
 
         int position = 0;
-        int reqBytes = compressed[position];
-        position += 1 + (reqBytes * keyLength);
+
+        byte header = compressed[position];
+        int firstEncodedIndex = 0;
+        boolean samePath = (sameID & header) == sameID;
+        boolean sameFirstID = (sameFirstNode & header) == sameFirstNode;
+        if(samePath)
+            firstEncodedIndex++;
+        if(sameFirstID)
+            firstEncodedIndex++;
+        header &= ~(1 << 7);
+        header &= ~(1 << 6);
+        int reqBytes = header;
+
+        position += 1 + (reqBytes * (keyLength - firstEncodedIndex));
         for(int i = 0; i < keyLength; i++) {
             dKeys[0][i] = toLong(compressed, i + 1, reqBytes);
         }
         for(int i = 1; i < keys.length; i++){
-            reqBytes = compressed[position++];
-            for(int j = 0; j < keyLength; j++){
+            header = compressed[position++];
+
+            //
+            firstEncodedIndex = 0;
+            samePath = (sameID & header) == sameID;
+            sameFirstID = (sameFirstNode & header) == sameFirstNode;
+            if(samePath) {
+                firstEncodedIndex++;
+                dKeys[i][0] = dKeys[i-1][0];
+            }
+            if(sameFirstID) {
+                firstEncodedIndex++;
+                dKeys[i][1] = dKeys[i-1][1];
+            }
+            header &= ~(1 << 7);
+            header &= ~(1 << 6);
+            reqBytes = header;
+            //
+
+            for(int j = firstEncodedIndex; j < (keyLength); j++){
                 dKeys[i][j] = dKeys[i-1][j] + toLong(compressed, position, reqBytes);
                 position += reqBytes;
             }
@@ -52,60 +86,32 @@ public class CompressionExample {
 
 
     }
-
-    @Ignore
-    public void bitTesting() {
-
-        int keyLength = 3;
-
-        long[] keyA = new long[]{123,321,451};
-        long[] keyB = new long[]{124,322,452};
-        System.out.println(Arrays.toString(keyB));
-
-        encodeKey(keyB, keyA);
-
-    }
-
-    public byte[] compress(long[][] keys){
-        int maxCompressedSize = keys.length * keys[0].length * Long.BYTES;
-        byte[] compressed = new byte[maxCompressedSize];
-        ByteBuffer buffer = ByteBuffer.wrap(compressed);
-        buffer.put(encodeKey(keys[0], new long[keys[0].length]));
-        for(int i = 1; i < keys.length; i++)
-            buffer.put(encodeKey(keys[i], keys[i-1]));
-        byte[] truncatedCompressed = new byte[buffer.position()];
-        System.arraycopy(compressed, 0, truncatedCompressed, 0, truncatedCompressed.length);
-        return truncatedCompressed;
-    }
-
-
     public byte[] encodeKey(long[] key, long[] prev){
+        this.maxNumBytes = 0;
+        int firstEncodedIndex = 0;
+        byte header = (byte)0;
+        if(key[0] == prev[0]) {
+            //set first bit
+            firstEncodedIndex++;
+            header |= sameID;
 
-        long[] diff = new long[key.length];
-        for(int i = 0; i < key.length; i++)
-        {
-            diff[i] = key[i] - prev[i];
+            if (key[1] == prev[1]) {
+                //set second bit
+                firstEncodedIndex++;
+                header |= sameFirstNode;
+            }
         }
 
-        int maxNumBytes = Math.max(numberOfBytes(diff[0]), 1);
-        for(int i = 1; i < key.length; i++){
-            maxNumBytes = Math.max(maxNumBytes, numberOfBytes(diff[i]));
+        for(int i = firstEncodedIndex; i < key.length; i++){
+            maxNumBytes = Math.max(maxNumBytes, numberOfBytes(key[i] - prev[i]));
         }
 
-        byte[] encoded = new byte[1 + (maxNumBytes * 4 )];
-        encoded[0] = (byte)maxNumBytes;
-        for(int i = 0; i < key.length; i++){
-            toBytes(diff[i], encoded, 1 + (i * maxNumBytes), maxNumBytes);
+        byte[] encoded = new byte[1 + (maxNumBytes * (key.length - firstEncodedIndex))];
+        header |=  maxNumBytes;
+        encoded[0] = header;
+        for(int i = 0; i < key.length - firstEncodedIndex; i++){
+            toBytes(key[i + firstEncodedIndex] - prev[i + firstEncodedIndex], encoded, 1 + (i * maxNumBytes), maxNumBytes);
         }
-
-        //System.out.println("Original KeyB length: " + key.length * 8);
-        //System.out.println("Compressed KeyB: " + encoded.length + ":" + Arrays.toString(encoded));
-
-        /*long[] keyBDec = new long[3];
-        keyBDec[0] = prev[0] + toLong(encoded, 1 + maxNumBytes * 0, maxNumBytes);
-        keyBDec[1] = prev[1] + toLong(encoded, 1 + maxNumBytes * 1, maxNumBytes);
-        keyBDec[2] = prev[2] + toLong(encoded, 1 + maxNumBytes * 2, maxNumBytes);
-*/
         return encoded;
     }
 
@@ -146,7 +152,7 @@ public class CompressionExample {
     }
 
     public static long toLong(byte[] bytes, int offset, int length) {
-        long l = bytes[offset ] < (byte)0 ? -1 : 0;
+        long l = bytes[offset] < (byte)0 ? -1 : 0;
         for (int i = offset; i < offset + length; i++) {
             l <<= 8;
             l ^= bytes[i] & 0xFF;

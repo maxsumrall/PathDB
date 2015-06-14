@@ -205,7 +205,7 @@ public class NodeTree {
         }
         else{
             long currKey = cursor.getLong();
-            while(currKey != Node.KEY_DELIMITER) {
+            while(currKey != -1) { //-1 used to be Node.KEY_DELIMITER
                 currKey = cursor.getLong();
             }
             int endOfFirstKeyPos = cursor.getOffset();

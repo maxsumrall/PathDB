@@ -45,6 +45,8 @@ public class Sorter {
         writeToCursor.next(writeToCursor.getCurrentPageId() - 1);
         NodeHeader.setFollowingID(writeToCursor, -1);
         writeToCursor.close();
+        readFromDisk.shutdown();
+        readFromDisk.pageCacheFile.delete();
         setIteratorCursor = null;
         postSortSet = new PageSet();
         for(PageSet pageSet : writePageSets){
@@ -61,7 +63,8 @@ public class Sorter {
         writeToCursor.close();
 
         sortHelper();
-
+        readFromDisk.shutdown();
+        readFromDisk.pageCacheFile.delete();
         setIteratorCursor = null;
         postSortSet = writePageSets.pop();
         finalPage = postSortSet.pagesInSet.getLast();
@@ -183,7 +186,7 @@ public class Sorter {
         NodeHeader.setFollowingID(writeToCursor, writeToCursor.getCurrentPageId() + 1);
         writeToCursor.setOffset(NodeHeader.NODE_HEADER_LENGTH);
         for(long[] sortedKey : sortedKeys){
-            for (Long val : sortedKey) {
+            for (long val : sortedKey) {
                 writeToCursor.putLong(val);
             }
         }
@@ -203,7 +206,7 @@ public class Sorter {
         writeToCursor.setOffset(NodeHeader.NODE_HEADER_LENGTH);
         while(bulkLoadedKeys.size() > 0){
             long[] sortedKey = bulkLoadedKeys.poll();
-            for (Long val : sortedKey) {
+            for (long val : sortedKey) {
                 writeToCursor.putLong(val);
             }
         }
@@ -222,7 +225,7 @@ public class Sorter {
         writeToCursor.setOffset(NodeHeader.NODE_HEADER_LENGTH);
         //dump sorted keys to page,
         for(long[] sortedKey : sortedKeys){
-            for (Long val : sortedKey) {
+            for (long val : sortedKey) {
                 writeToCursor.putLong(val);
             }
         }

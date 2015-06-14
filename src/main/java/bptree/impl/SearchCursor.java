@@ -52,7 +52,7 @@ public class SearchCursor {
                 return null;
             }
         }
-        if(Node.keyComparator.validPrefix(searchKey, currentKey)){
+        if(KeyImpl.getComparator().validPrefix(searchKey, currentKey)){
             return currentKey;
         }
         return null;
