@@ -37,8 +37,8 @@ public class CleverIndexBuilder {
     HashMap<Long, Long> k2PathIds = new HashMap<>();
     HashMap<Long, Long> k3PathIds = new HashMap<>();
     long currentShortPathID = 1;
-    FillSortedDisk k2DiskFiller = new FillSortedDisk(4);
-    FillSortedDisk k3DiskFiller = new FillSortedDisk(5);
+    SuperFillSortedDisk k2DiskFiller = new SuperFillSortedDisk(4);
+    SuperFillSortedDisk k3DiskFiller = new SuperFillSortedDisk(5);
 
 
     public static void main(String[] args) throws IOException {
@@ -134,7 +134,7 @@ public class CleverIndexBuilder {
         logToFile("index K= " + sorter.keySize + " root: " + index.rootNodeId);
         return index;
     }
-    public NodeTree buildIndex(FillSortedDisk filler) throws IOException {
+    public NodeTree buildIndex(SuperFillSortedDisk filler) throws IOException {
         System.out.println("Building Index");
         DiskCache sortedDisk = filler.compressedDisk;
         NodeBulkLoader bulkLoader = new NodeBulkLoader(sortedDisk, filler.finalPageID, filler.keyLength);
