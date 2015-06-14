@@ -36,7 +36,7 @@ public class DiskCache {
 
     private void initializePageCache() throws IOException {
         fs = new DefaultFileSystemAbstraction();
-        SingleFilePageSwapperFactory factory = new SingleFilePageSwapperFactory(fs);
+        SingleFilePageSwapperFactory factory = new SingleFilePageSwapperFactory();
         pageCache = new MuninnPageCache(factory, maxPages, PAGE_SIZE, PageCacheTracer.NULL);
         pagedFile = pageCache.map(this.pageCacheFile, PAGE_SIZE);
     }

@@ -150,7 +150,7 @@ public class LexographicIndexBuilder {
 
 
     private void enumerateSingleEdges() throws IOException {
-        GraphDatabaseService db = new GraphDatabaseFactory().newEmbeddedDatabase( DB_PATH );
+        GraphDatabaseService db = new GraphDatabaseFactory().newEmbeddedDatabase(new File(DB_PATH));
         GlobalGraphOperations ggo = GlobalGraphOperations.at(db);
         int count = 0;
         double totalRels;

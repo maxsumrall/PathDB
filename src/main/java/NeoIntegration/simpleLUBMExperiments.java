@@ -94,7 +94,7 @@ class simpleLUBMExperiments {
 
         stringBuilder = new StringBuilder();
 
-        database = new GraphDatabaseFactory().newEmbeddedDatabaseBuilder(CleverIndexBuilder.DB_PATH).newGraphDatabase();
+        database = new GraphDatabaseFactory().newEmbeddedDatabase(new File(CleverIndexBuilder.DB_PATH));
         ggo = GlobalGraphOperations.at(database);
     }
 
