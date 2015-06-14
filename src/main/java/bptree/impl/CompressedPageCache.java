@@ -6,7 +6,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 public class CompressedPageCache {
-    int max_cache_size_mb = 2048;
+    int max_cache_size_mb = 512;
     private int max_cache_size;
     private LRUCache<Long, ByteBuffer> cache;
     public CompressedPageCache(){

@@ -261,10 +261,10 @@ public class CleverIndexBuilder {
         for(Long pathIdK1 : relationshipMap.keySet()) {
             for(Long pathIdK2 : k2RelationshipsMap.keySet()) {
                 System.out.print("\rPaths complete: " + pathCount++ + "/" + total);
-                SearchCursorObjectReturner resultA = new SearchCursorObjectReturner(indexes.get(1).find(new long[]{pathIdK1}));
+                 SearchCursor resultA = indexes.get(1).find(new long[]{pathIdK1});
                 try (PageProxyCursor cursorA = indexes.get(1).disk.getCursor(resultA.pageID, PagedFile.PF_SHARED_LOCK)) {
                     while (resultA.hasNext(cursorA)) {
-                        Long[] entry = resultA.next(cursorA);
+                        long[] entry = resultA.next(cursorA);
                         SearchCursor resultB = indexes.get(2).find(new long[]{pathIdK2, entry[2]});
                         try (PageProxyCursor cursorB = indexes.get(2).disk.getCursor(resultB.pageID, PagedFile.PF_SHARED_LOCK)) {
                             while (resultB.hasNext(cursorB)) {
@@ -288,19 +288,19 @@ public class CleverIndexBuilder {
 
     private void addPath(Node node1, Relationship relationship1, Node node2) throws IOException {
         PathIDBuilder builder = new PathIDBuilder(node1, relationship1, node2);
-        Long[] key = new Long[]{builder.buildPath(), node1.getId(), node2.getId()};
+        long[] key = new long[]{builder.buildPath(), node1.getId(), node2.getId()};
         sorters.get(3).addUnsortedKey(key);
         updateStats(builder);
     }
     private void addPath(Node node1, Relationship relationship1, Node node2, Relationship relationship2, Node node3) throws IOException {
         PathIDBuilder builder = new PathIDBuilder(node1, relationship1, node2, relationship2, node3);
-        sorters.get(4).addUnsortedKey(new Long[]{builder.buildPath(), node1.getId(), node2.getId(), node3.getId()});
+        sorters.get(4).addUnsortedKey(new long[]{builder.buildPath(), node1.getId(), node2.getId(), node3.getId()});
         updateStats(builder);
     }
 
     private void addPath(Node node1, Relationship relationship1, Node node2, Relationship relationship2, Node node3, Relationship relationship3, Node node4) throws IOException {
         PathIDBuilder builder = new PathIDBuilder(node1, relationship1, node2, relationship2, node3, relationship3, node4);
-        sorters.get(5).addUnsortedKey(new Long[]{builder.buildPath(), node1.getId(), node2.getId(), node3.getId(), node4.getId()});
+        sorters.get(5).addUnsortedKey(new long[]{builder.buildPath(), node1.getId(), node2.getId(), node3.getId(), node4.getId()});
         updateStats(builder);
     }
 

@@ -15,9 +15,10 @@ public class CompressedPageCursor extends PageProxyCursor{
     ByteBuffer dBuffer = ByteBuffer.allocate(maxPageSize);
     int mostRecentCompressedLeafSize = DiskCache.PAGE_SIZE;//the default value
     boolean deferWriting = false;
+    CompressedPageCache fastCache;
 
     public CompressedPageCursor(DiskCache disk, long pageId, int lock) throws IOException {
-        //this.fastCache = new CompressedPageCache();
+        this.fastCache = new CompressedPageCache();
         this.cursor = disk.pagedFile.io(pageId, lock);
         cursor.next();
         loadCursorFromDisk();
@@ -25,7 +26,7 @@ public class CompressedPageCursor extends PageProxyCursor{
 
     @Override
     public void next(long page) throws IOException {
-        //fastCache.putByteBuffer(cursor.getCurrentPageId(), dBuffer);
+        fastCache.putByteBuffer(cursor.getCurrentPageId(), dBuffer);
         cursor.next(page);
         loadCursorFromDisk();
         dBuffer.position(0);
@@ -173,12 +174,12 @@ public class CompressedPageCursor extends PageProxyCursor{
     }
 
     private void loadCursorFromDisk(){
-        //ByteBuffer possibleBuffer = fastCache.getByteBuffer(cursor.getCurrentPageId());
-        //if(possibleBuffer != null){
-        //    dBuffer = possibleBuffer;
-       // }
-       // else {
-      //      dBuffer = ByteBuffer.allocate(maxPageSize);
+        ByteBuffer possibleBuffer = fastCache.getByteBuffer(cursor.getCurrentPageId());
+        if(possibleBuffer != null){
+            dBuffer = possibleBuffer;
+        }
+        else {
+            dBuffer = ByteBuffer.allocate(maxPageSize);
             if (NodeHeader.isUninitializedNode(cursor)) {
                 return;
             } else if (NodeHeader.isLeafNode(cursor))
@@ -186,7 +187,7 @@ public class CompressedPageCursor extends PageProxyCursor{
             else
                 decompressInternalNode();
         }
-    //}
+    }
 
     private void decompressLeaf(){
         int keyLength = NodeHeader.getKeyLength(cursor);

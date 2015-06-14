@@ -8,7 +8,7 @@ import java.util.Comparator;
 /**
  * Implements Comparator for sorting keys.
  */
-public class KeyImpl implements Key, Comparator<Long[]> {
+public class KeyImpl implements Key, Comparator<long[]> {
 
     private Long[] composed_key;
     private Long[] labelPath;

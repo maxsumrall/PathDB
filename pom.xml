@@ -22,6 +22,11 @@
       <scope>test</scope>
     </dependency>
       <dependency>
+          <groupId>com.github.vsonnier</groupId>
+          <artifactId>hppcrt</artifactId>
+          <version>0.6.8</version>
+      </dependency>
+      <dependency>
           <groupId>org.neo4j</groupId>
           <artifactId>neo4j</artifactId>
           <version>LATEST</version>

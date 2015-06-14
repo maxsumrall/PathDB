@@ -1,10 +1,7 @@
 package NeoIntegration;
 
 import bptree.PageProxyCursor;
-import bptree.impl.DiskCache;
-import bptree.impl.NodeBulkLoader;
-import bptree.impl.NodeHeader;
-import bptree.impl.NodeTree;
+import bptree.impl.*;
 import org.neo4j.io.pagecache.PagedFile;
 
 import java.io.IOException;
@@ -12,21 +9,21 @@ import java.io.IOException;
 /**
  * Takes a normal index, compresses the leaves, builds the new index on it, and saves it.
  */
-public class IndexCompressor {
+public class LZ4IndexCompressor {
     public DiskCache uncompressedDisk;
     public DiskCache compressedDisk;
 
     public static void main(String[] args) throws IOException {
         int keyLength = 4;
-        IndexCompressor ic = new IndexCompressor(keyLength);
+        LZ4IndexCompressor ic = new LZ4IndexCompressor(keyLength);
         long finalPageID = ic.compressDisk(keyLength);
         ic.buildIndex(finalPageID, keyLength);
     }
 
-    public IndexCompressor(int keyLength) {
+    public LZ4IndexCompressor(int keyLength) {
         String diskPath = "LUBM50Index/K4Cleverlubm50Index.db";
         this.uncompressedDisk = DiskCache.persistentDiskCache(diskPath, false);
-        this.compressedDisk = DiskCache.persistentDiskCache(keyLength + "compressed_disk.db", false); //I'm handling compression here, so I don't want the cursor to get confused.
+        this.compressedDisk = DiskCache.temporaryDiskCache(keyLength + "compressed_disk.db", true);
     }
 
     public void buildIndex(long finalPageID, int keyLength) throws IOException {
@@ -44,8 +41,14 @@ public class IndexCompressor {
         int keyCount = 0;
         long nextPage = 0;
         try (PageProxyCursor compressedCursor = compressedDisk.getCursor(0, PagedFile.PF_EXCLUSIVE_LOCK)) {
+            compressedCursor.deferWriting();
+            NodeHeader.setNodeTypeLeaf(compressedCursor);
+            NodeHeader.setKeyLength(compressedCursor, keyLength);
+            NodeHeader.setFollowingID(compressedCursor, compressedCursor.getCurrentPageId() + 1);
+            NodeHeader.setPrecedingId(compressedCursor, compressedCursor.getCurrentPageId() - 1);
+            compressedCursor.resumeWriting();
+            compressedCursor.setOffset(NodeHeader.NODE_HEADER_LENGTH);
             try (PageProxyCursor uncompressedCursor = uncompressedDisk.getCursor(nextPage, PagedFile.PF_SHARED_LOCK)) {
-                compressedCursor.setOffset(NodeHeader.NODE_HEADER_LENGTH);
                 while (nextPage != -1) {
                     uncompressedCursor.next(nextPage);
                     if (!NodeHeader.isLeafNode(uncompressedCursor))
@@ -55,92 +58,39 @@ public class IndexCompressor {
                     for (int i = 0; i < NodeHeader.getNumberOfKeys(uncompressedCursor); i++) {
                         for (int j = 0; j < keyLength; j++)
                             next[j] = uncompressedCursor.getLong();
-                        encodedKey = encodeKey(next, prev);
-                        System.arraycopy(next, 0, prev, 0, prev.length);
-                        keyCount++;
-                        compressedCursor.putBytes(encodedKey);
-                        if ((compressedCursor.getOffset() + (keyLength * Long.BYTES)) > DiskCache.PAGE_SIZE) {
+                        if (!compressedCursor.leafNodeContainsSpaceForNewKey(next)) {
                             //finalize this buffer, write it to the page, and start a new buffer
+                            NodeHeader.setNumberOfKeys(compressedCursor, keyCount);
+                            compressedCursor.next(compressedCursor.getCurrentPageId() + 1);
+                            compressedCursor.deferWriting();
+                            NodeHeader.setNodeTypeLeaf(compressedCursor);
+                            NodeHeader.setKeyLength(compressedCursor, keyLength);
                             NodeHeader.setFollowingID(compressedCursor, compressedCursor.getCurrentPageId() + 1);
                             NodeHeader.setPrecedingId(compressedCursor, compressedCursor.getCurrentPageId() - 1);
-                            NodeHeader.setKeyLength(compressedCursor, keyLength);
-                            NodeHeader.setNumberOfKeys(compressedCursor, keyCount);
-                            NodeHeader.setNodeTypeLeaf(compressedCursor);
-                            compressedCursor.next(compressedCursor.getCurrentPageId() + 1);
+                            compressedCursor.resumeWriting();
                             compressedCursor.setOffset(NodeHeader.NODE_HEADER_LENGTH);
                             keyCount = 0;
-                            prev = new long[keyLength];
                         }
+                        compressedCursor.deferWriting();
+                        for(long val : next){
+                            compressedCursor.putLong(val);
+                        }
+                        NodeHeader.setNumberOfKeys(compressedCursor, keyCount++);
+                        compressedCursor.resumeWriting();
+                        //keyCount++;
                     }
                 }
+                compressedCursor.deferWriting();
                 NodeHeader.setFollowingID(compressedCursor, -1);//last leaf node
                 NodeHeader.setPrecedingId(compressedCursor, compressedCursor.getCurrentPageId() - 1);
                 NodeHeader.setKeyLength(compressedCursor, keyLength);
                 NodeHeader.setNumberOfKeys(compressedCursor, keyCount);
                 NodeHeader.setNodeTypeLeaf(compressedCursor);
+                compressedCursor.resumeWriting();
                 finalPageID = compressedCursor.getCurrentPageId();
             }
         }
-        compressedDisk.COMPRESSION = true;
         return finalPageID;
-        //336674
-    }
-
-
-
-
-    public static byte[] encodeKey(long[] key, long[] prev){
-
-        long[] diff = new long[key.length];
-        for(int i = 0; i < key.length; i++)
-        {
-            diff[i] = key[i] - prev[i];
-        }
-
-        int maxNumBytes = Math.max(numberOfBytes(diff[0]), 1);
-        for(int i = 1; i < key.length; i++){
-            maxNumBytes = Math.max(maxNumBytes, numberOfBytes(diff[i]));
-        }
-
-        byte[] encoded = new byte[1 + (maxNumBytes * key.length )];
-        encoded[0] = (byte)maxNumBytes;
-        for(int i = 0; i < key.length; i++){
-            toBytes(diff[i], encoded, 1 + (i * maxNumBytes), maxNumBytes);
-        }
-        return encoded;
-    }
-
-    public static int numberOfBytes(long value){
-        long abs = Math.abs(value);
-        int minBytes = 8;
-        if(abs <= 127){
-            minBytes = 1;
-        }
-        else if(abs <= 32768){
-            minBytes = 2;
-        }
-        else if(abs <= 8388608){
-            minBytes = 3;
-        }
-        else if(abs <= 2147483648l){
-            minBytes = 4;
-        }
-        else if(abs <= 549755813888l){
-            minBytes = 5;
-        }
-        else if(abs <= 140737488355328l){
-            minBytes = 6;
-        }
-        else if(abs <= 36028797018963968l){
-            minBytes = 7;
-        }
-        return minBytes;
-    }
-    public static void toBytes(long val, byte[] dest, int position, int numberOfBytes) { //rewrite this to put bytes in a already made array at the right position.
-        for (int i = numberOfBytes - 1; i > 0; i--) {
-            dest[position + i] = (byte) val;
-            val >>= 8;
-        }
-        dest[position] = (byte) val;
+        //
     }
 }

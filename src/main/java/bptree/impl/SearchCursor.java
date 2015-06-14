@@ -34,6 +34,8 @@ public class SearchCursor {
     }
 
     private long[] getNext(PageProxyCursor cursor) throws IOException {
+        if(cursor.getCurrentPageId() != pageID)
+            cursor.next(pageID);
         long[] currentKey = new long[keyLength];
         if(currentKeyIndex < keysInNode){
             for(int i = 0; i < keyLength; i++){

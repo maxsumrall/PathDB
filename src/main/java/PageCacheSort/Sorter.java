@@ -29,8 +29,8 @@ public class Sorter {
     LinkedList<PageSet> writePageSets = new LinkedList<>();
     LinkedList<PageSet> readPageSets = new LinkedList<>();
     int byteRepSize = 0;
-    PriorityQueue<Long[]> bulkLoadedKeys = new PriorityQueue<>(KeyImpl.getComparator());
-    ArrayList<Long[]> sortedKeys = new ArrayList<>();
+    PriorityQueue<long[]> bulkLoadedKeys = new PriorityQueue<>(KeyImpl.getComparator());
+    ArrayList<long[]> sortedKeys = new ArrayList<>();
 
     public Sorter(int keySize) throws IOException {
         this.keySize = keySize;
@@ -140,14 +140,6 @@ public class Sorter {
     }
 
     public void addUnsortedKey(long[] key) throws IOException {
-        Long[] objKey = new Long[key.length];
-        for(int i = 0; i < key.length; i++){
-            objKey[i] = key[i];
-        }
-        addUnsortedKey(objKey);
-    }
-
-    public void addUnsortedKey(Long[] key) throws IOException {
         assert(key.length == keySize);
         if(byteRepSize + (keySize * 8) >= ALT_MAX_PAGE_SIZE){
             flushBulkLoadedKeys();
@@ -160,11 +152,7 @@ public class Sorter {
             flushAfterSortedKey();
         }
         byteRepSize += key.length * 8;
-        Long[] keyObj = new Long[key.length];
-        for(int i = 0; i < key.length; i++){
-            keyObj[i] = key[i];
-        }
-        sortedKeys.add(keyObj);
+        sortedKeys.add(key);
     }
 
     /* Testing for compressed pages.
@@ -177,7 +165,7 @@ public class Sorter {
     }
     */
 
-    public void addSortedKeyBulk(Long[] key) throws IOException {
+    public void addSortedKeyBulk(long[] key) throws IOException {
         if(byteRepSize + (keySize * 8) >= ALT_MAX_PAGE_SIZE){
             flushSortedBulkLoadedKeys();
         }
@@ -194,7 +182,7 @@ public class Sorter {
         NodeHeader.setPrecedingId(writeToCursor, writeToCursor.getCurrentPageId() - 1);
         NodeHeader.setFollowingID(writeToCursor, writeToCursor.getCurrentPageId() + 1);
         writeToCursor.setOffset(NodeHeader.NODE_HEADER_LENGTH);
-        for(Long[] sortedKey : sortedKeys){
+        for(long[] sortedKey : sortedKeys){
             for (Long val : sortedKey) {
                 writeToCursor.putLong(val);
             }
@@ -214,7 +202,7 @@ public class Sorter {
         NodeHeader.setFollowingID(writeToCursor, writeToCursor.getCurrentPageId() + 1);
         writeToCursor.setOffset(NodeHeader.NODE_HEADER_LENGTH);
         while(bulkLoadedKeys.size() > 0){
-            Long[] sortedKey = bulkLoadedKeys.poll();
+            long[] sortedKey = bulkLoadedKeys.poll();
             for (Long val : sortedKey) {
                 writeToCursor.putLong(val);
             }
@@ -233,7 +221,7 @@ public class Sorter {
         NodeHeader.setFollowingID(writeToCursor, writeToCursor.getCurrentPageId() + 1);
         writeToCursor.setOffset(NodeHeader.NODE_HEADER_LENGTH);
         //dump sorted keys to page,
-        for(Long[] sortedKey : sortedKeys){
+        for(long[] sortedKey : sortedKeys){
             for (Long val : sortedKey) {
                 writeToCursor.putLong(val);
             }

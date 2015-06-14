@@ -17,13 +17,13 @@ import java.util.Arrays;
  */
 public class LZ4PageCursor extends PageProxyCursor{
     public static PagedFile pagedFile;
-    LZ4Factory factory = LZ4Factory.fastestInstance();
+    LZ4Factory factory = LZ4Factory.fastestJavaInstance();
     LZ4Compressor compressor = factory.fastCompressor();
     LZ4FastDecompressor decompressor = factory.fastDecompressor();
     PageCursor cursor;
     int maxPageSize = DiskCache.PAGE_SIZE * 7;
     ByteBuffer dBuffer = ByteBuffer.allocate(maxPageSize);
-    int mostRecentCompressedLeafSize = DiskCache.PAGE_SIZE;//the default value
+    int mostRecentCompressedLeafSize = NodeHeader.NODE_HEADER_LENGTH;//the default value
     boolean deferWriting = false;
 
     public LZ4PageCursor(DiskCache disk, long pageId, int lock) throws IOException {
@@ -34,12 +34,20 @@ public class LZ4PageCursor extends PageProxyCursor{
 
     @Override
     public void next(long page) throws IOException {
+        forcePushChangesToDisk();
         cursor.next(page);
+        mostRecentCompressedLeafSize = NodeHeader.NODE_HEADER_LENGTH;
         loadCursorFromDisk();
         dBuffer.position(0);
     }
 
     public void pushChangesToDisk(){
+        if(dBuffer.position() >= DiskCache.PAGE_SIZE)
+            forcePushChangesToDisk();
+    }
+
+
+    public void forcePushChangesToDisk(){
         if(!deferWriting) {
             int mark = dBuffer.position();
             if (NodeHeader.isLeafNode(dBuffer))
@@ -64,30 +72,30 @@ public class LZ4PageCursor extends PageProxyCursor{
         //compress the contents of dBuffer. Must first determine how big dBuffer actually is.
         //assumption that this is a leaf node.
         //will just check if the path id is zero, if so, this is the end of this block.
+        writeHeaderToCursor();
         int decompressedSize = getLastUsedLeafBufferPosition() - NodeHeader.NODE_HEADER_LENGTH;
         if(decompressedSize != 0) {
             byte[] compresedMinusHeader = compress(decompressedSize);
-            writeHeaderToCursor();
             cursor.setOffset(NodeHeader.NODE_HEADER_LENGTH);
             cursor.putBytes(compresedMinusHeader);
         }
     }
 
     public byte[] compress(int decompressedSize){
-        int keyLength = NodeHeader.getKeyLength(cursor);
-        int numberOfKeys = NodeHeader.getNumberOfKeys(cursor);
-        byte[] compressed = new byte[DiskCache.PAGE_SIZE - NodeHeader.NODE_HEADER_LENGTH];
         byte[] data = new byte[decompressedSize];
         System.arraycopy(dBuffer.array(), NodeHeader.NODE_HEADER_LENGTH, data, 0, data.length);
-        compressor.compress(data, 0, decompressedSize, compressed, 0, data.length);
-        return data;
+        byte[] compressed = new byte[compressor.maxCompressedLength(decompressedSize)];
+        this.mostRecentCompressedLeafSize = compressor.compress(data, 0, decompressedSize, compressed, 0, compressed.length);
+        byte[] compressedTruncated = new byte[mostRecentCompressedLeafSize];
+        System.arraycopy(compressed, 0, compressedTruncated, 0, compressedTruncated.length);
+        return compressedTruncated;
     }
 
 
 
     private int getLastUsedLeafBufferPosition(){
         int keyLength = NodeHeader.getKeyLength(cursor);
-        int numberOfKeys = NodeHeader.getNumberOfKeys(cursor);
+        int numberOfKeys = NodeHeader.getNumberOfKeys(dBuffer);
         if(keyLength == 0 || numberOfKeys == 0)
             return NodeHeader.NODE_HEADER_LENGTH;
         dBuffer.position(NodeHeader.NODE_HEADER_LENGTH);
@@ -115,7 +123,7 @@ public class LZ4PageCursor extends PageProxyCursor{
         // else {
         //      dBuffer = ByteBuffer.allocate(maxPageSize);
         if (NodeHeader.isUninitializedNode(cursor)) {
-            return;
+            Arrays.fill(dBuffer.array(), (byte)0);
         } else if (NodeHeader.isLeafNode(cursor))
             decompressLeaf();
         else
@@ -124,12 +132,18 @@ public class LZ4PageCursor extends PageProxyCursor{
     //}
 
     private void decompressLeaf(){
+        dBuffer.position(0);
+        cursor.setOffset(0);
+        for(int i = 0; i < NodeHeader.NODE_HEADER_LENGTH; i++){
+            dBuffer.put(cursor.getByte());
+        }
+
         byte[] compressed = new byte[DiskCache.PAGE_SIZE - NodeHeader.NODE_HEADER_LENGTH];
         cursor.setOffset(NodeHeader.NODE_HEADER_LENGTH);
         cursor.getBytes(compressed);
-        byte[] restored = new byte[maxPageSize];
-        decompressor.decompress(compressed, 0, restored, 0, maxPageSize);
-
+        byte[] restored = new byte[maxPageSize - NodeHeader.NODE_HEADER_LENGTH];
+        decompressor.decompress(compressed, 0, restored, 0, restored.length);
+        System.arraycopy(restored, 0, dBuffer.array(), NodeHeader.NODE_HEADER_LENGTH, restored.length);
     }
 
     private void decompressInternalNode(){
@@ -241,8 +255,8 @@ public class LZ4PageCursor extends PageProxyCursor{
     }
     @Override
     public boolean leafNodeContainsSpaceForNewKey(long[] newKey){
-        //return NodeSize.leafNodeContainsSpaceForNewKey(this, newKey);
-        return mostRecentCompressedLeafSize + (newKey.length * Long.BYTES) < DiskCache.PAGE_SIZE;
+        int magic_pad = 100;
+        return (mostRecentCompressedLeafSize + (newKey.length * Long.BYTES) + magic_pad) < DiskCache.PAGE_SIZE;
     }
 
     @Override

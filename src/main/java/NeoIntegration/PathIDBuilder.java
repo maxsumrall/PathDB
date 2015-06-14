@@ -94,4 +94,15 @@ public class PathIDBuilder {
     public String prettyPrint(){
         return prettyPrint.toString().replace("()()", "()");
     }
+
+
+    public static boolean lexographicallyFirst(PathIDBuilder a, PathIDBuilder b){
+        StringBuilder normal = new StringBuilder();
+        normal.append(a.getPath());
+        normal.append(b.getPath());
+        String normStr = normal.toString();
+        String inverse = normal.reverse().toString();
+        return normStr.compareTo(inverse) < 0;
+    }
+
 }
