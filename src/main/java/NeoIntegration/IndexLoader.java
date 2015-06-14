@@ -7,7 +7,6 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.helpers.collection.IteratorUtil;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
@@ -29,7 +28,7 @@ public class IndexLoader {
     void run()
     {
         // START SNIPPET: addData
-        GraphDatabaseService db = new GraphDatabaseFactory().newEmbeddedDatabase(new File(DB_PATH));
+        GraphDatabaseService db = new GraphDatabaseFactory().newEmbeddedDatabase( DB_PATH );
 
 
         long[] key = new long[4];
