@@ -72,8 +72,9 @@ public class LexographicIndexBuilder {
 
     public LexographicIndexBuilder() throws IOException {
 
-        sorters.put(3, new Sorter(3));
-        sorters.put(4, new Sorter(4));
+        for(int i = 1; i <= MAX_K; i++){
+            sorters.put(i + 2, new Sorter(i + 2));
+        }
 
         long startTime = System.nanoTime();
         enumerateSingleEdges();
