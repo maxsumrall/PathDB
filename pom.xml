@@ -58,6 +58,22 @@
                     <executable>java</executable>
                     <mainClass>NeoIntegration.Runner</mainClass>
                     <arguments>
+                        <argument>-Xmx2G -Xms2G</argument>
+                        <argument>-XX:+UseFastAccessorMethods</argument>
+                        <argument>-XX:+DisableExplicitGC</argument>
+                        <argument>-XX:+UseConcMarkSweepGC</argument>
+                        <argument>-XX:+UseNUMA</argument>
+                        <argument>-XX:+CMSParallelRemarkEnabled</argument>
+                        <argument>-XX:MaxTenuringThreshold=15</argument>
+                        <argument>-XX:MaxGCPauseMillis=30</argument>
+                        <argument>-XX:GCPauseIntervalMillis=150</argument>
+                        <argument>-XX:+UseAdaptiveGCBoundary</argument>
+                        <argument>-XX:-UseGCOverheadLimit</argument>
+                        <argument>-XX:+UseBiasedLocking</argument>
+                        <argument>-XX:SurvivorRatio=8</argument>
+                        <argument>-XX:TargetSurvivorRatio=90</argument>
+                        <argument>-XX:MaxTenuringThreshold=15</argument>
+                        <argument>-XX:+UseCompressedOops</argument>
                     </arguments>
                     <cleanupDaemonThreads>false</cleanupDaemonThreads>
                 </configuration>
