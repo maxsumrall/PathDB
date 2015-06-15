@@ -5,7 +5,6 @@ import net.jpountz.lz4.LZ4Compressor;
 import net.jpountz.lz4.LZ4Factory;
 import net.jpountz.lz4.LZ4FastDecompressor;
 import org.neo4j.io.pagecache.PageCursor;
-import org.neo4j.io.pagecache.PagedFile;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -16,12 +15,11 @@ import java.util.Arrays;
  * Created by max on 6/8/15.
  */
 public class LZ4PageCursor extends PageProxyCursor{
-    public static PagedFile pagedFile;
     LZ4Factory factory = LZ4Factory.fastestJavaInstance();
     LZ4Compressor compressor = factory.fastCompressor();
     LZ4FastDecompressor decompressor = factory.fastDecompressor();
     PageCursor cursor;
-    int maxPageSize = DiskCache.PAGE_SIZE * 7;
+    int maxPageSize = DiskCache.PAGE_SIZE * 15;
     ByteBuffer dBuffer = ByteBuffer.allocate(maxPageSize);
     int mostRecentCompressedLeafSize = NodeHeader.NODE_HEADER_LENGTH;//the default value
     boolean deferWriting = false;
@@ -34,20 +32,13 @@ public class LZ4PageCursor extends PageProxyCursor{
 
     @Override
     public void next(long page) throws IOException {
-        forcePushChangesToDisk();
         cursor.next(page);
-        mostRecentCompressedLeafSize = NodeHeader.NODE_HEADER_LENGTH;
         loadCursorFromDisk();
         dBuffer.position(0);
     }
 
+
     public void pushChangesToDisk(){
-        if(dBuffer.position() >= DiskCache.PAGE_SIZE)
-            forcePushChangesToDisk();
-    }
-
-
-    public void forcePushChangesToDisk(){
         if(!deferWriting) {
             int mark = dBuffer.position();
             if (NodeHeader.isLeafNode(dBuffer))
@@ -77,6 +68,8 @@ public class LZ4PageCursor extends PageProxyCursor{
         if(decompressedSize != 0) {
             byte[] compresedMinusHeader = compress(decompressedSize);
             cursor.setOffset(NodeHeader.NODE_HEADER_LENGTH);
+            cursor.putInt(decompressedSize);
+            cursor.putInt(mostRecentCompressedLeafSize);
             cursor.putBytes(compresedMinusHeader);
         }
     }
@@ -116,20 +109,14 @@ public class LZ4PageCursor extends PageProxyCursor{
     }
 
     private void loadCursorFromDisk(){
-        //ByteBuffer possibleBuffer = fastCache.getByteBuffer(cursor.getCurrentPageId());
-        //if(possibleBuffer != null){
-        //    dBuffer = possibleBuffer;
-        // }
-        // else {
-        //      dBuffer = ByteBuffer.allocate(maxPageSize);
+
         if (NodeHeader.isUninitializedNode(cursor)) {
-            Arrays.fill(dBuffer.array(), (byte)0);
+            //Arrays.fill(dBuffer.array(), (byte)0);
         } else if (NodeHeader.isLeafNode(cursor))
             decompressLeaf();
         else
             decompressInternalNode();
     }
-    //}
 
     private void decompressLeaf(){
         dBuffer.position(0);
@@ -138,10 +125,16 @@ public class LZ4PageCursor extends PageProxyCursor{
             dBuffer.put(cursor.getByte());
         }
 
-        byte[] compressed = new byte[DiskCache.PAGE_SIZE - NodeHeader.NODE_HEADER_LENGTH];
-        cursor.setOffset(NodeHeader.NODE_HEADER_LENGTH);
+        int decompressedSize = cursor.getInt();
+        mostRecentCompressedLeafSize = cursor.getInt();
+        if(NodeHeader.getNumberOfKeys(dBuffer) < 1){
+            return;
+        }
+
+        byte[] compressed = new byte[mostRecentCompressedLeafSize];
+        //cursor.setOffset(NodeHeader.NODE_HEADER_LENGTH);
         cursor.getBytes(compressed);
-        byte[] restored = new byte[maxPageSize - NodeHeader.NODE_HEADER_LENGTH];
+        byte[] restored = new byte[decompressedSize];
         decompressor.decompress(compressed, 0, restored, 0, restored.length);
         System.arraycopy(restored, 0, dBuffer.array(), NodeHeader.NODE_HEADER_LENGTH, restored.length);
     }
@@ -255,7 +248,7 @@ public class LZ4PageCursor extends PageProxyCursor{
     }
     @Override
     public boolean leafNodeContainsSpaceForNewKey(long[] newKey){
-        int magic_pad = 100;
+        int magic_pad = 50;
         return (mostRecentCompressedLeafSize + (newKey.length * Long.BYTES) + magic_pad) < DiskCache.PAGE_SIZE;
     }
 

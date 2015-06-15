@@ -54,24 +54,21 @@ public class CleverIndexBuilder {
             System.out.println("");
             System.out.println("----- K1 Paths ---- ");
             out.println("----- K1 Paths ---- ");
-            for(Long key : indexBuilder.relationshipMap.keySet()) {
-                PathIDBuilder builder = (PathIDBuilder) indexBuilder.k3RelationshipsMap.get(key);
-                System.out.println("Path: " + builder.getPath() + " , pathID: " + key);
-                out.println("Path: " + builder.getPath() + " , pathID: " + key);
+            for (PathIDBuilder builder: indexBuilder.relationshipMap.values()) {
+                System.out.println("Path: " + builder.prettyPrint() + " , pathID: " + builder.buildPath());
+                out.println("Path: " + builder.prettyPrint() + " , pathID: " + builder.buildPath());
             }
             System.out.println("----- K2 Paths ---- ");
             out.println("----- K2 Paths ---- ");
-            for (Long key : indexBuilder.k2RelationshipsMap.keySet()) {
-                PathIDBuilder builder = (PathIDBuilder) indexBuilder.k2RelationshipsMap.get(key);
-                System.out.println("Path: " + builder.getPath() + " , pathID: " + key);
-                out.println("Path: " + builder.getPath() + " , pathID: " + key);
+            for (Long key: indexBuilder.k2RelationshipsMap.keySet()) {
+                System.out.println("Path: " + indexBuilder.k2RelationshipsMap.get(key).getPath() + " , pathID: " + key);
+                out.println("Path: " + indexBuilder.k2RelationshipsMap.get(key).getPath() + " , pathID: " + key);
             }
             System.out.println("----- K3 Paths ---- ");
             out.println("----- K3 Paths ---- ");
-            for(Long key : indexBuilder.k3RelationshipsMap.keySet()) {
-                PathIDBuilder builder = (PathIDBuilder) indexBuilder.k3RelationshipsMap.get(key);
-                System.out.println("Path: " + builder.getPath() + " , pathID: " + key);
-                out.println("Path: " + builder.getPath() + " , pathID: " + key);
+            for (Long key: indexBuilder.k3RelationshipsMap.keySet()) {
+                System.out.println("Path: " + indexBuilder.k3RelationshipsMap.get(key).getPath() + " , pathID: " + key);
+                out.println("Path: " + indexBuilder.k3RelationshipsMap.get(key).getPath() + " , pathID: " + key);
             }
         }
     }

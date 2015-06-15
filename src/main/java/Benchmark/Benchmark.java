@@ -42,7 +42,6 @@ public class Benchmark {
        // System.out.println("------ 1,000,000,000 -------");
        // runExperiment(1000000000);
 
-
         System.out.println("Benchmarking completed.");
     }
 
@@ -56,7 +55,7 @@ public class Benchmark {
 
         double totalSumInsert = performInsertionExperiment(proxy, items_to_insert, number_of_paths);
         double totalSumSearch = performSearchExperiment(proxy, items_to_insert, number_of_paths);
-        double totalSumDelete = performDeletionExperiment(proxy, items_to_insert, number_of_paths);
+        //double totalSumDelete = performDeletionExperiment(proxy, items_to_insert, number_of_paths);
 
         disk.shutdown();
         long disk_size = disk.pageCacheFile.length();
@@ -67,7 +66,7 @@ public class Benchmark {
         strBuilder.append("\n Sum Insertion time(minutes): ").append(totalSumInsert / 60000000000d);
         strBuilder.append("\n Average Insertion time(micro seconds): ").append(totalSumInsert / items_to_insert);
         strBuilder.append("\n Average Search time(micro seconds): ").append(totalSumSearch / items_to_insert);
-        strBuilder.append("\n Average Deletion time(micro seconds): ").append(totalSumDelete / items_to_insert);
+        //strBuilder.append("\n Average Deletion time(micro seconds): ").append(totalSumDelete / items_to_insert);
         strBuilder.append("\n Disk Size(mb): ").append(disk_size / 1000000.0);
 
         logToFile(strBuilder.toString());

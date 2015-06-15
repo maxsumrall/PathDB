@@ -185,9 +185,9 @@ public class LexographicIndexBuilder {
         for(long pathIdA : relationshipMap.keySet()){
             for(long pathIdB: relationshipMap.keySet()) {
                 System.out.print("\rPaths complete: " + pathCount++ + "/" + total);
-                if(!PathIDBuilder.lexographicallyFirst(relationshipMap.get(pathIdA), relationshipMap.get(pathIdB))){
+                /*if(!PathIDBuilder.lexicographicallyFirst(relationshipMap.get(pathIdA), relationshipMap.get(pathIdB))){
                     continue;
-                }
+                }*/
                 entries.clear();
                 SearchCursor resultA = indexes.get(1).find(cursorA, new long[]{pathIdA});
                     while (resultA.hasNext(cursorA)) {
@@ -229,7 +229,7 @@ public class LexographicIndexBuilder {
                 for (long pathIdK1 : relationshipMap.keySet()) {
                     for (long pathIdK2 : k2RelationshipsMap.keySet()) {
                         System.out.print("\rPaths complete: " + pathCount++ + "/" + total);
-                        if (!PathIDBuilder.lexographicallyFirst(relationshipMap.get(pathIdK1), k2RelationshipsMap.get(pathIdK2))) {
+                        if (!PathIDBuilder.lexicographicallyFirst(relationshipMap.get(pathIdK1), k2RelationshipsMap.get(pathIdK2))) {
                             continue;
                         }
                         entries.clear();

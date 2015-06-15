@@ -96,7 +96,7 @@ public class PathIDBuilder {
     }
 
 
-    public static boolean lexographicallyFirst(PathIDBuilder a, PathIDBuilder b){
+    public static boolean lexicographicallyFirst(PathIDBuilder a, PathIDBuilder b){
         StringBuilder normal = new StringBuilder();
         normal.append(a.getPath());
         normal.append(b.getPath());

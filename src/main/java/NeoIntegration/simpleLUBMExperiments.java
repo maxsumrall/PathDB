@@ -26,7 +26,7 @@ class simpleLUBMExperiments {
         int query;
         int index;
 
-
+/*
         query = experiments.query("MATCH (x)-[:memberOf]->(y) RETURN ID(x), ID(y)");
         index = experiments.index(3, 649439727, null);
         assert(query == index);
@@ -50,26 +50,32 @@ class simpleLUBMExperiments {
         query = experiments.query("MATCH (x)-[:memberOf]->(y)-[:subOrganizationOf]->(z) RETURN ID(x), ID(y), ID(z)");
         index = experiments.index(4, 49, null);
         assert(query == index);
-
+*/
         query = experiments.query("MATCH (x)-[:undergraduateDegreeFrom]->(y)<-[:subOrganizationOf]-(z)<-[:memberOf]-(x) RETURN ID(x), ID(y), ID(z)");
         index = experiments.rectangleJoin(3, 1918060825, 4, 49);
+        index = experiments.indexShape(5, 121, null);
         assert(query == index);
 
         query = experiments.query("MATCH (x)-[:hasAdvisor]->(y)-[:teacherOf]->(z)<-[:takesCourse]-(x) RETURN ID(x), ID(y), ID(z)");
         index = experiments.rectangleJoin(3, 939155463, 4, 57);
+        index = experiments.indexShape(5, 145, null);
         assert(query == index);
 
-        query = experiments.query("MATCH (x)<-[:headOf]-(y)-[:worksFor]->(z)<-[:subOrganizationOf]-(w) RETURN ID(x), ID(y), ID(z), ID(w)");
-        index = experiments.pathJoinAlpha(3, 1221271593, 4, 4);
+        //query = experiments.query("MATCH (x)<-[:headOf]-(y)-[:worksFor]->(z)<-[:subOrganizationOf]-(w) RETURN ID(x), ID(y), ID(z), ID(w)");
+        //index = experiments.pathJoinAlpha(3, 1221271593, 4, 4);
+        //index = experiments.index(5, 121, null);
+
         assert(query == index);
 
-        query = experiments.query("MATCH (x)<-[:headOf]-(y)-[:worksFor]->(z)-[:subOrganizationOf]->(w) RETURN ID(x), ID(y), ID(z), ID(w)");
-        index = experiments.pathJoin(3, 1221271593, 4, 1);
+        //query = experiments.query("MATCH (x)<-[:headOf]-(y)-[:worksFor]->(z)-[:subOrganizationOf]->(w) RETURN ID(x), ID(y), ID(z), ID(w)");
+        //index = experiments.pathJoin(3, 1221271593, 4, 1);
+        //index = experiments.index(5, 121, null);
         assert(query == index);
 
         for(DiskCache disk : experiments.disks.values()){
             disk.shutdown();
         }
+
     }
 
     public simpleLUBMExperiments() throws IOException {
@@ -122,8 +128,8 @@ class simpleLUBMExperiments {
             }
             long timeToLastResult = System.nanoTime();
             System.out.println("Number of results found in Neo4j:" + count);
-            stringBuilder.append((timeToFirstResult - startTime) / (double) 1000000).append(",");
-            stringBuilder.append((timeToLastResult - startTime) / (double) 1000000).append(",");;
+            System.out.println((timeToFirstResult - startTime) / (double) 1000000);
+            System.out.println((timeToLastResult - startTime) / (double) 1000000);
         }
         return count;
     }
@@ -157,9 +163,44 @@ class simpleLUBMExperiments {
             }
             timeToLastResult = System.nanoTime();
         }
-        //System.out.println("Number of results found in Index: " + count);
-        stringBuilder.append((timeToFirstResult - startTime) / (double) 1000000).append(",");
-        stringBuilder.append((timeToLastResult - startTime) / (double) 1000000);
+        System.out.println("Index");
+        System.out.println((timeToFirstResult - startTime) / (double) 1000000);
+        System.out.println((timeToLastResult - startTime) / (double) 1000000);
+        System.out.println("Result Set Size index: " + count);
+
+        if(tx != null){
+            tx.close();
+        }
+        return count;
+    }
+
+
+    public int indexShape(int index, long pathID, IndexConstraint constraint) throws IOException {
+        Transaction tx = null;
+        if(constraint != null){
+            tx = database.beginTx();
+        }
+        long startTime = System.nanoTime();
+        long timeToFirstResult;
+        long timeToLastResult;
+        long[] searchKey = new long[]{pathID};
+
+        long[] foundKey;
+        int count = 0;
+        SearchCursor searchCursor = indexes.get(index).find(searchKey);
+        try (PageProxyCursor cursor = disks.get(index).getCursor(searchCursor.pageID, PagedFile.PF_SHARED_LOCK)) {
+            timeToFirstResult = System.nanoTime();
+            while(searchCursor.hasNext(cursor)) {
+                foundKey = searchCursor.next(cursor);
+                if(foundKey[1] == foundKey[foundKey.length -1])
+                    count++;
+
+            }
+            timeToLastResult = System.nanoTime();
+        }
+        System.out.println("Index w/ constraint Join");
+        System.out.println((timeToFirstResult - startTime) / (double) 1000000);
+        System.out.println((timeToLastResult - startTime) / (double) 1000000);
         System.out.println("Result Set Size index: " + count);
 
         if(tx != null){
@@ -219,8 +260,9 @@ class simpleLUBMExperiments {
                 timeToLastResult = System.nanoTime();
             }
         }
-        stringBuilder.append((timeToFirstResult - startTime) / (double) 1000000).append(",");
-        stringBuilder.append((timeToLastResult - startTime) / (double) 1000000);
+        System.out.println("Rectangle Join");
+        System.out.println((timeToFirstResult - startTime) / (double) 1000000);
+        System.out.println((timeToLastResult - startTime) / (double) 1000000);
         System.out.println("Result Set Size index: " + count);
         return count;
     }
@@ -263,8 +305,9 @@ class simpleLUBMExperiments {
                 timeToLastResult = System.nanoTime();
             }
         }
-        stringBuilder.append((timeToFirstResult - startTime) / (double) 1000000).append(",");
-        stringBuilder.append((timeToLastResult - startTime) / (double) 1000000);
+        System.out.println("Path Join");
+        System.out.println((timeToFirstResult - startTime) / (double) 1000000);
+        System.out.println((timeToLastResult - startTime) / (double) 1000000);
         System.out.println("Result Set Size index: " + count);
         return count;
     }
