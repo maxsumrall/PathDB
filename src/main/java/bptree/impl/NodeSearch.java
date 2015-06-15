@@ -34,6 +34,26 @@ public class NodeSearch {
         return resultsCursor;
     }
 
+    public SearchCursor findWithCursor(PageProxyCursor cursor, long[] key){
+        SearchCursor resultsCursor = null;
+        int[] searchResult;
+        try {
+            cursor.next(tree.rootNodeId);
+            searchResult = find(cursor, key);
+            long currentNode = cursor.getCurrentPageId();
+            if(searchResult[0] == 0) {
+                int[] altResult = moveCursorBackIfPreviousNodeContainsValidKeys(cursor, key);
+                if (currentNode != cursor.getCurrentPageId()) {
+                    searchResult = altResult;
+                }
+            }
+            resultsCursor = new SearchCursor(cursor.getCurrentPageId(), NodeHeader.getSiblingID(cursor), searchResult[0], key, NodeHeader.getKeyLength(cursor), NodeHeader.getNumberOfKeys(cursor));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return resultsCursor;
+    }
+
     public int[] find(PageProxyCursor cursor, long[] key) throws IOException {
         int[] searchResult;
         if(NodeHeader.isLeafNode(cursor)){

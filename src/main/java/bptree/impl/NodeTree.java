@@ -58,8 +58,12 @@ public class NodeTree {
     }
 
 
-    public SearchCursor find(long[] key){
+    public SearchCursor find(long[] key) throws IOException {
         return nodeSearch.find(key);
+    }
+
+    public SearchCursor find(PageProxyCursor cursor, long[] key) throws IOException {
+        return nodeSearch.findWithCursor(cursor, key);
     }
 
     public void insert(long[] key){

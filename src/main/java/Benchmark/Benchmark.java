@@ -94,7 +94,7 @@ public class Benchmark {
         return totalSum;
     }
 
-    public static double performSearchExperiment(NodeTree tree, int items_to_insert, int number_of_paths){
+    public static double performSearchExperiment(NodeTree tree, int items_to_insert, int number_of_paths) throws IOException {
         double totalSum = 0;
         long[] key = new long[4];
         for (int i = 1; i < items_to_insert; i++) {

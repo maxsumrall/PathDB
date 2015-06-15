@@ -33,7 +33,7 @@ public class LexographicIndexBuilder {
     TreeMap<Long, PathIDBuilder> k3RelationshipsMap = new TreeMap<>(); //relationship types to path ids
     HashMap<Long, Long> k2PathIds = new HashMap<>();
     HashMap<Long, Long> k3PathIds = new HashMap<>();
-    SuperFillSortedDisk k2DiskFiller = new SuperFillSortedDisk(4);
+    //SuperFillSortedDisk k2DiskFiller = new SuperFillSortedDisk(4);
     SuperFillSortedDisk k3DiskFiller = new SuperFillSortedDisk(5);
     long currentShortPathID = 1;
 
@@ -73,6 +73,7 @@ public class LexographicIndexBuilder {
     public LexographicIndexBuilder() throws IOException {
 
         sorters.put(3, new Sorter(3));
+        sorters.put(4, new Sorter(4));
 
         long startTime = System.nanoTime();
         enumerateSingleEdges();
@@ -96,10 +97,11 @@ public class LexographicIndexBuilder {
         if(MAX_K > 1) {
             startTime = System.nanoTime();
             buildK2Paths();
-            k2DiskFiller.finish();
+            Sorter sorterK2 = sorters.get(4);
+            SetIterator k2Iterator = sorterK2.finishWithoutSort();
+            NodeTree k2Index = buildIndex(sorterK2, k2Iterator);
             endTime = System.nanoTime();
             logToFile("Time to build K2 edges(ns): " + (endTime - startTime));
-            NodeTree k2Index = buildIndex(k2DiskFiller);
             indexes.put(2, k2Index);
         }
 
@@ -176,26 +178,25 @@ public class LexographicIndexBuilder {
         int k2count = 0;
         long prevK2PathId = 0;
         long[] combinedPath;
+        ArrayList<long[]> entries = new ArrayList<>();
         int total = relationshipMap.size() * relationshipMap.size();
+        try (PageProxyCursor cursorA = indexes.get(1).disk.getCursor(0, PagedFile.PF_SHARED_LOCK)) {
         for(long pathIdA : relationshipMap.keySet()){
             for(long pathIdB: relationshipMap.keySet()) {
                 System.out.print("\rPaths complete: " + pathCount++ + "/" + total);
                 if(!PathIDBuilder.lexographicallyFirst(relationshipMap.get(pathIdA), relationshipMap.get(pathIdB))){
                     continue;
                 }
-
-                ArrayList<long[]> entries = new ArrayList<>();
-                SearchCursor resultA = indexes.get(1).find(new long[]{pathIdA});
-                try (PageProxyCursor cursorA = indexes.get(1).disk.getCursor(resultA.pageID, PagedFile.PF_SHARED_LOCK)) {
+                entries.clear();
+                SearchCursor resultA = indexes.get(1).find(cursorA, new long[]{pathIdA});
                     while (resultA.hasNext(cursorA)) {
                         entries.add(resultA.next(cursorA));
                     }
-                }
+
                 for (long[] entry : entries) {
-                    SearchCursor resultB = indexes.get(1).find(new long[]{pathIdB, entry[2]});
-                    try (PageProxyCursor cursorB = indexes.get(1).disk.getCursor(resultB.pageID, PagedFile.PF_SHARED_LOCK)) {
-                        while (resultB.hasNext(cursorB)) {
-                            long[] secondPath = resultB.next(cursorB);
+                    SearchCursor resultB = indexes.get(1).find(cursorA, new long[]{pathIdB, entry[2]});
+                        while (resultB.hasNext(cursorA)) {
+                            long[] secondPath = resultB.next(cursorA);
                             if (entry[1] == secondPath[2]) {//TODO test if this is correct
                                 continue;
                             }
@@ -206,7 +207,7 @@ public class LexographicIndexBuilder {
                             }
                             long k2PathId = k2PathIds.get(builder.buildPath());
                             combinedPath = new long[]{k2PathId, entry[1], entry[2], secondPath[2]};
-                            k2DiskFiller.addKey(combinedPath);
+                            sorters.get(4).addSortedKeyBulk(combinedPath);
                         }
                     }
                 }
@@ -220,33 +221,34 @@ public class LexographicIndexBuilder {
         int k2count = 0;
         long prevK2PathId = 0;
         long[] combinedPath;
+        ArrayList<long[]> entries = new ArrayList<>();
         int total = relationshipMap.size() * k2PathIds.size();
-        for(long pathIdK1 : relationshipMap.keySet()){
-            for(long pathIdK2: k2RelationshipsMap.keySet()) {
-                System.out.print("\rPaths complete: " + pathCount++ + "/" + total);
-                if(!PathIDBuilder.lexographicallyFirst(relationshipMap.get(pathIdK1), k2RelationshipsMap.get(pathIdK2))){
-                    continue;
-                }
-                ArrayList<long[]> entries = new ArrayList<>();
-                SearchCursor resultA = indexes.get(1).find(new long[]{pathIdK1});
-                try (PageProxyCursor cursorA = indexes.get(1).disk.getCursor(resultA.pageID, PagedFile.PF_SHARED_LOCK)) {
-                    while (resultA.hasNext(cursorA)) {
-                        entries.add(resultA.next(cursorA));
-                    }
-                }
-                for (long[] entry : entries) {
-                    SearchCursor resultB = indexes.get(2).find(new long[]{pathIdK2, entry[2]});
-                    try (PageProxyCursor cursorB = indexes.get(2).disk.getCursor(resultB.pageID, PagedFile.PF_SHARED_LOCK)) {
-                        while (resultB.hasNext(cursorB)) {
-                            long[] secondPath = resultB.next(cursorB);
-                            PathIDBuilder builder = new PathIDBuilder(relationshipMap.get(entry[0]).getPath(), k2RelationshipsMap.get(pathIdK2).getPath());
-                            if (!k3PathIds.containsKey(builder.buildPath())) {
-                                k3PathIds.put(builder.buildPath(), currentShortPathID++);
-                                k3RelationshipsMap.put(k3PathIds.get(builder.buildPath()), builder);
+        try (PageProxyCursor cursorA = indexes.get(1).disk.getCursor(0, PagedFile.PF_SHARED_LOCK)) {
+            try (PageProxyCursor cursorB = indexes.get(2).disk.getCursor(0, PagedFile.PF_SHARED_LOCK)) {
+                for (long pathIdK1 : relationshipMap.keySet()) {
+                    for (long pathIdK2 : k2RelationshipsMap.keySet()) {
+                        System.out.print("\rPaths complete: " + pathCount++ + "/" + total);
+                        if (!PathIDBuilder.lexographicallyFirst(relationshipMap.get(pathIdK1), k2RelationshipsMap.get(pathIdK2))) {
+                            continue;
+                        }
+                        entries.clear();
+                        SearchCursor resultA = indexes.get(1).find(cursorA, new long[]{pathIdK1});
+                        while (resultA.hasNext(cursorA)) {
+                            entries.add(resultA.next(cursorA));
+                        }
+                        for (long[] entry : entries) {
+                            SearchCursor resultB = indexes.get(2).find(cursorB, new long[]{pathIdK2, entry[2]});
+                            while (resultB.hasNext(cursorB)) {
+                                long[] secondPath = resultB.next(cursorB);
+                                PathIDBuilder builder = new PathIDBuilder(relationshipMap.get(entry[0]).getPath(), k2RelationshipsMap.get(pathIdK2).getPath());
+                                if (!k3PathIds.containsKey(builder.buildPath())) {
+                                    k3PathIds.put(builder.buildPath(), currentShortPathID++);
+                                    k3RelationshipsMap.put(k3PathIds.get(builder.buildPath()), builder);
+                                }
+                                long k3PathId = k3PathIds.get(builder.buildPath());
+                                combinedPath = new long[]{k3PathId, entry[1], entry[2], secondPath[2], secondPath[3]};
+                                k3DiskFiller.addKey(combinedPath);
                             }
-                            long k3PathId = k3PathIds.get(builder.buildPath());
-                            combinedPath = new long[]{k3PathId, entry[1], entry[2], secondPath[2], secondPath[3]};
-                            k3DiskFiller.addKey(combinedPath);
                         }
                     }
                 }

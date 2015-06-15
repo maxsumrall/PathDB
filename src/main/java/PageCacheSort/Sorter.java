@@ -37,7 +37,7 @@ public class Sorter {
         this.keyByteSize = this.keySize * 8;
         writeToDisk = DiskCache.persistentDiskCache(keySize+"tmp_sortFileA.dat", false);
         readFromDisk = DiskCache.temporaryDiskCache(keySize+"tmp_sortFileB.dat", false);
-        writeToCursor = writeToDisk.getCursor(0, PagedFile.PF_EXCLUSIVE_LOCK);
+        writeToCursor = writeToDisk.getCursor(0, PagedFile.PF_EXCLUSIVE_LOCK | PagedFile.PF_NO_FAULT);
     }
 
     public SetIterator finishWithoutSort() throws IOException {
@@ -73,8 +73,8 @@ public class Sorter {
 
     private void sortHelper() throws IOException {
         swapPageSets();
-        setIteratorCursor = readFromDisk.getCursor(0, PagedFile.PF_SHARED_LOCK);
-        writeToCursor = writeToDisk.getCursor(0, PagedFile.PF_EXCLUSIVE_LOCK);
+        setIteratorCursor = readFromDisk.getCursor(0, PagedFile.PF_SHARED_LOCK | PagedFile.PF_READ_AHEAD);
+        writeToCursor = writeToDisk.getCursor(0, PagedFile.PF_EXCLUSIVE_LOCK | PagedFile.PF_NO_FAULT);
         while(!readPageSets.isEmpty()){
             int modifiedFanOut = Math.min(readPageSets.size(), FAN_IN);
             LinkedList<PageSet> pageSets = new LinkedList<>();

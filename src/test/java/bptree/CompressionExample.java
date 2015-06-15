@@ -139,8 +139,14 @@ public class CompressionExample {
         else if(abs <= 36028797018963968l){
             minBytes = 7;
         }
-        return minBytes;
-        //return (int) Math.ceil(Math.ceil(Math.log(value, 2)) / 8.0));
+        //return minBytes;
+        return (int) Math.ceil(Math.ceil(log2nlz(value) / 8.0));
+    }
+    public static int log2nlz( long bits )
+    {
+        if( bits == 0 )
+            return 0; // or throw exception
+        return 31 - Long.numberOfLeadingZeros( bits );
     }
 
     public static void toBytes(long val, byte[] dest,int position, int numberOfBytes) { //rewrite this to put bytes in a already made array at the right position.
