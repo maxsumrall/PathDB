@@ -61,9 +61,9 @@ public class DiskCache {
 
     public PageProxyCursor getCursor(long id, int lockType) throws IOException {
         if(COMPRESSION){
-            return new LZ4PageCursor(this, id, lockType);
+            //return new LZ4PageCursor(this, id, lockType);
             //return new CompressedPageCursor(this, id, lockType);
-            //return new SuperCompressedPageCursor(this, id, lockType);
+            return new SuperCompressedPageCursor(this, id, lockType);
         }
         else{
             return new BasicPageCursor(this, id, lockType);
