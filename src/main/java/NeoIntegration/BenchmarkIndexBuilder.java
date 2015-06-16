@@ -16,29 +16,24 @@ import org.neo4j.tooling.GlobalGraphOperations;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.Map;
 
 /**
  * Created by max on 6/2/15.
  */
-public class CleverIndexBuilder {
-    public static final int MAX_K = 3;
+public class BenchmarkIndexBuilder {
+    public static final int MAX_K = 2;
     public static final String DB_PATH = "graph.db/";
-    public static final String LUBM_INDEX_PATH = "Cleverlubm50Index.db";
-    public static final String INDEX_METADATA_PATH = "pathIndexMetaData.dat";
+    public static final String LUBM_INDEX_PATH = "Benchmarklubm50Index.db";
+    public static final String INDEX_METADATA_PATH = "BenchmarkMetaData.dat";
     StringBuilder strBulder;
-    LinkedList<String> prettyPaths = new LinkedList<>();
     HashMap<Integer, Sorter> sorters = new HashMap<>();
     Map<Integer, NodeTree> indexes = new HashMap<>();
     HashMap<Long, PathIDBuilder> relationshipMap = new HashMap<>(); //relationship types to path ids
     HashMap<Long, PathIDBuilder> k2RelationshipsMap = new HashMap<>();
-    HashMap<Long, PathIDBuilder> k3RelationshipsMap = new HashMap<>();
     HashMap<Long, Long> k2PathIds = new HashMap<>();
-    HashMap<Long, Long> k3PathIds = new HashMap<>();
     long currentShortPathID = 1;
     //SuperFillSortedDisk k2DiskFiller = new SuperFillSortedDisk(4);
-    SuperFillSortedDisk k3DiskFiller = new SuperFillSortedDisk(5);
 
 
     public static void main(String[] args) throws IOException {
@@ -50,7 +45,7 @@ public class CleverIndexBuilder {
                 indexBuilder.indexes.get(i+1).disk.shutdown();
             }
         }
-        try(PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter("CleverLUBMLoaderLog" +".txt", false)))) {
+        try(PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter("BenchmarkLUBMLoaderLog" +".txt", false)))) {
             System.out.println("");
             System.out.println("----- K1 Paths ---- ");
             out.println("----- K1 Paths ---- ");
@@ -73,7 +68,7 @@ public class CleverIndexBuilder {
         }
     }
 
-    public CleverIndexBuilder() throws IOException {
+    public BenchmarkIndexBuilder() throws IOException {
 
         for(int i = 1; i <= MAX_K; i++){
             sorters.put(i + 2, new Sorter(i + 2));
@@ -107,16 +102,8 @@ public class CleverIndexBuilder {
             NodeTree k2Index = buildIndex(sorterK2, k2Iterator);
             indexes.put(2, k2Index);
         }
-
-        if(MAX_K > 2) {
-            startTime = System.nanoTime();
-            buildK3Paths();
-            k3DiskFiller.finish();
-            logToFile("Time to build K3 edges(ns): " + (System.nanoTime() - startTime));
-            NodeTree k3Index = buildIndex(k3DiskFiller);
-            indexes.put(3, k3Index);
-        }
     }
+
     public NodeTree buildIndex(Sorter sorter, SetIterator finalIterator) throws IOException {
         System.out.println("Building Index");
         DiskCache sortedDisk = sorter.getSortedDisk();
@@ -129,6 +116,7 @@ public class CleverIndexBuilder {
         logToFile("index K= " + sorter.keySize + " root: " + index.rootNodeId);
         return index;
     }
+
     public NodeTree buildIndex(SuperFillSortedDisk filler) throws IOException {
         System.out.println("Building Index");
         DiskCache sortedDisk = filler.compressedDisk;
@@ -194,8 +182,6 @@ public class CleverIndexBuilder {
     private void buildK2Paths() throws IOException {
         System.out.println("Building K2 Paths");
         int pathCount = 0;
-        int k2count = 0;
-        long prevK2PathId = 0;
         long[] combinedPath;
         ArrayList<long[]> entries = new ArrayList<>();
         int total = relationshipMap.size() * relationshipMap.size();
@@ -208,6 +194,7 @@ public class CleverIndexBuilder {
                     while (resultA.hasNext(cursorA)) {
                         entries.add(resultA.next(cursorA));
                     }
+
                     for (long[] entry : entries) {
                         SearchCursor resultB = indexes.get(1).find(cursorA, new long[]{pathIdB, entry[2]});
                         while (resultB.hasNext(cursorA)) {
@@ -227,46 +214,6 @@ public class CleverIndexBuilder {
         }
     }
 
-    private void buildK3Paths() throws IOException {
-        System.out.println("Building K3 Paths");
-        int pathCount = 0;
-        int k2count = 0;
-        long prevK2PathId = 0;
-        long[] combinedPath;
-        ArrayList<long[]> entries = new ArrayList<>();
-        int total = relationshipMap.size() * k2PathIds.size();
-        try (PageProxyCursor cursorA = indexes.get(1).disk.getCursor(0, PagedFile.PF_SHARED_LOCK)) {
-            try (PageProxyCursor cursorB = indexes.get(2).disk.getCursor(0, PagedFile.PF_SHARED_LOCK)) {
-                for (long pathIdK1 : relationshipMap.keySet()) {
-                    for (long pathIdK2 : k2RelationshipsMap.keySet()) {
-                        System.out.print("\rPaths complete: " + pathCount++ + "/" + total);
-                        entries.clear();
-                        SearchCursor resultA = indexes.get(1).find(cursorA, new long[]{pathIdK1});
-                        while (resultA.hasNext(cursorA)) {
-                            entries.add(resultA.next(cursorA));
-                        }
-                        for (long[] entry : entries) {
-                            SearchCursor resultB = indexes.get(2).find(cursorB, new long[]{pathIdK2, entry[2]});
-                            while (resultB.hasNext(cursorB)) {
-                                long[] secondPath = resultB.next(cursorB);
-                                PathIDBuilder builder = new PathIDBuilder(relationshipMap.get(entry[0]).getPath(), k2RelationshipsMap.get(pathIdK2).getPath());
-                                if (!k3PathIds.containsKey(builder.buildPath())) {
-                                    k3PathIds.put(builder.buildPath(), currentShortPathID++);
-                                    k3RelationshipsMap.put(k3PathIds.get(builder.buildPath()), builder);
-                                }
-                                long k3PathId = k3PathIds.get(builder.buildPath());
-                                combinedPath = new long[]{k3PathId, entry[1], entry[2], secondPath[2], secondPath[3]};
-                                k3DiskFiller.addKey(combinedPath);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-
-
     private void addPath(Node node1, Relationship relationship1, Node node2) throws IOException {
         PathIDBuilder builder = new PathIDBuilder(node1, relationship1, node2);
         long[] key = new long[]{builder.buildPath(), node1.getId(), node2.getId()};
@@ -281,7 +228,7 @@ public class CleverIndexBuilder {
     }
 
     public static void logToFile(String text){
-        try(PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter("index_building_times_clever.txt", true)))) {
+        try(PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter("BENCHMARKindex_building_times_clever.txt", true)))) {
             out.println(text);
             System.out.println(text);
         }catch (IOException e) {
@@ -290,3 +237,4 @@ public class CleverIndexBuilder {
     }
 
 }
+
