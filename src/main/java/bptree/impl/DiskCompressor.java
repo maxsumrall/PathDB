@@ -10,8 +10,11 @@ import java.io.IOException;
  * Created by max on 6/9/15.
  */
 public class DiskCompressor {
-
+    public static int maxNumBytes;
     public static long finalPageID = 0;
+    final static int sameID = 128;
+    final static int sameFirstNode = 64;
+
 
     public static DiskCache convertDiskToCompressed(SetIterator iterator, int keyLength) throws IOException {
         long[] next;
@@ -55,29 +58,61 @@ public class DiskCompressor {
 
     public static byte[] encodeKey(long[] key, long[] prev){
 
-        long[] diff = new long[key.length];
-        for(int i = 0; i < key.length; i++)
-        {
-            diff[i] = key[i] - prev[i];
+        maxNumBytes = 0;
+        int firstEncodedIndex = 0;
+        byte header = (byte)0;
+        if(key[0] == prev[0]) {
+            //set first bit
+            firstEncodedIndex++;
+            header |= sameID;
+
+            if (key[1] == prev[1]) {
+                //set second bit
+                firstEncodedIndex++;
+                header |= sameFirstNode;
+            }
         }
 
-        int maxNumBytes = Math.max(numberOfBytes(diff[0]), 1);
-        for(int i = 1; i < key.length; i++){
-            maxNumBytes = Math.max(maxNumBytes, numberOfBytes(diff[i]));
+        for(int i = firstEncodedIndex; i < key.length; i++){
+            maxNumBytes = Math.max(maxNumBytes, numberOfBytes(key[i] - prev[i]));
         }
 
-        byte[] encoded = new byte[1 + (maxNumBytes * key.length )];
-        encoded[0] = (byte)maxNumBytes;
-        for(int i = 0; i < key.length; i++){
-            toBytes(diff[i], encoded, 1 + (i * maxNumBytes), maxNumBytes);
+        byte[] encoded = new byte[1 + (maxNumBytes * (key.length - firstEncodedIndex))];
+        header |=  maxNumBytes;
+        encoded[0] = header;
+        for(int i = 0; i < key.length - firstEncodedIndex; i++){
+            toBytes(key[i + firstEncodedIndex] - prev[i + firstEncodedIndex], encoded, 1 + (i * maxNumBytes), maxNumBytes);
         }
         return encoded;
     }
 
-    public static int numberOfBytes(long value){
-        return (int) (Math.ceil(Math.log(value) / Math.log(2)) / 8) + 1;
-    }
 
+    public static int numberOfBytes(long value){
+        long abs = Math.abs(value);
+        int minBytes = 8;
+        if(abs <= 127){
+            minBytes = 1;
+        }
+        else if(abs <= 32768){
+            minBytes = 2;
+        }
+        else if(abs <= 8388608){
+            minBytes = 3;
+        }
+        else if(abs <= 2147483648l){
+            minBytes = 4;
+        }
+        else if(abs <= 549755813888l){
+            minBytes = 5;
+        }
+        else if(abs <= 140737488355328l){
+            minBytes = 6;
+        }
+        else if(abs <= 36028797018963968l){
+            minBytes = 7;
+        }
+        return minBytes;
+    }
     public static void toBytes(long val, byte[] dest, int position, int numberOfBytes) { //rewrite this to put bytes in a already made array at the right position.
         for (int i = numberOfBytes - 1; i > 0; i--) {
             dest[position + i] = (byte) val;

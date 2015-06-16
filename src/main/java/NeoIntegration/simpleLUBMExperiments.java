@@ -5,6 +5,7 @@ import bptree.impl.DiskCache;
 import bptree.impl.NodeTree;
 import bptree.impl.SearchCursor;
 import org.neo4j.graphdb.*;
+import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.io.pagecache.PagedFile;
 import org.neo4j.tooling.GlobalGraphOperations;
 
@@ -50,22 +51,22 @@ class simpleLUBMExperiments {
         index = experiments.index(4, 49, null);
         assert(query == index);
 */
-        //query = experiments.query("MATCH (x)-[:undergraduateDegreeFrom]->(y)<-[:subOrganizationOf]-(z)<-[:memberOf]-(x) RETURN ID(x), ID(y), ID(z)");
+        query = experiments.query("MATCH (x)-[:undergraduateDegreeFrom]->(y)<-[:subOrganizationOf]-(z)<-[:memberOf]-(x) RETURN ID(x), ID(y), ID(z)");
         //index = experiments.rectangleJoin(3, 1918060825, 4, 49);
-        index = experiments.indexShape(5, 121, null);
+        index = experiments.indexShape(5, 267, null);
 
-        //query = experiments.query("MATCH (x)-[:hasAdvisor]->(y)-[:teacherOf]->(z)<-[:takesCourse]-(x) RETURN ID(x), ID(y), ID(z)");
+        query = experiments.query("MATCH (x)-[:hasAdvisor]->(y)-[:teacherOf]->(z)<-[:takesCourse]-(x) RETURN ID(x), ID(y), ID(z)");
         //index = experiments.rectangleJoin(3, 939155463, 4, 57);
-        index = experiments.indexShape(5, 145, null);
+        index = experiments.indexShape(5, 294, null);
 
-        //query = experiments.query("MATCH (x)<-[:headOf]-(y)-[:worksFor]->(z)<-[:subOrganizationOf]-(w) RETURN ID(x), ID(y), ID(z), ID(w)");
+        query = experiments.query("MATCH (x)<-[:headOf]-(y)-[:worksFor]->(z)<-[:subOrganizationOf]-(w) RETURN ID(x), ID(y), ID(z), ID(w)");
         //index = experiments.pathJoinAlpha(3, 1221271593, 4, 4);
-        index = experiments.index(5, 121, null);
+        index = experiments.index(5, 387, null);
 
 
-        //query = experiments.query("MATCH (x)<-[:headOf]-(y)-[:worksFor]->(z)-[:subOrganizationOf]->(w) RETURN ID(x), ID(y), ID(z), ID(w)");
+        query = experiments.query("MATCH (x)<-[:headOf]-(y)-[:worksFor]->(z)-[:subOrganizationOf]->(w) RETURN ID(x), ID(y), ID(z), ID(w)");
         //index = experiments.pathJoin(3, 1221271593, 4, 1);
-        index = experiments.index(5, 121, null);
+        index = experiments.index(5, 384, null);
 
         for(DiskCache disk : experiments.disks.values()){
             disk.shutdown();
@@ -87,7 +88,7 @@ class simpleLUBMExperiments {
             int k = new Integer(entry.get(0));
             long root = new Long(entry.get(1));
             boolean compressed = entry.get(2).equals("true");
-            DiskCache disk = DiskCache.persistentDiskCache(folder +"K"+k+ CleverIndexBuilder.LUBM_INDEX_PATH, compressed);
+            DiskCache disk = DiskCache.persistentDiskCache(folder +"K"+k+ LexicographicIndexBuilder.LUBM_INDEX_PATH, compressed);
             indexes.put(k, new NodeTree(k+1, root, disk));
             disks.put(k, disk);
         }
@@ -95,8 +96,8 @@ class simpleLUBMExperiments {
 
         stringBuilder = new StringBuilder();
 
-        //database = new GraphDatabaseFactory().newEmbeddedDatabaseBuilder(CleverIndexBuilder.DB_PATH).newGraphDatabase();
-        //ggo = GlobalGraphOperations.at(database);
+        database = new GraphDatabaseFactory().newEmbeddedDatabaseBuilder(CleverIndexBuilder.DB_PATH).newGraphDatabase();
+        ggo = GlobalGraphOperations.at(database);
     }
 
     public int query(String cypher){
