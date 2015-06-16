@@ -14,7 +14,7 @@ public class Runner {
             LexicographicIndexBuilder.main(args);
         }
         else if (args[0].equals("4")){
-            simpleLUBMExperiments.main(args);
+            BenchmarkIndexBuilderLZ4.main(args);
         }
         else if (args[0].equals("5")){
             LUBMExperiments.main(args);
