@@ -39,7 +39,7 @@ public class DebugCounterPathIDs {
 
     public void brutesearch(long[] key) throws IOException {
         DiskCache disk = DiskCache.persistentDiskCache("K4Cleverlubm50Index.db", true);
-        NodeTree index = new NodeTree(338335, disk);
+        NodeTree index = new NodeTree(4, 338335, disk);
         long currentPage = 0;
         try(PageProxyCursor cursor = disk.getCursor(currentPage, PagedFile.PF_SHARED_LOCK)){
             while(currentPage != -1){

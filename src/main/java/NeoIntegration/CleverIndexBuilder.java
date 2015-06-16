@@ -194,6 +194,49 @@ public class CleverIndexBuilder {
     }
 
 
+    private void buildK2PathsMerge() throws IOException {
+        System.out.println("Building K2 Paths");
+        int pathCount = 0;
+        long[] combinedPath;
+        int total = relationshipMap.size() * relationshipMap.size();
+        try (PageProxyCursor cursorA = indexes.get(1).disk.getCursor(0, PagedFile.PF_SHARED_LOCK)) {
+            for(long pathIdA : relationshipMap.keySet()){
+                for(long pathIdB: relationshipMap.keySet()) {
+                    System.out.print("\rPaths complete: " + pathCount++ + "/" + total);
+                    SearchCursor resultA = indexes.get(1).find(cursorA, new long[]{pathIdA});
+                    SearchCursor resultB = indexes.get(1).find(cursorA, new long[]{pathIdB});
+                    long[] nextA = resultA.next(cursorA);
+                    long[] nextB = resultB.next(cursorA);
+                    while (resultA.hasNext(cursorA) && resultB.hasNext(cursorA)) {
+                            if (nextA[1] == nextB[2]) {//TODO test if this is correct
+                                nextB = resultB.next(cursorA);
+                            }
+                            else if(nextA[2] == nextB[1]) {
+                                PathIDBuilder builder = new PathIDBuilder(relationshipMap.get(nextA[0]).getPath(), relationshipMap.get(pathIdB).getPath());
+                                if (!k2PathIds.containsKey(builder.buildPath())) {
+                                    k2PathIds.put(builder.buildPath(), currentShortPathID++);
+                                    k2RelationshipsMap.put(k2PathIds.get(builder.buildPath()), builder);
+                                }
+                                long k2PathId = k2PathIds.get(builder.buildPath());
+                                combinedPath = new long[]{k2PathId, nextA[1], nextA[2], nextB[2]};
+                                sorters.get(4).addSortedKeyBulk(combinedPath);
+                                nextB = resultB.next(cursorA);
+                            }
+                        else if(nextA[2] > nextB[1]){
+                                if(resultB.hasNext(cursorA))
+                                    nextB = resultB.next(cursorA);
+                            }
+                        else{//nextA[2] < nextB[1]
+                                if(resultA.hasNext(cursorA))
+                                    nextA = resultA.next(cursorA);
+
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
 
     private void buildK2Paths() throws IOException {
         System.out.println("Building K2 Paths");

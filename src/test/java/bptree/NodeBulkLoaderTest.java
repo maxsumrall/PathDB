@@ -1,7 +1,10 @@
 package bptree;
 
-import bptree.impl.*;
-import org.junit.Test;
+import bptree.impl.DiskCache;
+import bptree.impl.NodeBulkLoader;
+import bptree.impl.NodeTree;
+import bptree.impl.SimpleDataGenerator;
+import org.junit.Ignore;
 
 import java.io.IOException;
 
@@ -11,7 +14,7 @@ import java.io.IOException;
 public class NodeBulkLoaderTest {
     NodeTree proxy;
 
-    @Test
+    @Ignore
     public void loadTest() throws IOException {
 
         DiskCache disk = DiskCache.temporaryDiskCache(false);

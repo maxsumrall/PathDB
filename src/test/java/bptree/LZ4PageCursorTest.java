@@ -1,7 +1,7 @@
 package bptree;
 
-import bptree.impl.*;
-import org.junit.Test;
+import bptree.impl.DiskCache;
+import org.junit.Ignore;
 import org.neo4j.io.pagecache.PagedFile;
 
 import java.io.IOException;
@@ -11,7 +11,7 @@ import java.io.IOException;
  */
 public class LZ4PageCursorTest {
 
-    @Test
+    @Ignore
     public void loadTest() throws IOException {
 
         DiskCache disk = DiskCache.temporaryDiskCache(false);

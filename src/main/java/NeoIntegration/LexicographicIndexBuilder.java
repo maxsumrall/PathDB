@@ -19,7 +19,7 @@ import java.util.*;
 /**
  * Created by max on 6/2/15.
  */
-public class LexographicIndexBuilder {
+public class LexicographicIndexBuilder {
     public static final int MAX_K = 3;
     public static final String DB_PATH = "graph.db/";
     public static final String LUBM_INDEX_PATH = "Lexographiclubm50Index.db";
@@ -39,7 +39,7 @@ public class LexographicIndexBuilder {
 
 
     public static void main(String[] args) throws IOException {
-        LexographicIndexBuilder indexBuilder = new LexographicIndexBuilder();
+        LexicographicIndexBuilder indexBuilder = new LexicographicIndexBuilder();
 
         try(PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(INDEX_METADATA_PATH, false)))) {
             for(int i = 0; i < indexBuilder.indexes.size(); i++){
@@ -47,7 +47,7 @@ public class LexographicIndexBuilder {
                 indexBuilder.indexes.get(i+1).disk.shutdown();
             }
         }
-        try(PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter("LexographicLUBMLoaderLog" +".txt", false)))) {
+        try(PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter("LexicographicLUBMLoaderLog" +".txt", false)))) {
             System.out.println("");
             System.out.println("----- K1 Paths ---- ");
             out.println("----- K1 Paths ---- ");
@@ -70,7 +70,7 @@ public class LexographicIndexBuilder {
         }
     }
 
-    public LexographicIndexBuilder() throws IOException {
+    public LexicographicIndexBuilder() throws IOException {
 
         for(int i = 1; i <= MAX_K; i++){
             sorters.put(i + 2, new Sorter(i + 2));
@@ -176,8 +176,6 @@ public class LexographicIndexBuilder {
     private void buildK2Paths() throws IOException {
         System.out.println("Building K2 Paths");
         int pathCount = 0;
-        int k2count = 0;
-        long prevK2PathId = 0;
         long[] combinedPath;
         ArrayList<long[]> entries = new ArrayList<>();
         int total = relationshipMap.size() * relationshipMap.size();
@@ -219,8 +217,6 @@ public class LexographicIndexBuilder {
     private void buildK3Paths() throws IOException {
         System.out.println("Building K3 Paths");
         int pathCount = 0;
-        int k2count = 0;
-        long prevK2PathId = 0;
         long[] combinedPath;
         ArrayList<long[]> entries = new ArrayList<>();
         int total = relationshipMap.size() * k2PathIds.size();

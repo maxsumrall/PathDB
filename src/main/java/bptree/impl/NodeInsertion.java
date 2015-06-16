@@ -310,8 +310,9 @@ public class NodeInsertion {
 
     private static void insertKeyAtIndex(PageProxyCursor cursor, int offset, long[] key){
         byte[] tmp_bytes;
+        NodeHeader.setNumberOfKeys(cursor, NodeHeader.getNumberOfKeys(cursor) + 1);
         if(NodeHeader.isNodeWithSameLengthKeys(cursor)) {
-            tmp_bytes = new byte[cursor.capacity() - offset - key.length * 8];
+            tmp_bytes = new byte[cursor.capacity() - offset - (key.length * 8)];
         }
         else{
             tmp_bytes = new byte[DiskCache.PAGE_SIZE - offset - (key.length + 1) * 8];
@@ -328,7 +329,6 @@ public class NodeInsertion {
         }
         cursor.putBytes(tmp_bytes);
 
-        NodeHeader.setNumberOfKeys(cursor, NodeHeader.getNumberOfKeys(cursor) + 1);
         cursor.resumeWriting();
     }
 

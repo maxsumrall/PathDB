@@ -14,23 +14,26 @@ public class NodeTree {
     public DiskCache disk;
     public static KeyImpl comparator = new KeyImpl();
     public long rootNodeId = 0;
+    public int keySize;
     public PageProxyCursor cursor;
     public NodeSearch nodeSearch;
     public NodeInsertion nodeInsertion;
     public NodeDeletion nodeDeletion;
 
-    public NodeTree(long rootNodeId, DiskCache disk){
+    public NodeTree(int keySize, long rootNodeId, DiskCache disk){
         this.rootNodeId = rootNodeId;
         pagedFile = disk.pagedFile;
         this.disk = disk;
+        this.keySize = keySize;
         this.nodeSearch = new NodeSearch(this);
         this.nodeInsertion = new NodeInsertion(this);
         this.nodeDeletion = new NodeDeletion(this);
     }
 
-    public NodeTree(DiskCache disk) throws IOException {
+    public NodeTree(int keySize, DiskCache disk) throws IOException {
         pagedFile = disk.pagedFile;
         this.disk = disk;
+        this.keySize = keySize;
         rootNodeId = acquireNewLeafNode();
         this.nodeSearch = new NodeSearch(this);
         this.nodeInsertion = new NodeInsertion(this);
@@ -172,7 +175,7 @@ public class NodeTree {
     public long acquireNewLeafNode() throws IOException {
         long newNodeId = AvailablePageIdPool.acquireId();
         try(PageProxyCursor cursor = disk.getCursor(newNodeId, PagedFile.PF_EXCLUSIVE_LOCK)) {
-            NodeHeader.initializeLeafNode(cursor);
+            NodeHeader.initializeLeafNode(cursor, this.keySize);
         }
         catch(Exception e ){
 

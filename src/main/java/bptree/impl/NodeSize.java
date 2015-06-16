@@ -54,10 +54,6 @@ public class NodeSize {
         return byteSize;
     }
 
-    //public boolean internalNodeContainsSpaceForNewKeyAndChild(long nodeId, long[] newKey){
-        //return internalNodeByteSize(nodeId, newKey) < DiskCache.PAGE_SIZE;
-    //}
-
     public static boolean internalNodeContainsSpaceForNewKeyAndChild(PageProxyCursor cursor, long[] newKey){
         return internalNodeByteSize(cursor, newKey) < DiskCache.PAGE_SIZE;
     }

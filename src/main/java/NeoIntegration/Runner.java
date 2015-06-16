@@ -11,7 +11,7 @@ public class Runner {
             CleverIndexBuilder.main(args);
         }
         else if (args[0].equals("3")){
-            LexographicIndexBuilder.main(args);
+            LexicographicIndexBuilder.main(args);
         }
         else if (args[0].equals("4")){
             simpleLUBMExperiments.main(args);

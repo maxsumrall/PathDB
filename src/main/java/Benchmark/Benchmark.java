@@ -47,7 +47,7 @@ public class Benchmark {
 
     public static void runExperiment(int items_to_insert) throws IOException {
         DiskCache disk = DiskCache.temporaryDiskCache(items_to_insert + "experiment.dat", true);
-        proxy = new NodeTree(disk);
+        proxy = new NodeTree(4, disk);
 
         int number_of_paths = 10000;
 
@@ -76,7 +76,7 @@ public class Benchmark {
         double totalSum = 0;
         long[] key = new long[4];
         for (int i = 1; i < items_to_insert; i++) {
-            key[0] = (long) (i % number_of_paths);
+            key[0] = (long) (i);
             key[1] = (long) i;
             key[2] = (long) i;
             key[3] = (long) i;

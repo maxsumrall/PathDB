@@ -143,8 +143,8 @@ public class CompressedPageCursor extends PageProxyCursor{
 
 
     private int getLastUsedLeafBufferPosition(){
-        int keyLength = NodeHeader.getKeyLength(cursor);
-        int numberOfKeys = NodeHeader.getNumberOfKeys(cursor);
+        int keyLength = NodeHeader.getKeyLength(dBuffer);
+        int numberOfKeys = NodeHeader.getNumberOfKeys(dBuffer);
         if(keyLength == 0 || numberOfKeys == 0)
             return NodeHeader.NODE_HEADER_LENGTH;
         dBuffer.position(NodeHeader.NODE_HEADER_LENGTH);

@@ -29,7 +29,7 @@ public class NodeBulkLoader {
         this.disk = disk;
         this.finalLeafPage = finalPage;
         AvailablePageIdPool.currentID = finalLeafPage + 1;
-        this.tree = new NodeTree(0, this.disk);
+        this.tree = new NodeTree(keySize, 0, this.disk);
         this.keySize = keySize;
         this.MAX_PAIRS = ((DiskCache.PAGE_SIZE - NodeHeader.NODE_HEADER_LENGTH) / ((keySize + 1)*8) ) - 1;
         this.RESERVED_CHILDREN_SPACE  = (MAX_PAIRS + 1) * 8;

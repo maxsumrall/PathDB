@@ -139,7 +139,7 @@ public class LUBMExperiments {
             int k = new Integer(entry.get(0));
             long root = new Long(entry.get(1));
             DiskCache disk = DiskCache.persistentDiskCache("K"+k+CleverIndexBuilder.LUBM_INDEX_PATH, false);
-            indexes.put(k, new NodeTree(root, disk));
+            indexes.put(k, new NodeTree(k+1, root, disk));
             disks.put(k, disk);
         }
         bufferedReader.close();

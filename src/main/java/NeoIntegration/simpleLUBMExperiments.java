@@ -38,7 +38,7 @@ class simpleLUBMExperiments {
         query = experiments.query("MATCH (x)-[:worksFor]->(y) RETURN ID(x), ID(y)");
         index = experiments.index(3, 35729895, null);
         assert(query == index);
-
+*/
         query = experiments.query("MATCH (x)-[:takesCourse]->(y)<-[:teacherOf]-(z) RETURN ID(x), ID(y), ID(z)");
         index = experiments.index(4, 64, null);
         assert(query == index);
@@ -50,7 +50,7 @@ class simpleLUBMExperiments {
         query = experiments.query("MATCH (x)-[:memberOf]->(y)-[:subOrganizationOf]->(z) RETURN ID(x), ID(y), ID(z)");
         index = experiments.index(4, 49, null);
         assert(query == index);
-*/
+/*
         query = experiments.query("MATCH (x)-[:undergraduateDegreeFrom]->(y)<-[:subOrganizationOf]-(z)<-[:memberOf]-(x) RETURN ID(x), ID(y), ID(z)");
         index = experiments.rectangleJoin(3, 1918060825, 4, 49);
         index = experiments.indexShape(5, 121, null);
@@ -71,7 +71,7 @@ class simpleLUBMExperiments {
         //index = experiments.pathJoin(3, 1221271593, 4, 1);
         //index = experiments.index(5, 121, null);
         assert(query == index);
-
+*/
         for(DiskCache disk : experiments.disks.values()){
             disk.shutdown();
         }
@@ -82,18 +82,18 @@ class simpleLUBMExperiments {
 
         //String folder = "LUBM50IndexCompressed/";
         //String folder = "LUBM50Index/";
-        String folder = "LUBM50IndexLexographic/";
-        //String folder = "";
+        //String folder = "LUBM50IndexLexographic/";
+        String folder = "";
 
-        BufferedReader bufferedReader = new BufferedReader(new FileReader(new File(folder + LexographicIndexBuilder.INDEX_METADATA_PATH)));
+        BufferedReader bufferedReader = new BufferedReader(new FileReader(new File(folder + CleverIndexBuilder.INDEX_METADATA_PATH)));
         String line;
         while((line = bufferedReader.readLine()) != null) {
             List<String> entry = Arrays.asList(line.split(","));
             int k = new Integer(entry.get(0));
             long root = new Long(entry.get(1));
             boolean compressed = entry.get(2).equals("true");
-            DiskCache disk = DiskCache.persistentDiskCache(folder +"K"+k+LexographicIndexBuilder.LUBM_INDEX_PATH, compressed);
-            indexes.put(k, new NodeTree(root, disk));
+            DiskCache disk = DiskCache.persistentDiskCache(folder +"K"+k+ CleverIndexBuilder.LUBM_INDEX_PATH, compressed);
+            indexes.put(k, new NodeTree(k+1, root, disk));
             disks.put(k, disk);
         }
         bufferedReader.close();

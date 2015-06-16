@@ -57,11 +57,12 @@ public class SuperCompressedPageCursor extends PageProxyCursor{
         //assumption that this is a leaf node.
         //will just check if the path id is zero, if so, this is the end of this block.
         int decompressedSize = getLastUsedLeafBufferPosition() - NodeHeader.NODE_HEADER_LENGTH;
+        writeHeaderToCursor();
         if(decompressedSize != 0) {
             byte[] compresedMinusHeader = compress();
-            writeHeaderToCursor();
             cursor.setOffset(NodeHeader.NODE_HEADER_LENGTH);
             cursor.putBytes(compresedMinusHeader);
+            mostRecentCompressedLeafSize = compresedMinusHeader.length + NodeHeader.NODE_HEADER_LENGTH;
         }
     }
 
@@ -160,8 +161,8 @@ public class SuperCompressedPageCursor extends PageProxyCursor{
 
 
     private int getLastUsedLeafBufferPosition(){
-        int keyLength = NodeHeader.getKeyLength(cursor);
-        int numberOfKeys = NodeHeader.getNumberOfKeys(cursor);
+        int keyLength = NodeHeader.getKeyLength(dBuffer);
+        int numberOfKeys = NodeHeader.getNumberOfKeys(dBuffer);
         if(keyLength == 0 || numberOfKeys == 0)
             return NodeHeader.NODE_HEADER_LENGTH;
         dBuffer.position(NodeHeader.NODE_HEADER_LENGTH);
@@ -350,7 +351,8 @@ public class SuperCompressedPageCursor extends PageProxyCursor{
     @Override
     public boolean leafNodeContainsSpaceForNewKey(long[] newKey){
         //return NodeSize.leafNodeContainsSpaceForNewKey(this, newKey);
-        return mostRecentCompressedLeafSize + (newKey.length * Long.BYTES) < DiskCache.PAGE_SIZE;
+        int magic = 10;
+        return mostRecentCompressedLeafSize + (newKey.length * Long.BYTES) + magic < DiskCache.PAGE_SIZE;
     }
 
     @Override
