@@ -196,9 +196,6 @@ public class LexicographicIndexBuilder {
                     SearchCursor resultB = indexes.get(1).find(cursorA, new long[]{pathIdB, entry[2]});
                         while (resultB.hasNext(cursorA)) {
                             long[] secondPath = resultB.next(cursorA);
-                            if (entry[1] == secondPath[2]) {//TODO test if this is correct
-                                continue;
-                            }
                             PathIDBuilder builder = new PathIDBuilder(relationshipMap.get(entry[0]).getPath(), relationshipMap.get(pathIdB).getPath());
                             if (!k2PathIds.containsKey(builder.buildPath())) {
                                 k2PathIds.put(builder.buildPath(), currentShortPathID++);

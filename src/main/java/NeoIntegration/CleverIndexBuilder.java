@@ -23,7 +23,7 @@ import java.util.Map;
  * Created by max on 6/2/15.
  */
 public class CleverIndexBuilder {
-    public static final int MAX_K = 3;
+    public static final int MAX_K = 2;
     public static final String DB_PATH = "graph.db/";
     public static final String LUBM_INDEX_PATH = "Cleverlubm50Index.db";
     public static final String INDEX_METADATA_PATH = "pathIndexMetaData.dat";
@@ -89,12 +89,12 @@ public class CleverIndexBuilder {
         startTime = System.nanoTime();
         SetIterator k1Iterator = sorterK1.sort();
         endTime = System.nanoTime();
-        logToFile("Time to sort K1 edges(ns): " + (endTime - startTime));
+        //logToFile("Time to sort K1 edges(ns): " + (endTime - startTime));
 
         startTime = System.nanoTime();
         NodeTree k1Index = buildIndex(sorterK1, k1Iterator);
         endTime = System.nanoTime();
-        logToFile("Time to bulk load K1 edges into index(ns): " + (endTime - startTime));
+        //logToFile("Time to bulk load K1 edges into index(ns): " + (endTime - startTime));
 
         indexes.put(1, k1Index);
 
@@ -103,9 +103,8 @@ public class CleverIndexBuilder {
             buildK2Paths();
             Sorter sorterK2 = sorters.get(4);
             SetIterator k2Iterator = sorterK2.finishWithoutSort();
+            logToFile("Time to build K2 edges(ns): " + (System.nanoTime() - startTime));
             NodeTree k2Index = buildIndex(sorterK2, k2Iterator);
-            endTime = System.nanoTime();
-            logToFile("Time to build K2 edges(ns): " + (endTime - startTime));
             indexes.put(2, k2Index);
         }
 
@@ -113,8 +112,7 @@ public class CleverIndexBuilder {
             startTime = System.nanoTime();
             buildK3Paths();
             k3DiskFiller.finish();
-            endTime = System.nanoTime();
-            logToFile("Time to build K3 edges(ns): " + (endTime - startTime));
+            logToFile("Time to build K3 edges(ns): " + (System.nanoTime() - startTime));
             NodeTree k3Index = buildIndex(k3DiskFiller);
             indexes.put(3, k3Index);
         }
@@ -193,51 +191,6 @@ public class CleverIndexBuilder {
         System.out.println("Keys written: " + count);
     }
 
-
-    private void buildK2PathsMerge() throws IOException {
-        System.out.println("Building K2 Paths");
-        int pathCount = 0;
-        long[] combinedPath;
-        int total = relationshipMap.size() * relationshipMap.size();
-        try (PageProxyCursor cursorA = indexes.get(1).disk.getCursor(0, PagedFile.PF_SHARED_LOCK)) {
-            for(long pathIdA : relationshipMap.keySet()){
-                for(long pathIdB: relationshipMap.keySet()) {
-                    System.out.print("\rPaths complete: " + pathCount++ + "/" + total);
-                    SearchCursor resultA = indexes.get(1).find(cursorA, new long[]{pathIdA});
-                    SearchCursor resultB = indexes.get(1).find(cursorA, new long[]{pathIdB});
-                    long[] nextA = resultA.next(cursorA);
-                    long[] nextB = resultB.next(cursorA);
-                    while (resultA.hasNext(cursorA) && resultB.hasNext(cursorA)) {
-                            if (nextA[1] == nextB[2]) {//TODO test if this is correct
-                                nextB = resultB.next(cursorA);
-                            }
-                            else if(nextA[2] == nextB[1]) {
-                                PathIDBuilder builder = new PathIDBuilder(relationshipMap.get(nextA[0]).getPath(), relationshipMap.get(pathIdB).getPath());
-                                if (!k2PathIds.containsKey(builder.buildPath())) {
-                                    k2PathIds.put(builder.buildPath(), currentShortPathID++);
-                                    k2RelationshipsMap.put(k2PathIds.get(builder.buildPath()), builder);
-                                }
-                                long k2PathId = k2PathIds.get(builder.buildPath());
-                                combinedPath = new long[]{k2PathId, nextA[1], nextA[2], nextB[2]};
-                                sorters.get(4).addSortedKeyBulk(combinedPath);
-                                nextB = resultB.next(cursorA);
-                            }
-                        else if(nextA[2] > nextB[1]){
-                                if(resultB.hasNext(cursorA))
-                                    nextB = resultB.next(cursorA);
-                            }
-                        else{//nextA[2] < nextB[1]
-                                if(resultA.hasNext(cursorA))
-                                    nextA = resultA.next(cursorA);
-
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-
     private void buildK2Paths() throws IOException {
         System.out.println("Building K2 Paths");
         int pathCount = 0;
@@ -255,14 +208,10 @@ public class CleverIndexBuilder {
                     while (resultA.hasNext(cursorA)) {
                         entries.add(resultA.next(cursorA));
                     }
-
                     for (long[] entry : entries) {
                         SearchCursor resultB = indexes.get(1).find(cursorA, new long[]{pathIdB, entry[2]});
                         while (resultB.hasNext(cursorA)) {
                             long[] secondPath = resultB.next(cursorA);
-                            if (entry[1] == secondPath[2]) {//TODO test if this is correct
-                                continue;
-                            }
                             PathIDBuilder builder = new PathIDBuilder(relationshipMap.get(entry[0]).getPath(), relationshipMap.get(pathIdB).getPath());
                             if (!k2PathIds.containsKey(builder.buildPath())) {
                                 k2PathIds.put(builder.buildPath(), currentShortPathID++);
