@@ -37,7 +37,7 @@ public class CleverIndexBuilder {
     HashMap<Long, Long> k2PathIds = new HashMap<>();
     HashMap<Long, Long> k3PathIds = new HashMap<>();
     long currentShortPathID = 1;
-    //SuperFillSortedDisk k2DiskFiller = new SuperFillSortedDisk(4);
+    SuperFillSortedDisk k2DiskFiller = new SuperFillSortedDisk(4);
     SuperFillSortedDisk k3DiskFiller = new SuperFillSortedDisk(5);
 
 
@@ -101,10 +101,12 @@ public class CleverIndexBuilder {
         if(MAX_K > 1) {
             startTime = System.nanoTime();
             buildK2Paths();
+            logToFile("Time to build K2 edges(ns): " + (System.nanoTime() - startTime));
             Sorter sorterK2 = sorters.get(4);
             SetIterator k2Iterator = sorterK2.finishWithoutSort();
-            logToFile("Time to build K2 edges(ns): " + (System.nanoTime() - startTime));
             NodeTree k2Index = buildIndex(sorterK2, k2Iterator);
+            //k2DiskFiller.finish();
+            //NodeTree k2Index = buildIndex(k2DiskFiller);
             indexes.put(2, k2Index);
         }
 
@@ -194,8 +196,6 @@ public class CleverIndexBuilder {
     private void buildK2Paths() throws IOException {
         System.out.println("Building K2 Paths");
         int pathCount = 0;
-        int k2count = 0;
-        long prevK2PathId = 0;
         long[] combinedPath;
         ArrayList<long[]> entries = new ArrayList<>();
         int total = relationshipMap.size() * relationshipMap.size();
@@ -220,6 +220,7 @@ public class CleverIndexBuilder {
                             long k2PathId = k2PathIds.get(builder.buildPath());
                             combinedPath = new long[]{k2PathId, entry[1], entry[2], secondPath[2]};
                             sorters.get(4).addSortedKeyBulk(combinedPath);
+                            //k2DiskFiller.addKey(combinedPath);
                         }
                     }
                 }
