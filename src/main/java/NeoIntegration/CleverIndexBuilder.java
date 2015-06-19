@@ -23,7 +23,7 @@ import java.util.Map;
  * Created by max on 6/2/15.
  */
 public class CleverIndexBuilder {
-    public static final int MAX_K = 2;
+    public static final int MAX_K = 1;
     public static final String DB_PATH = "graph.db/";
     public static final String LUBM_INDEX_PATH = "Cleverlubm50Index.db";
     public static final String INDEX_METADATA_PATH = "pathIndexMetaData.dat";

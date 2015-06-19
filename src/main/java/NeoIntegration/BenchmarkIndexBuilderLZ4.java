@@ -1,9 +1,11 @@
 package NeoIntegration;
 
-import PageCacheSort.SetIterator;
 import PageCacheSort.Sorter;
 import bptree.PageProxyCursor;
-import bptree.impl.*;
+import bptree.impl.DiskCache;
+import bptree.impl.NodeBulkLoader;
+import bptree.impl.NodeTree;
+import bptree.impl.SearchCursor;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
@@ -22,7 +24,7 @@ import java.util.Map;
  * Created by max on 6/2/15.
  */
 public class BenchmarkIndexBuilderLZ4 {
-    public static final int MAX_K = 2;
+    public static final int MAX_K = 1;
     public static final String DB_PATH = "graph.db/";
     public static final String LUBM_INDEX_PATH = "BenchmarkLZ4lubm50Index.db";
     public static final String INDEX_METADATA_PATH = "BenchmarkLZ4MetaData.dat";
@@ -35,7 +37,8 @@ public class BenchmarkIndexBuilderLZ4 {
     HashMap<Long, Long> k2PathIds = new HashMap<>();
     HashMap<Long, Long> k3PathIds = new HashMap<>();
     long currentShortPathID = 1;
-    LZ4DiskFiller k2LZ4DIskFiller = new LZ4DiskFiller(4);
+    LZ4DiskFiller k1LZ4DiskFiller = new LZ4DiskFiller(3);
+    LZ4DiskFiller k2LZ4DiskFiller = new LZ4DiskFiller(4);
     //FillSortedDisk k2FillSortedDisk = new FillSortedDisk(4);
     //SuperFillSortedDisk superk2DiskFiller = new SuperFillSortedDisk(4);
 
@@ -54,27 +57,27 @@ public class BenchmarkIndexBuilderLZ4 {
         enumerateSingleEdges();
         long endTime = System.nanoTime();
         logToFile("Time to enumerate K1 edges(ns): " + (endTime - startTime));
-        Sorter sorterK1 = sorters.get(3);
+        //Sorter sorterK1 = sorters.get(3);
         System.out.println("\nSorting K = 1");
 
         startTime = System.nanoTime();
-        SetIterator k1Iterator = sorterK1.sort();
+        //SetIterator k1Iterator = sorterK1.sort();
         endTime = System.nanoTime();
         //logToFile("Time to sort K1 edges(ns): " + (endTime - startTime));
 
         startTime = System.nanoTime();
-        NodeTree k1Index = buildIndex(sorterK1);
+        //NodeTree k1Index = buildIndex(sorterK1);
         endTime = System.nanoTime();
         //logToFile("Time to bulk load K1 edges into index(ns): " + (endTime - startTime));
 
-        indexes.put(1, k1Index);
+        //indexes.put(1, k1Index);
 
         if(MAX_K > 1) {
             startTime = System.nanoTime();
             buildK2Paths();
             //Sorter sorterK2 = sorters.get(4);
-            k2LZ4DIskFiller.finish();
-            k2LZ4DIskFiller.compressedDisk.shutdown();
+            k2LZ4DiskFiller.finish();
+            k2LZ4DiskFiller.compressedDisk.shutdown();
             //SetIterator k2Iterator = sorterK2.finishWithoutSort();
             logToFile("Time to build K2 edges(ns): " + (System.nanoTime() - startTime));
 
@@ -119,8 +122,10 @@ public class BenchmarkIndexBuilderLZ4 {
                 if (count % 1000 == 0) {
                     printStats(count, totalRels);
                 }
-                addPath(edge.getStartNode(), edge, edge.getEndNode());
-                addPath(edge.getEndNode(), edge, edge.getStartNode());
+                //addPath(edge.getStartNode(), edge, edge.getEndNode());
+                //addPath(edge.getEndNode(), edge, edge.getStartNode());
+                k1LZ4DiskFiller.addKey(new long[]{edge.getStartNode().getId(), edge.getType().name().hashCode(), edge.getEndNode().getId()});
+                k1LZ4DiskFiller.addKey(new long[]{edge.getEndNode().getId(), edge.getType().name().hashCode(), edge.getStartNode().getId()});
                 count++;
             }
         }
@@ -156,7 +161,7 @@ public class BenchmarkIndexBuilderLZ4 {
                             long k2PathId = k2PathIds.get(builder.buildPath());
                             combinedPath = new long[]{k2PathId, entry[1], entry[2], secondPath[2]};
                             //sorters.get(4).addSortedKeyBulk(combinedPath);
-                            k2LZ4DIskFiller.addKey(combinedPath);
+                            k2LZ4DiskFiller.addKey(combinedPath);
                             //superk2DiskFiller.addKey(combinedPath);
                             //k2FillSortedDisk.addKey(combinedPath);
                         }

@@ -133,17 +133,15 @@ public class NodeInsertion {
         int keysInclInsert = originalNumberOfKeys + 1;
         if(NodeHeader.isNodeWithSameLengthKeys(cursor)){
             returnedKey = new long[keyLength];
-            byte[] keys = new byte[originalNumberOfKeys * keyLength * 8];
+            byte[] keys = new byte[originalNumberOfKeys * keyLength * Long.BYTES];
             cursor.setOffset(NodeHeader.NODE_HEADER_LENGTH);
             cursor.getBytes(keys);
-            keys = insertKeyAtIndex(keys, newKey, searchResults[0], returnedKey);
+            keys = insertKeyAtIndex(keys, newKey, searchResults[0], returnedKey);//TODO there is something wrong here in this function and splitting
+            keysA = new byte[((keysInclInsert/2) * keyLength) * Long.BYTES];
+            keysB = new byte[(((keysInclInsert + 1) /2 ) * keyLength) * Long.BYTES];
             int middle = (keys.length / 2);
-            //keysA = new byte[((keysInclInsert/2) * 4) * 8];
-            //keysB = new byte[(((keysInclInsert + 1) /2 ) * 4) * 8];
-            keysA = new byte[middle];
-            keysB = new byte[middle];
             System.arraycopy(keys, 0, keysA, 0, keysA.length);
-            System.arraycopy(keys, middle, keysB, 0, keysB.length);
+            System.arraycopy(keys, keysA.length, keysB, 0, keysB.length);
 
         }
         else{
@@ -180,26 +178,25 @@ public class NodeInsertion {
         int keysInclInsert = originalNumberOfKeys + 1;
         if(NodeHeader.isNodeWithSameLengthKeys(cursor)){
             returnedKey = new long[keyLength];
-            byte[] keys = new byte[originalNumberOfKeys * keyLength * 8];
-            byte[] children = new byte[(originalNumberOfKeys + 1) * 8];
+            byte[] keys = new byte[originalNumberOfKeys * keyLength * Long.BYTES];
+            byte[] children = new byte[(originalNumberOfKeys + 1) * Long.BYTES];
             cursor.setOffset(NodeHeader.NODE_HEADER_LENGTH);
             cursor.getBytes(children);
             cursor.getBytes(keys);
             keys = insertKeyAtIndex(keys, newKey, searchResults[0], returnedKey);
-            children = insertChildAtIndex(children, newChild, searchResults[0] + 1);
-            int splitIndex = (originalNumberOfKeys + 1) / 2;
-            childrenA = new byte[((originalNumberOfKeys + 3) / 2) * 8]; // 1 for normal, another 1 for the new key/child, and another one for rounding up in integer division.
-            childrenB = new byte[((originalNumberOfKeys + 2) / 2) * 8];
-            keysA = new byte[(((keysInclInsert + 1)/2) * 4) * 8];
-            //keysB = new byte[((originalNumberOfKeys /2 ) * 4) * 8];
-            int numberOfBytesInKey = keyLength * 8;
-            //int middleAfterMiddleKey = (keys.length / 2) + numberOfBytesInKey;
-            int middleAfterMiddleKey = keysA.length + 32;
-            keysB = new byte[keysInclInsert % 2 == 0 ? keysA.length - 32 : keys.length - middleAfterMiddleKey];
+            children = insertChildAtIndex(children, newChild, searchResults[0] + 1);//TODO there is something wrong here in this function and splitting
+
+            childrenA = new byte[ ( (int) Math.ceil( (keysInclInsert + 1 ) / 2.0) ) * Long.BYTES];
+            childrenB = new byte[ ( (int) Math.floor((keysInclInsert + 1 ) / 2.0) ) * Long.BYTES];
+
+            keysA = new byte[ ( (int) Math.floor( (keysInclInsert + 1) / 2.0) ) * keyLength * Long.BYTES];
+            int middleAfterDroppedKey = keysA.length + keyLength * Long.BYTES;
+            keysB = new byte[keysInclInsert % 2 == 0 ? keysA.length - (keyLength * Long.BYTES) : keys.length];
+
             System.arraycopy(keys, 0, keysA, 0, keysA.length);
-            System.arraycopy(keys, middleAfterMiddleKey, keysB, 0, keysB.length);
+            System.arraycopy(keys, middleAfterDroppedKey, keysB, 0, keysB.length);
             System.arraycopy(children, 0, childrenA, 0, childrenA.length);
-            System.arraycopy(children, childrenA.length , childrenB, 0, childrenB.length);
+            System.arraycopy(children,  childrenA.length, childrenB, 0, childrenB.length);
         }
         else{
             //Do it for delimited node
@@ -235,7 +232,7 @@ public class NodeInsertion {
         }
         else{
             int children = NodeHeader.getNumberOfKeys(cursor) + 1;
-            cursor.setOffset(NodeHeader.NODE_HEADER_LENGTH + children * 8);
+            cursor.setOffset(NodeHeader.NODE_HEADER_LENGTH + children * Long.BYTES);
         }
 
         if(NodeHeader.isNodeWithSameLengthKeys(cursor)){
@@ -262,12 +259,12 @@ public class NodeInsertion {
         }
         else{
             int children = NodeHeader.getNumberOfKeys(cursor) + 1;
-            cursor.setOffset(NodeHeader.NODE_HEADER_LENGTH + children * 8);
+            cursor.setOffset(NodeHeader.NODE_HEADER_LENGTH + children * Long.BYTES);
         }
 
         if(NodeHeader.isNodeWithSameLengthKeys(cursor)){
             int keyLength = NodeHeader.getKeyLength(cursor);
-            firstKey = new byte[keyLength * 8];
+            firstKey = new byte[keyLength * Long.BYTES];
             cursor.getBytes(firstKey);
         }
         else{
@@ -288,12 +285,12 @@ public class NodeInsertion {
         }
         else{
             int children = NodeHeader.getNumberOfKeys(cursor) + 1;
-            cursor.setOffset(NodeHeader.NODE_HEADER_LENGTH + children * 8);
+            cursor.setOffset(NodeHeader.NODE_HEADER_LENGTH + children * Long.BYTES);
         }
 
         if(NodeHeader.isNodeWithSameLengthKeys(cursor)){
             int keyLength = NodeHeader.getKeyLength(cursor);
-            firstKey = new byte[keyLength * 8];
+            firstKey = new byte[keyLength * Long.BYTES];
             cursor.getBytes(firstKey);
         }
         else{
@@ -312,10 +309,10 @@ public class NodeInsertion {
         byte[] tmp_bytes;
         NodeHeader.setNumberOfKeys(cursor, NodeHeader.getNumberOfKeys(cursor) + 1);
         if(NodeHeader.isNodeWithSameLengthKeys(cursor)) {
-            tmp_bytes = new byte[cursor.capacity() - offset - (key.length * 8)];
+            tmp_bytes = new byte[cursor.capacity() - offset - (key.length * Long.BYTES)];
         }
         else{
-            tmp_bytes = new byte[DiskCache.PAGE_SIZE - offset - (key.length + 1) * 8];
+            tmp_bytes = new byte[DiskCache.PAGE_SIZE - offset - (key.length + 1) * Long.BYTES];
         }
         cursor.setOffset(offset);
         cursor.getBytes(tmp_bytes);
@@ -334,8 +331,8 @@ public class NodeInsertion {
 
     private static void insertChildAtIndex(PageProxyCursor cursor, int index, long child){
         cursor.deferWriting();
-        int childInsertionOffset = NodeHeader.NODE_HEADER_LENGTH + (index * 8);
-        byte[] shiftDownBytes = new byte[DiskCache.PAGE_SIZE - childInsertionOffset - 8];
+        int childInsertionOffset = NodeHeader.NODE_HEADER_LENGTH + (index * Long.BYTES);
+        byte[] shiftDownBytes = new byte[DiskCache.PAGE_SIZE - childInsertionOffset - Long.BYTES];
         cursor.setOffset(childInsertionOffset);
         cursor.getBytes(shiftDownBytes);
         cursor.setOffset(childInsertionOffset);
@@ -346,7 +343,7 @@ public class NodeInsertion {
 
     private static byte[] insertKeyAtIndex(byte[] keys, long[] newKey, int index, long[] returnedKey){
         LongBuffer keyB = ByteBuffer.wrap(keys).asLongBuffer();
-        byte[] updatedKeys = new byte[keys.length + (newKey.length * 8)];
+        byte[] updatedKeys = new byte[keys.length + (newKey.length * Long.BYTES)];
         ByteBuffer updatedKeysBB = ByteBuffer.wrap(updatedKeys);
         LongBuffer updatedKeysLB = updatedKeysBB.asLongBuffer();
         for(int i = 0; i < index; i++){
@@ -370,7 +367,7 @@ public class NodeInsertion {
 
     private static byte[] insertChildAtIndex(byte[] children, long newChild, int index){
         LongBuffer childrenB = ByteBuffer.wrap(children).asLongBuffer();
-        byte[] updatedChildren = new byte[children.length + 8];
+        byte[] updatedChildren = new byte[children.length + Long.BYTES];
         ByteBuffer updatedChildrenBB = ByteBuffer.wrap(updatedChildren);
         LongBuffer updatedChildrenLB = updatedChildrenBB.asLongBuffer();
         for(int i = 0; i < index; i++){
@@ -417,7 +414,7 @@ public class NodeInsertion {
 
     private static void alignCursorToKeys(PageProxyCursor cursor){
         if(!NodeHeader.isLeafNode(cursor)){
-            cursor.setOffset(NodeHeader.NODE_HEADER_LENGTH + (NodeHeader.getNumberOfKeys(cursor) + 1) * 8);
+            cursor.setOffset(NodeHeader.NODE_HEADER_LENGTH + (NodeHeader.getNumberOfKeys(cursor) + 1) * Long.BYTES);
         }
         else{
             cursor.setOffset(NodeHeader.NODE_HEADER_LENGTH);
