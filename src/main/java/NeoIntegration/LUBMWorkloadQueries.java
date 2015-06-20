@@ -31,7 +31,9 @@ public class LUBMWorkloadQueries {
     StringBuilder stringBuilder;
     HashMap<Long, PathIDBuilder> relationshipMap = new HashMap<>(); //relationship types to path ids
     HashMap<long[], Long> k2PathIds = new HashMap<>();
+    HashMap<long[], Long> k3PathIds = new HashMap<>();
     long k2PathCounter = 1;
+    long k3PathCounter = 1;
     String cypher;
     Sorter k1Sorter = new Sorter(3);
     long duration = 0;
@@ -78,7 +80,17 @@ public class LUBMWorkloadQueries {
 
         query6();
 
+        query7A();
 
+        query7B();
+
+        query8A();
+
+        query8B();
+
+        query9();
+
+        query10();
 
     }
 
@@ -88,12 +100,19 @@ public class LUBMWorkloadQueries {
         duration = 0;
 
         long starttime = System.nanoTime();
-        long pathID3 = joinK1Results(pathID, pathID2);
+        long pathID3 = joinOnK1(pathID, pathID2);
         long endTime = System.nanoTime();
         long total = endTime - starttime;
         long totalWithoutInsertion = total - duration;
-        System.out.println("Query 4: Total : " + nanoToMilli(total));
-        System.out.println("Total without insertion : " + nanoToMilli(totalWithoutInsertion));
+
+        starttime = System.nanoTime();
+        findK2(pathID3);
+        long subsequentSearch = nanoToMilli(System.nanoTime() - starttime);
+
+        System.out.println("Queyr 4: insertion time : " + nanoToMilli(duration));
+        System.out.println("Queyr 4: finding time : " + nanoToMilli(totalWithoutInsertion));
+        System.out.println("Query 4: Total Time : " + nanoToMilli(total));
+        System.out.println("Query 4: Subsequent Search: " + subsequentSearch);
     }
 
     public void query5() throws IOException {
@@ -102,12 +121,18 @@ public class LUBMWorkloadQueries {
         duration = 0;
 
         long starttime = System.nanoTime();
-        long pathID3 = joinK1Results(pathID, pathID2);
+        long pathID3 = joinOnK1(pathID, pathID2);
         long endTime = System.nanoTime();
         long total = endTime - starttime;
         long totalWithoutInsertion = total - duration;
-        System.out.println("Query 5: Total : " + nanoToMilli(total));
-        System.out.println("Total without insertion : " + nanoToMilli(totalWithoutInsertion));
+        starttime = System.nanoTime();
+        findK2(pathID3);
+        long subsequentSearch = nanoToMilli(System.nanoTime() - starttime);
+
+        System.out.println("Queyr 5: insertion time : " + nanoToMilli(duration));
+        System.out.println("Queyr 5: finding time : " + nanoToMilli(totalWithoutInsertion));
+        System.out.println("Query 5: Total Time : " + nanoToMilli(total));
+        System.out.println("Query 5: Subsequent Search: " + subsequentSearch);
     }
 
     public void query6() throws IOException {
@@ -116,33 +141,351 @@ public class LUBMWorkloadQueries {
         duration = 0;
 
         long starttime = System.nanoTime();
-        long pathID3 = joinK1Results(pathID, pathID2);
+        long pathID3 = joinOnK1(pathID, pathID2);
         long endTime = System.nanoTime();
         long total = endTime - starttime;
         long totalWithoutInsertion = total - duration;
-        System.out.println("Query 6: Total : " + nanoToMilli(total));
-        System.out.println("Total without insertion : " + nanoToMilli(totalWithoutInsertion));
+        starttime = System.nanoTime();
+        findK2(pathID3);
+        long subsequentSearch = nanoToMilli(System.nanoTime() - starttime);
+
+        System.out.println("Queyr 6: insertion time : " + nanoToMilli(duration));
+        System.out.println("Queyr 6: finding time : " + nanoToMilli(totalWithoutInsertion));
+        System.out.println("Query 6: Total Time : " + nanoToMilli(total));
+        System.out.println("Query 6: Subsequent Search: " + subsequentSearch);
     }
 
 
-    public void query7() throws IOException {
-        long pathID = 1918060825l; // undergraduateDegreeFrom - >
-        long pathID2 = 1522104310l; //<-subOrganizationOf
-        long pathID3 = 2131368143l; // <-memberOf
+    public void query7A() throws IOException {
+        long pathK1 = 1918060825l; // undergraduateDegreeFrom - >
+        long[] key = new long[]{649439727l, 1190990026l};
+        long pathK2 = -1; // <-memberOf
+        for(long[] val : k2PathIds.keySet()){
+            if(val[0] == key[0])
+                if(val[1] == key[1])
+                    pathK2 = k2PathIds.get(val);
+        }
         duration = 0;
 
         long starttime = System.nanoTime();
-        long pathID4 = joinK1Results(pathID, pathID2);
+        long pathID4 = joinOnK1AndK2Version1(pathK1, pathK2);
         long endTime = System.nanoTime();
         long total = endTime - starttime;
         long totalWithoutInsertion = total - duration;
-        System.out.println("Query 7: Total : " + nanoToMilli(total));
-        System.out.println("Total without insertion : " + nanoToMilli(totalWithoutInsertion));
+        starttime = System.nanoTime();
+        findK3(pathID4);
+        long subsequentSearch = nanoToMilli(System.nanoTime() - starttime);
+
+        System.out.println("Queyr 7A: insertion time : " + nanoToMilli(duration));
+        System.out.println("Queyr 7A: finding time : " + nanoToMilli(totalWithoutInsertion));
+        System.out.println("Query 7A: Total Time : " + nanoToMilli(total));
+        System.out.println("Query 7A: Subsequent Search: " + subsequentSearch);
+    }
+
+    public void query7B() throws IOException {
+        long pathK1 = 1918060825l; // undergraduateDegreeFrom - >
+        long pathK21 = 1522104310l; // <-subOrgOf
+        long pathK22 =2131368143; // <-memberOF
+
+        duration = 0;
+
+        long starttime = System.nanoTime();
+        long pathID3 = joinOnK1(pathK21, pathK22);
+        long endTime = System.nanoTime();
+        long total = endTime - starttime;
+        long totalWithoutInsertion = total - duration;
+        starttime = System.nanoTime();
+        findK2(pathID3);
+        long subsequentSearch = nanoToMilli(System.nanoTime() - starttime);
+
+        System.out.println("Queyr 7B-1: insertion time : " + nanoToMilli(duration));
+        System.out.println("Queyr 7B-1: finding time : " + nanoToMilli(totalWithoutInsertion));
+        System.out.println("Query 7B-1: Total Time : " + nanoToMilli(total));
+        System.out.println("Query 7B-1: Subsequent Search: " + subsequentSearch);
+
+        duration = 0;
+
+
+        starttime = System.nanoTime();
+        long pathID4 = joinOnK1AndK2Version3(pathK1, pathID3);
+        endTime = System.nanoTime();
+        total = endTime - starttime;
+        totalWithoutInsertion = total - duration;
+        starttime = System.nanoTime();
+        findK3(pathID4);
+        subsequentSearch = nanoToMilli(System.nanoTime() - starttime);
+
+        System.out.println("Queyr 7B-2: insertion time : " + nanoToMilli(duration));
+        System.out.println("Queyr 7B-2: finding time : " + nanoToMilli(totalWithoutInsertion));
+        System.out.println("Query 7B-2: Total Time : " + nanoToMilli(total));
+        System.out.println("Query 7B-2: Subsequent Search: " + subsequentSearch);
+    }
+
+    public void query8A() throws IOException {
+        long pathK1 = 901063622; // hasAdvisor - >
+        long[] key = new long[]{939155463l, 1653142233l};
+        long pathK2 = -1; // <-memberOf
+        for (long[] val : k2PathIds.keySet()) {
+            if (val[0] == key[0])
+                if (val[1] == key[1])
+                    pathK2 = k2PathIds.get(val);
+        }
+        duration = 0;
+
+        long starttime = System.nanoTime();
+        long pathID4 = joinOnK1AndK2Version1(pathK1, pathK2);
+        long endTime = System.nanoTime();
+        long total = endTime - starttime;
+        long totalWithoutInsertion = total - duration;
+        starttime = System.nanoTime();
+        findK3(pathID4);
+        long subsequentSearch = nanoToMilli(System.nanoTime() - starttime);
+
+        System.out.println("Queyr 8A: insertion time : " + nanoToMilli(duration));
+        System.out.println("Queyr 8A: finding time : " + nanoToMilli(totalWithoutInsertion));
+        System.out.println("Query 8A: Total Time : " + nanoToMilli(total));
+        System.out.println("Query 8A: Subsequent Search: " + subsequentSearch);
+    }
+
+    public void query8B() throws IOException {
+        long pathK1 = 901063622l; // hasAdvisor - >
+        long pathK21 = 454138535l;// teacherOf - >
+        long pathK22 = 1682423943l;// <-takesCourse
+
+
+        duration = 0;
+
+        long starttime = System.nanoTime();
+        long pathK2 = joinOnK1(pathK21, pathK22);
+        long endTime = System.nanoTime();
+        long total = endTime - starttime;
+        long totalWithoutInsertion = total - duration;
+        starttime = System.nanoTime();
+        findK2(pathK2);
+        long subsequentSearch = nanoToMilli(System.nanoTime() - starttime);
+
+        System.out.println("Queyr 8B-1: insertion time : " + nanoToMilli(duration));
+        System.out.println("Queyr 8B-1: finding time : " + nanoToMilli(totalWithoutInsertion));
+        System.out.println("Query 8B-1: Total Time : " + nanoToMilli(total));
+        System.out.println("Query 8B-1: Subsequent Search: " + subsequentSearch);
+
+        duration = 0;
+
+
+
+        starttime = System.nanoTime();
+        long pathK3 = joinOnK1AndK2Version3(pathK1, pathK2);
+        endTime = System.nanoTime();
+        total = endTime - starttime;
+        totalWithoutInsertion = total - duration;
+        starttime = System.nanoTime();
+        findK3(pathK3);
+        subsequentSearch = nanoToMilli(System.nanoTime() - starttime);
+
+        System.out.println("Queyr 8B-2: insertion time : " + nanoToMilli(duration));
+        System.out.println("Queyr 8B-2: finding time : " + nanoToMilli(totalWithoutInsertion));
+        System.out.println("Query 8B-2: Total Time : " + nanoToMilli(total));
+        System.out.println("Query 8B-2: Subsequent Search: " + subsequentSearch);
+
+
+    }
+
+    public void query9() throws IOException {
+        long pathK1 = 1298760183; // <-headOf
+        long pathK12 = 35729895; //worksFor->
+        long pathK13 = 1522104310; // <-subOrgOf
+
+        //do the first merge shit
+
+        long starttime = System.nanoTime();
+        long pathK2 = joinOnK1(pathK12, pathK13);
+        long endTime = System.nanoTime();
+        long total = endTime - starttime;
+        long totalWithoutInsertion = total - duration;
+        starttime = System.nanoTime();
+        findK2(pathK2);
+        long subsequentSearch = nanoToMilli(System.nanoTime() - starttime);
+
+        System.out.println("Queyr 9-1: insertion time : " + nanoToMilli(duration));
+        System.out.println("Queyr 9-1: finding time : " + nanoToMilli(totalWithoutInsertion));
+        System.out.println("Query 9-1: Total Time : " + nanoToMilli(total));
+        System.out.println("Query 9-1: Subsequent Search: " + subsequentSearch);
+
+
+        //Now complete this query by merging that last result
+
+
+        duration = 0;
+
+        starttime = System.nanoTime();
+        long pathID4 = joinOnK1AndK2Version2(pathK1, pathK2);
+        endTime = System.nanoTime();
+        total = endTime - starttime;
+        totalWithoutInsertion = total - duration;
+        starttime = System.nanoTime();
+        findK3(pathID4);
+        subsequentSearch = nanoToMilli(System.nanoTime() - starttime);
+
+        System.out.println("Queyr 9-2: insertion time : " + nanoToMilli(duration));
+        System.out.println("Queyr 9-2: finding time : " + nanoToMilli(totalWithoutInsertion));
+        System.out.println("Query 9-2: Total Time : " + nanoToMilli(total));
+        System.out.println("Query 9-2: Subsequent Search: " + subsequentSearch);
     }
 
 
+    public void query10() throws IOException {
+        long pathK1 = 1298760183; // <-headOf
+        long pathK12 = 35729895; //worksFor->
+        long pathK13 = 1190990026; // subOrgOf->
 
-    public long joinK1Results(long pathID1, long pathID2) throws IOException {
+        //do the first merge shit
+
+        long starttime = System.nanoTime();
+        long pathK2 = joinOnK1(pathK12, pathK13);
+        long endTime = System.nanoTime();
+        long total = endTime - starttime;
+        long totalWithoutInsertion = total - duration;
+
+        starttime = System.nanoTime();
+        findK2(pathK2);
+        long subsequentSearch = nanoToMilli(System.nanoTime() - starttime);
+
+        System.out.println("Queyr 10A: insertion time : " + nanoToMilli(duration));
+        System.out.println("Queyr 10A: finding time : " + nanoToMilli(totalWithoutInsertion));
+        System.out.println("Query 10A: Total Time : " + nanoToMilli(total));
+        System.out.println("Query 10A: Subsequent Search: " + subsequentSearch);
+
+
+        //Now complete this query by merging that last result
+
+
+        duration = 0;
+
+        starttime = System.nanoTime();
+        long pathID4 = joinOnK1AndK2Version2(pathK1, pathK2);
+        endTime = System.nanoTime();
+        total = endTime - starttime;
+        totalWithoutInsertion = total - duration;
+
+        starttime = System.nanoTime();
+        findK3(pathID4);
+        subsequentSearch = nanoToMilli(System.nanoTime() - starttime);
+
+        System.out.println("Queyr 10B: insertion time : " + nanoToMilli(duration));
+        System.out.println("Queyr 10B: finding time : " + nanoToMilli(totalWithoutInsertion));
+        System.out.println("Query 10B: Total Time : " + nanoToMilli(total));
+        System.out.println("Query 10B: Subsequent Search: " + subsequentSearch);
+    }
+
+    public long joinOnK1AndK2Version1(long pathK1, long pathK2) throws IOException {
+        long[] resultB;
+        long clock;
+        int count = 0;
+        List<long[]> entries = new ArrayList<>();
+        long[] key = new long[]{pathK1, pathK2};
+        if(!k3PathIds.containsKey(key))
+            k3PathIds.put(key, k3PathCounter++);
+        long pathID3 = k3PathIds.get(key);
+        try (PageProxyCursor cursorK1 = disks.get(1).getCursor(0, PagedFile.PF_SHARED_LOCK)) {
+            try (PageProxyCursor cursorK2 = disks.get(2).getCursor(0, PagedFile.PF_SHARED_LOCK)) {
+                SearchCursor searchCursorA = indexes.get(1).find(cursorK1, new long[]{pathK1});
+                while (searchCursorA.hasNext(cursorK1)) {
+                    entries.add(searchCursorA.next(cursorK1));
+                }
+                for (long[] resultA : entries) {
+                    SearchCursor searchCursorB = indexes.get(2).find(cursorK2, new long[]{pathK2, resultA[1]});
+                    while (searchCursorB.hasNext(cursorK2)) {
+                        resultB = searchCursorB.next(cursorK2);
+                        if (resultA[2] == resultB[3]) {
+                            count++;
+
+                            //pause clock
+                            clock = System.nanoTime();
+                            indexes.get(3).insert(new long[]{pathID3, resultA[1], resultA[2], resultB[2], resultB[1]});
+                            duration += System.nanoTime() - clock;
+                            //start clock again
+                        }
+                    }
+                }
+            }
+        }
+        System.out.println("k3 joins found: " + count);
+        return pathID3;
+    }
+    public long joinOnK1AndK2Version2(long pathK1, long pathK2) throws IOException {
+        long[] resultB;
+        long clock;
+        int count = 0;
+        List<long[]> entries = new ArrayList<>();
+        long[] key = new long[]{pathK1, pathK2};
+        if(!k3PathIds.containsKey(key))
+            k3PathIds.put(key, k3PathCounter++);
+        long pathID3 = k3PathIds.get(key);
+        try (PageProxyCursor cursorK1 = disks.get(1).getCursor(0, PagedFile.PF_SHARED_LOCK)) {
+            try (PageProxyCursor cursorK2 = disks.get(2).getCursor(0, PagedFile.PF_SHARED_LOCK)) {
+                SearchCursor searchCursorA = indexes.get(1).find(cursorK1, new long[]{pathK1});
+                while (searchCursorA.hasNext(cursorK1)) {
+                    entries.add(searchCursorA.next(cursorK1));
+                }
+                for (long[] resultA : entries) {
+                    SearchCursor searchCursorB = indexes.get(2).find(cursorK2, new long[]{pathK2, resultA[2]});
+                    while (searchCursorB.hasNext(cursorK2)) {
+                        resultB = searchCursorB.next(cursorK2);
+
+                        count++;
+
+                        //pause clock
+                        clock = System.nanoTime();
+                        indexes.get(3).insert(new long[]{pathID3, resultA[1], resultA[2], resultB[2], resultB[3]});
+                        duration += System.nanoTime() - clock;
+                            //start clock again
+
+                    }
+                }
+            }
+        }
+        System.out.println("k3 joins found: " + count);
+        return pathID3;
+    }
+    public long joinOnK1AndK2Version3(long pathK1, long pathK2) throws IOException {
+        long[] resultB;
+        long clock;
+        int count = 0;
+        List<long[]> entries = new ArrayList<>();
+        long[] key = new long[]{pathK1, pathK2};
+        if(!k3PathIds.containsKey(key))
+            k3PathIds.put(key, k3PathCounter++);
+        long pathID3 = k3PathIds.get(key);
+        try (PageProxyCursor cursorK1 = disks.get(1).getCursor(0, PagedFile.PF_SHARED_LOCK)) {
+            try (PageProxyCursor cursorK2 = disks.get(2).getCursor(0, PagedFile.PF_SHARED_LOCK)) {
+                SearchCursor searchCursorA = indexes.get(1).find(cursorK1, new long[]{pathK1});
+                while (searchCursorA.hasNext(cursorK1)) {
+                    entries.add(searchCursorA.next(cursorK1));
+                }
+                for (long[] resultA : entries) {
+                    SearchCursor searchCursorB = indexes.get(2).find(cursorK2, new long[]{pathK2, resultA[2]});
+                    while (searchCursorB.hasNext(cursorK2)) {
+                        resultB = searchCursorB.next(cursorK2);
+                        if (resultA[1] == resultB[3]) {
+
+                            count++;
+
+                            //pause clock
+                            clock = System.nanoTime();
+                            indexes.get(3).insert(new long[]{pathID3, resultA[1], resultA[2], resultB[2], resultB[3]});
+                            duration += System.nanoTime() - clock;
+                            //start clock again
+                        }
+
+                    }
+                }
+            }
+        }
+        System.out.println("k3 joins found: " + count);
+        return pathID3;
+    }
+
+    public long joinOnK1(long pathID1, long pathID2) throws IOException {
         long[] resultB;
         long clock;
         int count = 0;
@@ -172,6 +515,30 @@ public class LUBMWorkloadQueries {
             }
         System.out.println("k2 joins found: " + count);
         return pathID3;
+    }
+
+    public void findK2(long pathID) throws IOException {
+        int count = 0;
+        SearchCursor searchCursor = indexes.get(2).find(new long[]{pathID});
+        try(PageProxyCursor cursor = disks.get(2).getCursor(searchCursor.pageID, PagedFile.PF_SHARED_LOCK)){
+            while(searchCursor.hasNext(cursor)){
+                searchCursor.next(cursor);
+                count++;
+            }
+        }
+        System.out.println("Found: " + count);
+    }
+
+    public void findK3(long pathID) throws IOException {
+        int count = 0;
+        SearchCursor searchCursor = indexes.get(3).find(new long[]{pathID});
+        try(PageProxyCursor cursor = disks.get(3).getCursor(searchCursor.pageID, PagedFile.PF_SHARED_LOCK)){
+            while(searchCursor.hasNext(cursor)){
+                searchCursor.next(cursor);
+                count++;
+            }
+        }
+        System.out.println("Found: " + count);
     }
 
     public void loadK1Index() throws IOException {
