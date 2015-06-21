@@ -11,6 +11,7 @@ import org.neo4j.io.pagecache.PagedFile;
 import org.neo4j.tooling.GlobalGraphOperations;
 
 import java.io.*;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -24,6 +25,7 @@ public class LUBMExperiments {
     public GraphDatabaseService database;
     public GlobalGraphOperations ggo;
     StringBuilder stringBuilder;
+    StringBuilder stringBuilder456;
     String cypher;
 
     public static void main(String[] args) throws IOException {
@@ -76,6 +78,7 @@ public class LUBMExperiments {
         }
 
         experiments.logToFile();
+        experiments.logToFile456();
 
         for(DiskCache disk : experiments.disks.values()){
             disk.shutdown();
@@ -98,6 +101,7 @@ public class LUBMExperiments {
         bufferedReader.close();
 
         stringBuilder = new StringBuilder();
+        stringBuilder456 = new StringBuilder();
 
         database = new GraphDatabaseFactory().newEmbeddedDatabaseBuilder(CleverIndexBuilder.DB_PATH).newGraphDatabase();
 
@@ -106,48 +110,51 @@ public class LUBMExperiments {
 
 
     public void doExperiment1() throws IOException {
-        query("MATCH (x)-[:memberOf]->(y) RETURN ID(x), ID(y)");
-        index(3, 649439727, null);
+        //query("MATCH (x)-[:memberOf]->(y) RETURN ID(x), ID(y)");
+        //index(3, 649439727, null);
     }
     public void doExperiment2() throws IOException {
-        query("MATCH (x)-[:memberOf]->(y) WHERE x.uri=\"http://www.Department0.University0.edu/UndergraduateStudent207\" RETURN ID(x), ID(y)");
-        index(3, 649439727, new IndexConstraint(1, "uri", "http://www.Department0.University0.edu/UndergraduateStudent207"));
+        //query("MATCH (x)-[:memberOf]->(y) WHERE x.uri=\"http://www.Department0.University0.edu/UndergraduateStudent207\" RETURN ID(x), ID(y)");
+        //index(3, 649439727, new IndexConstraint(1, "uri", "http://www.Department0.University0.edu/UndergraduateStudent207"));
     }
     public void doExperiment3() throws IOException {
-        query("MATCH (x)-[:worksFor]->(y) RETURN ID(x), ID(y)");
-        index(3, 35729895, null);
+        //query("MATCH (x)-[:worksFor]->(y) RETURN ID(x), ID(y)");
+        //index(3, 35729895, null);
     }
     public void doExperiment4() throws IOException {
         query("MATCH (x)-[:takesCourse]->(y)<-[:teacherOf]-(z) RETURN ID(x), ID(y), ID(z)");
-        index(4, 165, null);
+        //index(4, 165, null);
+        indexForQueries456(939155463, 1653142233);
     }
     public void doExperiment5() throws IOException {
         query("MATCH (x)-[:memberOf]->(y)<-[:subOrganizationOf]-(z) RETURN ID(x), ID(y), ID(z)");
-        index(4, 66, null);
+        //index(4, 66, null);
+        indexForQueries456(649439727, 1522104310);
     }
     public void doExperiment6() throws IOException {
         query("MATCH (x)-[:memberOf]->(y)-[:subOrganizationOf]->(z) RETURN ID(x), ID(y), ID(z)");
-        index(4, 69, null);
+        //index(4, 69, null);
+        indexForQueries456(649439727, 1190990026);
     }
     public void doExperiment7() throws IOException {
         query("MATCH (x)-[:undergraduateDegreeFrom]->(y)<-[:subOrganizationOf]-(z)<-[:memberOf]-(x) RETURN ID(x), ID(y), ID(z)");
-        //rectangleJoin(3, 1918060825, 4, 49);
-        indexShape(5, 856, null);
+        rectangleJoin(3, 1918060825, 4, 49);
+        //indexShape(5, 856, null);
     }
     public void doExperiment8() throws IOException {
         query("MATCH (x)-[:hasAdvisor]->(y)-[:teacherOf]->(z)<-[:takesCourse]-(x) RETURN ID(x), ID(y), ID(z)");
-        //rectangleJoin(3, 939155463, 4, 57);
-        indexShape(5, 802, null);
+        rectangleJoin(3, 939155463, 4, 57);
+        //indexShape(5, 802, null);
     }
     public void doExperiment9() throws IOException {
         query("MATCH (x)<-[:headOf]-(y)-[:worksFor]->(z)<-[:subOrganizationOf]-(w) RETURN ID(x), ID(y), ID(z), ID(w)");
-        //pathJoin(3, 1221271593, 4, 4);
-        index(5, 567, null);
+        pathJoin(3, 1221271593, 4, 4);
+        //index(5, 567, null);
     }
     public void doExperiment10() throws IOException {
         query("MATCH (x)<-[:headOf]-(y)-[:worksFor]->(z)-[:subOrganizationOf]->(w) RETURN ID(x), ID(y), ID(z), ID(w)");
-        //pathJoin(3, 1221271593, 4, 1);
-        index(5, 570, null);
+        pathJoin(3, 1221271593, 4, 1);
+        //index(5, 570, null);
     }
 
     public void stats(){
@@ -196,6 +203,36 @@ public class LUBMExperiments {
         }
         return count;
     }
+
+
+    public int indexForQueries456(long pathID1, long pathID2) throws IOException {
+        long startTime = System.nanoTime();
+        long timeToLastResult = 0;
+        long timeToFirstResult= 0;
+        int count = 0;
+        List<long[]> entries = new ArrayList<>();
+        try (PageProxyCursor cursor = disks.get(3).getCursor(0, PagedFile.PF_SHARED_LOCK)) {
+            SearchCursor searchCursorA = indexes.get(3).find(cursor, new long[]{pathID1});
+            while (searchCursorA.hasNext(cursor)) {
+                entries.add(searchCursorA.next(cursor));
+            }
+            for (long[] resultA : entries) {
+                SearchCursor searchCursorB = indexes.get(3).find(cursor, new long[]{pathID2, resultA[2]});
+                while (searchCursorB.hasNext(cursor)) {
+                    if(timeToFirstResult == 0)
+                        timeToFirstResult = System.nanoTime();
+                    searchCursorB.next(cursor);
+                    count++;
+                }
+            }
+            timeToLastResult = System.nanoTime();
+        }
+        stringBuilder.append((timeToFirstResult - startTime) / (double) 1000000).append(",");
+        stringBuilder.append((timeToLastResult - startTime) / (double) 1000000).append(",");
+        return count;
+    }
+
+
 
     public int indexShape(int index, long pathID, IndexConstraint constraint) throws IOException {
         Transaction tx = null;
@@ -375,6 +412,15 @@ public class LUBMExperiments {
 
     public void logToFile(){
         try(PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter("LUBMExperimentsCompressed_results.txt", true)))) {
+            out.println(this.cypher+"\n");
+            out.println(stringBuilder.toString());
+            System.out.println(stringBuilder.toString());
+        }catch (IOException e) {
+            //exception handling left as an exercise for the reader
+        }
+    }
+    public void logToFile456(){
+        try(PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter("LUBMExperimentsCompressed456_results.txt", true)))) {
             out.println(this.cypher+"\n");
             out.println(stringBuilder.toString());
             System.out.println(stringBuilder.toString());

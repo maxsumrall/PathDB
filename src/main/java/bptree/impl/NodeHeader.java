@@ -20,9 +20,7 @@ The Header of the block when stored as bytes is:
     public static final int BYTE_POSITION_SIBLING_ID = 9;
     public static final int BYTE_POSITION_PRECEDING_ID = 17;
     public static final int LEAF_FLAG = 1;
-    public static final int SAME_LENGTH_KEYS_FLAG = 1;
     public static final int NODE_HEADER_LENGTH = 1 + 4 + 4 + 8 + 8;
-    public static final long KEY_DELIMITER = -1;
 
     public static boolean isLeafNode(ByteBuffer buffer){
         return buffer.get(BYTE_POSITION_NODE_TYPE) == LEAF_FLAG;
@@ -34,20 +32,6 @@ The Header of the block when stored as bytes is:
         return cursor.getByte(BYTE_POSITION_NODE_TYPE) == LEAF_FLAG;
     }
     public static boolean isUninitializedNode(PageCursor cursor){return cursor.getByte(BYTE_POSITION_NODE_TYPE) == 0;}
-
-
-
-    public static boolean isNodeWithSameLengthKeys(ByteBuffer buffer){
-        return getKeyLength(buffer) != -1;
-    }
-    public static boolean isNodeWithSameLengthKeys(PageCursor cursor){
-        return getKeyLength(cursor) != -1;
-    }
-    public static boolean isNodeWithSameLengthKeys(PageProxyCursor cursor){
-        return getKeyLength(cursor) != -1;
-    }
-
-
 
 
     public static int getNumberOfKeys(ByteBuffer buffer){
@@ -72,9 +56,6 @@ The Header of the block when stored as bytes is:
     public static void setNumberOfKeys(PageProxyCursor cursor, int numberOfKeys){
         cursor.putInt(BYTE_POSITION_KEY_COUNT, numberOfKeys);
     }
-
-
-
 
     public static int getKeyLength(ByteBuffer buffer){
         return buffer.getInt(BYTE_POSITION_KEY_LENGTH);

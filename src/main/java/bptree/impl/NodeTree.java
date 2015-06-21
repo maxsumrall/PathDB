@@ -202,25 +202,14 @@ public class NodeTree {
         cursor.putBytes(compactionBytes);
 
         int numberOfKeys = NodeHeader.getNumberOfKeys(cursor);
-        if(NodeHeader.isNodeWithSameLengthKeys(cursor)){
-            int keyLength = NodeHeader.getKeyLength(cursor);
-            compactionBytes = new byte[DiskCache.PAGE_SIZE - NodeHeader.NODE_HEADER_LENGTH - (numberOfKeys * 8) - (8 * keyLength)];
-            cursor.setOffset(NodeHeader.NODE_HEADER_LENGTH + (numberOfKeys * 8) + (8 * keyLength));
-            cursor.getBytes(compactionBytes);
-            cursor.setOffset(NodeHeader.NODE_HEADER_LENGTH + (numberOfKeys * 8));
-            cursor.putBytes(compactionBytes);
-        }
-        else{
-            long currKey = cursor.getLong();
-            while(currKey != -1) { //-1 used to be Node.KEY_DELIMITER
-                currKey = cursor.getLong();
-            }
-            int endOfFirstKeyPos = cursor.getOffset();
-            compactionBytes = new byte[DiskCache.PAGE_SIZE - endOfFirstKeyPos];
-            cursor.getBytes(compactionBytes);
-            cursor.setOffset(NodeHeader.NODE_HEADER_LENGTH + (numberOfKeys * 8));
-            cursor.putBytes(compactionBytes);
-        }
+
+        int keyLength = NodeHeader.getKeyLength(cursor);
+        compactionBytes = new byte[DiskCache.PAGE_SIZE - NodeHeader.NODE_HEADER_LENGTH - (numberOfKeys * 8) - (8 * keyLength)];
+        cursor.setOffset(NodeHeader.NODE_HEADER_LENGTH + (numberOfKeys * 8) + (8 * keyLength));
+        cursor.getBytes(compactionBytes);
+        cursor.setOffset(NodeHeader.NODE_HEADER_LENGTH + (numberOfKeys * 8));
+        cursor.putBytes(compactionBytes);
+
         NodeHeader.setNumberOfKeys(cursor, numberOfKeys - 1);
     }
 }

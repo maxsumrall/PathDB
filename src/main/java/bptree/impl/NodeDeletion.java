@@ -135,18 +135,10 @@ public class NodeDeletion {
 
     private static void removeKeyAtOffset(PageProxyCursor cursor, int offset, long[] key){
         byte[] tmp_bytes;
-        if(NodeHeader.isNodeWithSameLengthKeys(cursor)) {
-            tmp_bytes = new byte[cursor.capacity()- offset - key.length * 8];
-            cursor.setOffset(offset + (key.length * 8));
-        }
-        else{
-            tmp_bytes = new byte[cursor.capacity() - offset - (key.length + 1) * 8];
-            cursor.setOffset(offset);
-            long tmp = cursor.getLong();
-            while(tmp != -1l){
-                cursor.getLong();
-            }
-        }
+
+        tmp_bytes = new byte[cursor.capacity()- offset - key.length * 8];
+        cursor.setOffset(offset + (key.length * 8));
+
 
         cursor.getBytes(tmp_bytes);
         cursor.setOffset(offset);
@@ -162,25 +154,14 @@ public class NodeDeletion {
         int offset;
         int nodeHeaderOffset = NodeHeader.NODE_HEADER_LENGTH + (NodeHeader.isLeafNode(cursor) ? 0 : (NodeHeader.getNumberOfKeys(cursor) + 1) * 8);
         int keyLength = NodeHeader.getKeyLength(cursor);
-        if(NodeHeader.isNodeWithSameLengthKeys(cursor)) {
-            offset = nodeHeaderOffset + (index * (keyLength * 8));
-            tmp_bytes = new byte[cursor.capacity() - offset - keyLength * 8];
-            cursor.setOffset(offset + (keyLength * 8));
-        }
-        else{
-            cursor.setOffset(nodeHeaderOffset);
-            for(int i = 0; i < index; i++) {
-                long tmp = cursor.getLong();
-                while (tmp != -1l) {
-                    cursor.getLong();
-                }
-            }
-            offset = cursor.getOffset();
-            tmp_bytes = new byte[cursor.capacity() - offset - (keyLength + 1) * 8];
-            long tmp = cursor.getLong();
-            while (tmp != -1l) {
-                cursor.getLong();
-            }
+        offset = nodeHeaderOffset + (index * (keyLength * 8));
+        tmp_bytes = new byte[cursor.capacity() - offset - keyLength * 8];
+        cursor.setOffset(offset + (keyLength * 8));
+        offset = cursor.getOffset();
+        tmp_bytes = new byte[cursor.capacity() - offset - (keyLength + 1) * 8];
+        long tmp = cursor.getLong();
+        while (tmp != -1l) {
+            cursor.getLong();
         }
 
         cursor.getBytes(tmp_bytes);

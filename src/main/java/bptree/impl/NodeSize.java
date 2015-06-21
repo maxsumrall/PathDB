@@ -34,23 +34,10 @@ public class NodeSize {
         int byteSize = 0;
         int numberOfKeys = NodeHeader.getNumberOfKeys(cursor);
         byteSize += NodeHeader.NODE_HEADER_LENGTH;
-        if(NodeHeader.isNodeWithSameLengthKeys(cursor)){
-            int keyLength = NodeHeader.getKeyLength(cursor);
-            byteSize += ((numberOfKeys + 1) * keyLength * 8);
-        }
-        else{
-            long currKey = 0;
-            cursor.setOffset(NodeHeader.NODE_HEADER_LENGTH);
-            for(int i = 0; i < numberOfKeys; i++) {
-                currKey = cursor.getLong();
-                byteSize+=8;
-                while(currKey != NodeHeader.KEY_DELIMITER) {
-                    byteSize += 8;
-                    currKey = cursor.getLong();
-                }
-            }
-            byteSize += (newKey.length + 1) * 8;
-        }
+
+        int keyLength = NodeHeader.getKeyLength(cursor);
+        byteSize += ((numberOfKeys + 1) * keyLength * 8);
+
         return byteSize;
     }
 
@@ -73,23 +60,10 @@ public class NodeSize {
         int numberOfKeys = NodeHeader.getNumberOfKeys(cursor);
         byteSize += NodeHeader.NODE_HEADER_LENGTH;
         byteSize += (numberOfKeys + 2) * 8; //calculate number of children;
-        if(NodeHeader.isNodeWithSameLengthKeys(cursor)){
-            int keyLength = NodeHeader.getKeyLength(cursor);
-            byteSize += ((numberOfKeys + 1) * keyLength * 8);
-        }
-        else{
-            long currKey = 0;
-            cursor.setOffset(NodeHeader.NODE_HEADER_LENGTH + (numberOfKeys + 1) * 8);
-            for(int i = 0; i < numberOfKeys; i++) {
-                currKey = cursor.getLong();
-                byteSize+=8;
-                while(currKey != NodeHeader.KEY_DELIMITER) {
-                    byteSize += 8;
-                    currKey = cursor.getLong();
-                }
-            }
-            byteSize += (newKey.length + 1) * 8;
-        }
+
+        int keyLength = NodeHeader.getKeyLength(cursor);
+        byteSize += ((numberOfKeys + 1) * keyLength * 8);
+
         return byteSize;
     }
 }

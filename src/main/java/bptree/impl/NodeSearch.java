@@ -82,21 +82,10 @@ public class NodeSearch {
 
     public static int[] search(PageProxyCursor cursor, long[] key){
         if(NodeHeader.isLeafNode(cursor)){
-            if(NodeHeader.isNodeWithSameLengthKeys(cursor)){
-                return searchLeafNodeSameLengthKeys(cursor, key);
-            }
-            else{
-                return searchLeafNodeDifferentLengthKeys(cursor, key);
-            }
-
+            return searchLeafNodeSameLengthKeys(cursor, key);
         }
         else{
-            if(NodeHeader.isNodeWithSameLengthKeys(cursor)){
-                return searchInternalNodeSameLengthKeys(cursor, key);
-            }
-            else{
-                return searchInternalNodeDifferentLengthKeys(cursor, key);
-            }
+            return searchInternalNodeSameLengthKeys(cursor, key);
         }
     }
 
@@ -126,34 +115,7 @@ public class NodeSearch {
         }
         return new int[]{index, offset};
     }
-    private static int[] searchInternalNodeDifferentLengthKeys(PageProxyCursor cursor, long[] key){
-        int index = -1;
-        int offset = -1;
-        int numberOfKeys = NodeHeader.getNumberOfKeys(cursor);
-        int keyLength = NodeHeader.getKeyLength(cursor);
-        cursor.setOffset(NodeHeader.NODE_HEADER_LENGTH + ((numberOfKeys + 1) * 8)); //header + children
-        long currKey;
-        int lastKeyLength; //for rewinding of offset to return.
-        for(int i = 0; i < numberOfKeys; i++) {
-            lastKeyLength = 1;
-            currKey = cursor.getLong();
-            while(currKey != NodeHeader.KEY_DELIMITER) {
-                arrayUtil.put(currKey);
-                currKey = cursor.getLong();
-                lastKeyLength++;
-            }
-            if(NodeTree.comparator.prefixCompare(key, arrayUtil.get()) < 0){
-                index = i;
-                offset = cursor.getOffset() - (8 * lastKeyLength);
-                break;
-            }
-        }
-        if(index == -1){ //Didn't find anything
-            index = numberOfKeys;
-            offset = cursor.getOffset();
-        }
-        return new int[]{index, offset};
-    }
+
 
     private static int[] searchLeafNodeSameLengthKeys(PageProxyCursor cursor, long[] key){
         int index = -1;
@@ -179,33 +141,6 @@ public class NodeSearch {
         return new int[]{index, offset};
     }
 
-    private static int[] searchLeafNodeDifferentLengthKeys(PageProxyCursor cursor, long[] key){
-        int index = -1;
-        int offset = -1;
-        int numberOfKeys = NodeHeader.getNumberOfKeys(cursor);
-        cursor.setOffset(NodeHeader.NODE_HEADER_LENGTH);
-        long currKey;
-        int lastKeyLength; //for rewinding of offset to return.
-        for(int i = 0; i < numberOfKeys; i++) {
-            lastKeyLength = 1;
-            currKey = cursor.getLong();
-            while(currKey != NodeHeader.KEY_DELIMITER) {
-                arrayUtil.put(currKey);
-                currKey = cursor.getLong();
-                lastKeyLength++;
-            }
-            if(NodeTree.comparator.prefixCompare(key, arrayUtil.get()) == 0){
-                index = i;
-                offset = cursor.getOffset() - (8 * lastKeyLength);
-                break;
-            }
-        }
-        if(index == -1){ //Didn't find anything
-            index = numberOfKeys;
-            offset = cursor.getOffset();
-        }
-        return new int[]{index, offset};
-    }
 
     private static int[] moveCursorBackIfPreviousNodeContainsValidKeys(PageProxyCursor cursor, long[] key) throws IOException {
         long currentNode = cursor.getCurrentPageId();

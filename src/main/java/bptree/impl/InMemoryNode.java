@@ -22,20 +22,10 @@ public class InMemoryNode {
         precedingNode = NodeHeader.getPrecedingID(cursor);
         followingNode = NodeHeader.getSiblingID(cursor);
         if(NodeHeader.isLeafNode(cursor)){
-            if(NodeHeader.isNodeWithSameLengthKeys(cursor)){
-                leafNodeSameLengthKeyDeserialization(cursor);
-            }
-            else{
-                leafNodeVariableLengthKeyDeserialization(cursor);
-            }
+            leafNodeSameLengthKeyDeserialization(cursor);
         }
         else{
-            if(NodeHeader.isNodeWithSameLengthKeys(cursor)){
-                iNodeSameLengthKeyDeserialization(cursor);
-            }
-            else{
-                iNodeVariableLengthKeyDeserialization(cursor);
-            }
+            iNodeSameLengthKeyDeserialization(cursor);
         }
     }
 
@@ -44,20 +34,10 @@ public class InMemoryNode {
         precedingNode = NodeHeader.getPrecedingID(cursor);
         followingNode = NodeHeader.getSiblingID(cursor);
         if(NodeHeader.isLeafNode(cursor)){
-            if(NodeHeader.isNodeWithSameLengthKeys(cursor)){
-                leafNodeSameLengthKeyDeserialization(cursor);
-            }
-            else{
-                leafNodeVariableLengthKeyDeserialization(cursor);
-            }
+            leafNodeSameLengthKeyDeserialization(cursor);
         }
         else{
-            if(NodeHeader.isNodeWithSameLengthKeys(cursor)){
-                iNodeSameLengthKeyDeserialization(cursor);
-            }
-            else{
-                iNodeVariableLengthKeyDeserialization(cursor);
-            }
+            iNodeSameLengthKeyDeserialization(cursor);
         }
     }
 
@@ -83,28 +63,6 @@ public class InMemoryNode {
         }
     }
 
-    protected void iNodeVariableLengthKeyDeserialization(PageProxyCursor cursor){
-        int numberOfKeys = NodeHeader.getNumberOfKeys(cursor);
-        ArrayList<Long> newKey = new ArrayList<>();
-        cursor.setOffset(NodeHeader.NODE_HEADER_LENGTH);
-        //Read all of the children id values
-        for(int i = 0; i < numberOfKeys + 1; i++){ //There is +1 children ids more than the number of keys
-            children.add(cursor.getLong());
-        }
-        Long nextValue = cursor.getLong();
-        for(int i = 0; (numberOfKeys > 0) && (i < numberOfKeys); i++){ //check if we are at the final end of the block
-            while(nextValue != NodeHeader.KEY_DELIMITER) { //while still within this key
-                newKey.add(nextValue);
-                nextValue = cursor.getLong();
-            }
-            keys.add(newKey.toArray(new Long[newKey.size()]));
-            newKey.clear();
-            if(i + 1 < numberOfKeys) {
-                nextValue = cursor.getLong();//Without this check, there are problems for the last value being at the very end of the block.
-            }
-        }
-    }
-
     protected void leafNodeSameLengthKeyDeserialization(PageProxyCursor cursor){
         this.keyLength = NodeHeader.getKeyLength(cursor);
         this.numberOfKeys = NodeHeader.getNumberOfKeys(cursor);
@@ -120,26 +78,6 @@ public class InMemoryNode {
             //deserialize_keys.add(newKey.toArray(new Long[newKey.size()]));
             deserialize_keys.add(newKey);
             //newKey.clear(); //clear if for the next round.
-        }
-        this.keys = deserialize_keys;
-    }
-
-    protected void leafNodeVariableLengthKeyDeserialization(PageProxyCursor cursor){
-        int numberOfKeys = NodeHeader.getNumberOfKeys(cursor);
-        ArrayList<Long[]> deserialize_keys = new ArrayList<>();
-        ArrayList<Long> newKey = new ArrayList<>();
-        cursor.setOffset(NodeHeader.NODE_HEADER_LENGTH);
-        Long nextValue = cursor.getLong();
-        for(int i = 0; i < numberOfKeys; i++){ //check if we are at the final end of the block
-            while(nextValue != NodeHeader.KEY_DELIMITER) { //while still within this key
-                newKey.add(nextValue);
-                nextValue = cursor.getLong();
-            }
-            deserialize_keys.add(newKey.toArray(new Long[newKey.size()]));
-            newKey.clear();
-            if(i + 1 < numberOfKeys) {
-                nextValue = cursor.getLong();//Without this check, there are problems for the last value being at the very end of the block.
-            }
         }
         this.keys = deserialize_keys;
     }
