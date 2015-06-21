@@ -23,7 +23,7 @@ import java.util.Map;
  * Created by max on 6/2/15.
  */
 public class CleverIndexBuilder {
-    public static final int MAX_K = 1;
+    public static final int MAX_K = 3;
     public static final String DB_PATH = "graph.db/";
     public static final String LUBM_INDEX_PATH = "Cleverlubm50Index.db";
     public static final String INDEX_METADATA_PATH = "pathIndexMetaData.dat";
@@ -102,11 +102,11 @@ public class CleverIndexBuilder {
             startTime = System.nanoTime();
             buildK2Paths();
             logToFile("Time to build K2 edges(ns): " + (System.nanoTime() - startTime));
-            //Sorter sorterK2 = sorters.get(4);
-            //SetIterator k2Iterator = sorterK2.finishWithoutSort();
-            //NodeTree k2Index = buildIndex(sorterK2, k2Iterator);
-            k2DiskFiller.finish();
-            NodeTree k2Index = buildIndex(k2DiskFiller);
+            Sorter sorterK2 = sorters.get(4);
+            SetIterator k2Iterator = sorterK2.finishWithoutSort();
+            NodeTree k2Index = buildIndex(sorterK2, k2Iterator);
+            //k2DiskFiller.finish();
+            //NodeTree k2Index = buildIndex(k2DiskFiller);
             indexes.put(2, k2Index);
         }
 
@@ -219,8 +219,8 @@ public class CleverIndexBuilder {
                             }
                             long k2PathId = k2PathIds.get(builder.buildPath());
                             combinedPath = new long[]{k2PathId, entry[1], entry[2], secondPath[2]};
-                            //sorters.get(4).addSortedKeyBulk(combinedPath);
-                            k2DiskFiller.addKey(combinedPath);
+                            sorters.get(4).addSortedKeyBulk(combinedPath);
+                            //k2DiskFiller.addKey(combinedPath);
                         }
                     }
                 }

@@ -143,17 +143,17 @@ public class LUBMExperiments {
     }
     public void doExperiment8() throws IOException {
         query("MATCH (x)-[:hasAdvisor]->(y)-[:teacherOf]->(z)<-[:takesCourse]-(x) RETURN ID(x), ID(y), ID(z)");
-        rectangleJoin(3, 939155463, 4, 140);
+        rectangleJoin(3, 901063622, 4, 140);
         //indexShape(5, 802, null);
     }
     public void doExperiment9() throws IOException {
         query("MATCH (x)<-[:headOf]-(y)-[:worksFor]->(z)<-[:subOrganizationOf]-(w) RETURN ID(x), ID(y), ID(z), ID(w)");
-        pathJoin(3, 1221271593, 4, 14);
+        pathJoin(3, 1298760183, 4, 14);
         //index(5, 567, null);
     }
     public void doExperiment10() throws IOException {
         query("MATCH (x)<-[:headOf]-(y)-[:worksFor]->(z)-[:subOrganizationOf]->(w) RETURN ID(x), ID(y), ID(z), ID(w)");
-        pathJoin(3, 1221271593, 4, 17);
+        pathJoin(3, 1298760183, 4, 17);
         //index(5, 570, null);
     }
 
