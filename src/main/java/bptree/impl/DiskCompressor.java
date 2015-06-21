@@ -26,8 +26,6 @@ public class DiskCompressor {
             compressedCursor.setOffset(NodeHeader.NODE_HEADER_LENGTH);
             while(iterator.hasNext()){
                 next = iterator.getNext();
-                if(next[0] == 57 && next[1] == 36983 && next[2] == 0 && next[3] == 558097)
-                    System.out.println("shit the bed");
                 encodedKey = encodeKey(next, prev);
                 System.arraycopy(next, 0, prev, 0, prev.length);
                 keyCount++;

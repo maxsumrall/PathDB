@@ -15,6 +15,7 @@ import org.neo4j.helpers.collection.IteratorUtil;
 import org.neo4j.io.pagecache.PagedFile;
 import org.neo4j.tooling.GlobalGraphOperations;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -44,12 +45,15 @@ public class LUBMWorkloadQueries {
         workload.disks.get(1).shutdown();
         workload.disks.get(2).shutdown();
         workload.disks.get(3).shutdown();
+
+        System.out.println("Workload Index Size: " + (workload.disks.get(1).pageCacheFile.length() + workload.disks.get(2).pageCacheFile.length() + workload.disks.get(3).pageCacheFile.length()));
+
     }
 
     public LUBMWorkloadQueries() throws IOException {
 
-        DiskCache diskK2 = DiskCache.temporaryDiskCache("workloadK2.db", false);
-        DiskCache diskK3 = DiskCache.temporaryDiskCache("workloadK3.db", false);
+        DiskCache diskK2 = DiskCache.persistentDiskCache("workloadK2.db", false);
+        DiskCache diskK3 = DiskCache.persistentDiskCache("workloadK3.db", false);
 
         disks.put(2, diskK2);
         disks.put(3, diskK3);
@@ -72,6 +76,8 @@ public class LUBMWorkloadQueries {
     public void run() throws IOException {
         //Start query 1
 
+        long startTime = System.nanoTime();
+
         loadK1Index();
 
         query4();
@@ -91,6 +97,9 @@ public class LUBMWorkloadQueries {
         query9();
 
         query10();
+
+        System.out.println("Total Query Workload Time: " + nanoToMilli(System.nanoTime() - startTime));
+
 
     }
 
@@ -125,6 +134,7 @@ public class LUBMWorkloadQueries {
         long endTime = System.nanoTime();
         long total = endTime - starttime;
         long totalWithoutInsertion = total - duration;
+
         starttime = System.nanoTime();
         findK2(pathID3);
         long subsequentSearch = nanoToMilli(System.nanoTime() - starttime);
@@ -185,7 +195,7 @@ public class LUBMWorkloadQueries {
     public void query7B() throws IOException {
         long pathK1 = 1918060825l; // undergraduateDegreeFrom - >
         long pathK21 = 1522104310l; // <-subOrgOf
-        long pathK22 =2131368143; // <-memberOF
+        long pathK22 = 2131368143; // <-memberOF
 
         duration = 0;
 
@@ -518,6 +528,7 @@ public class LUBMWorkloadQueries {
     }
 
     public void findK2(long pathID) throws IOException {
+       /*
         int count = 0;
         SearchCursor searchCursor = indexes.get(2).find(new long[]{pathID});
         try(PageProxyCursor cursor = disks.get(2).getCursor(searchCursor.pageID, PagedFile.PF_SHARED_LOCK)){
@@ -527,10 +538,11 @@ public class LUBMWorkloadQueries {
             }
         }
         System.out.println("Found: " + count);
+        */
     }
 
     public void findK3(long pathID) throws IOException {
-        int count = 0;
+       /* int count = 0;
         SearchCursor searchCursor = indexes.get(3).find(new long[]{pathID});
         try(PageProxyCursor cursor = disks.get(3).getCursor(searchCursor.pageID, PagedFile.PF_SHARED_LOCK)){
             while(searchCursor.hasNext(cursor)){
@@ -539,12 +551,15 @@ public class LUBMWorkloadQueries {
             }
         }
         System.out.println("Found: " + count);
+        */
     }
 
     public void loadK1Index() throws IOException {
         enumerateSingleEdges();
         k1Sorter.sort();
         indexes.put(1, buildIndex(k1Sorter));
+        k1Sorter.getSortedDisk().pageCacheFile.renameTo(new File("workloadK1.db"));
+
     }
 
     private void enumerateSingleEdges() throws IOException {

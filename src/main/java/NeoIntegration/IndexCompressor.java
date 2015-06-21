@@ -17,16 +17,16 @@ public class IndexCompressor {
     public DiskCache compressedDisk;
 
     public static void main(String[] args) throws IOException {
-        int keyLength = 4;
+        int keyLength = 5;
         IndexCompressor ic = new IndexCompressor(keyLength);
         long finalPageID = ic.compressDisk(keyLength);
         ic.buildIndex(finalPageID, keyLength);
     }
 
     public IndexCompressor(int keyLength) {
-        String diskPath = "LUBM50Index/K4Cleverlubm50Index.db";
+        String diskPath = "workloadK3.db";
         this.uncompressedDisk = DiskCache.persistentDiskCache(diskPath, false);
-        this.compressedDisk = DiskCache.persistentDiskCache(keyLength + "compressed_disk.db", false); //I'm handling compression here, so I don't want the cursor to get confused.
+        this.compressedDisk = DiskCache.persistentDiskCache(keyLength + "compressed_workload.db", false); //I'm handling compression here, so I don't want the cursor to get confused.
     }
 
     public void buildIndex(long finalPageID, int keyLength) throws IOException {
@@ -42,7 +42,7 @@ public class IndexCompressor {
         long[] prev = new long[keyLength];
         byte[] encodedKey;
         int keyCount = 0;
-        long nextPage = 0;
+        long nextPage = 1;
         try (PageProxyCursor compressedCursor = compressedDisk.getCursor(0, PagedFile.PF_EXCLUSIVE_LOCK)) {
             try (PageProxyCursor uncompressedCursor = uncompressedDisk.getCursor(nextPage, PagedFile.PF_SHARED_LOCK)) {
                 compressedCursor.setOffset(NodeHeader.NODE_HEADER_LENGTH);

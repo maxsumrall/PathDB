@@ -40,8 +40,6 @@ public class NodeTree {
         this.nodeDeletion = new NodeDeletion(this);
     }
 
-    public static void setPagedFile(PagedFile pagedFile){pagedFile = pagedFile;
-    }
 
     public void newRoot(long childA, long childB, long[] key){
         try (PageProxyCursor cursor = disk.getCursor(rootNodeId, PagedFile.PF_EXCLUSIVE_LOCK)) {
