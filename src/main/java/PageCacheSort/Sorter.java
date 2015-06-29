@@ -15,7 +15,7 @@ import java.util.*;
  * Main entry into the Sorter.
  */
 public class Sorter {
-    int FAN_IN = 1024;
+    public int FAN_IN = 64;
     PageProxyCursor setIteratorCursor;
     DiskCache writeToDisk;
     DiskCache readFromDisk;

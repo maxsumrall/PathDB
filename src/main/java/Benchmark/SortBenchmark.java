@@ -12,13 +12,12 @@ import java.util.Random;
 
 public class SortBenchmark {
     Sorter sorter;
-    String mergeSetSize = "256";
     public static void main(String[] args) throws IOException {
         SortBenchmark sortBenchmark = new SortBenchmark();
 
         sortBenchmark.smallestExample();
 
-        sortBenchmark.randomSorting();
+        //sortBenchmark.randomSorting();
     }
 
     public SortBenchmark() throws IOException {
@@ -32,7 +31,7 @@ public class SortBenchmark {
 
         SetIterator itr = sorter.sort();
 
-        String text = "SmallExample - Merge Set Size:" + mergeSetSize + " Duration: " + ((System.nanoTime() - startTime) / 1000000);
+        String text = "SmallExample - Merge Set Size:" + sorter.FAN_IN + " Duration: " + ((System.nanoTime() - startTime) / 1000000);
         try(PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter("sorting_benchmarking.txt", true)))) {
             out.println(text);
             System.out.println(text);
@@ -46,7 +45,7 @@ public class SortBenchmark {
 
         SetIterator itr = sorter.sort();
 
-        String text = "RandomExample - Merge Set Size:" + mergeSetSize + " Duration: " + ((System.nanoTime() - startTime) / 1000000);
+        String text = "RandomExample - Merge Set Size:" + sorter.FAN_IN + " Duration: " + ((System.nanoTime() - startTime) / 1000000);
         try(PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter("sorting_benchmarking.txt", true)))) {
             out.println(text);
             System.out.println(text);

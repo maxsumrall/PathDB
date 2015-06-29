@@ -11,7 +11,6 @@ import org.neo4j.io.pagecache.PagedFile;
 import org.neo4j.tooling.GlobalGraphOperations;
 
 import java.io.*;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -20,12 +19,12 @@ import java.util.List;
  * Created by max on 6/21/15.
  */
 public class AdvogadoBenchmarkExperiment {
+    public static String DB_PATH = "graph.db";
     public HashMap<Integer, NodeTree> indexes = new HashMap<>();
     public HashMap<Integer, DiskCache> disks = new HashMap<>();
     public GraphDatabaseService database;
     public GlobalGraphOperations ggo;
     StringBuilder stringBuilder;
-    StringBuilder stringBuilder456;
     String cypher;
 
     public static void main(String[] args) throws IOException {
@@ -36,7 +35,7 @@ public class AdvogadoBenchmarkExperiment {
         //experiments.stats();
 
 
-        int experimentCount = 5;
+        int experimentCount = 1;
         for(int i = 0; i < experimentCount; i++) {
             if(args.length == 2){
                 System.out.println(args[0] + " " + args[1]);
@@ -59,12 +58,16 @@ public class AdvogadoBenchmarkExperiment {
                 experiments.stringBuilder.append("\n");
             }
             else{
-                System.out.println("Argument mismatch");
+                //System.out.println("Argument mismatch");
+                experiments.doExperiment1();
+                experiments.doExperiment2();
+                experiments.doExperiment3();
+                experiments.doExperiment4();
+                experiments.doExperiment5();
             }
         }
 
         experiments.logToFile();
-        experiments.logToFile456();
 
         for(DiskCache disk : experiments.disks.values()){
             disk.shutdown();
@@ -73,49 +76,52 @@ public class AdvogadoBenchmarkExperiment {
 
     public AdvogadoBenchmarkExperiment() throws IOException {
 
-        BufferedReader bufferedReader = new BufferedReader(new FileReader(new File("advogadoIndex/pathIndexMetaData.dat")));
+        BufferedReader bufferedReader = new BufferedReader(new FileReader(new File("advogado2/pathIndexMetaData.dat")));
         String line;
+        String folder = "advogado2/";
         while((line = bufferedReader.readLine()) != null) {
             List<String> entry = Arrays.asList(line.split(","));
             int k = new Integer(entry.get(0));
             long root = new Long(entry.get(1));
             boolean compressed = new Boolean(entry.get(2));
-            DiskCache disk = DiskCache.persistentDiskCache("K"+k+"AdvogadoIndex.db", compressed);
+            DiskCache disk = DiskCache.persistentDiskCache(folder + "K"+k+"Cleverlubm50Index.db", compressed);
             indexes.put(k, new NodeTree(k+1, root, disk));
             disks.put(k, disk);
         }
         bufferedReader.close();
 
         stringBuilder = new StringBuilder();
-        stringBuilder456 = new StringBuilder();
 
-        database = new GraphDatabaseFactory().newEmbeddedDatabaseBuilder(CleverIndexBuilder.DB_PATH).newGraphDatabase();
+        database = new GraphDatabaseFactory().newEmbeddedDatabaseBuilder(DB_PATH).newGraphDatabase();
 
         ggo = GlobalGraphOperations.at(database);
     }
 
 
     public void doExperiment1() throws IOException {
-        query("MATCH (x)-[:apprentice]->(y)-[:apprentice]-(z)-[:apprentice]-(x) RETURN ID(x), ID(y), ID(z)");
-        index(3, 649439727, null);
+        query("MATCH (x)-[:apprentice]->(y)-[:apprentice]->(z)-[:apprentice]->(x) RETURN ID(x), ID(y), ID(z)");
+        indexShape(5, 252, null);
+        rectangleJoin(3, 560747377, 4, 36);
     }
     public void doExperiment2() throws IOException {
-        query("MATCH (x)-[:journeyer]->(y)-[:journeyer]-(z)-[:journeyer]-(x) RETURN ID(x), ID(y), ID(z)");
-        index(3, 649439727, null);
+        query("MATCH (x)-[:journeyer]->(y)-[:journeyer]->(z)-[:journeyer]->(x) RETURN ID(x), ID(y), ID(z)");
+        indexShape(5, 166, null);
+        rectangleJoin(3, 1693961325, 4, 22);
     }
     public void doExperiment3() throws IOException {
-        query("MATCH (x)-[:master]->(y)-[:master]-(z)-[:master]-(x) RETURN ID(x), ID(y), ID(z)");
-        index(3, 35729895, null);
+        query("MATCH (x)-[:master]->(y)-[:master]->(z)-[:master]->(x) RETURN ID(x), ID(y), ID(z)");
+        indexShape(5, 209, null);
+        rectangleJoin(3, 1081267614, 4, 29);
     }
     public void doExperiment4() throws IOException {
-        query("MATCH (x)-[:apprentice]->(y)-[:journeyer]-(z)-[:master]-(x) RETURN ID(x), ID(y), ID(z)");
-        index(4, 165, null);
-        indexForQueries456(939155463, 1653142233);
+        query("MATCH (x)-[:apprentice]->(y)-[:journeyer]->(z)-[:master]->(x) RETURN ID(x), ID(y), ID(z)");
+        indexShape(5, 239, null);
+        rectangleJoin(3, 560747377, 4, 23);
     }
     public void doExperiment5() throws IOException {
-        query("MATCH (x)-[:apprentice]->(y)-[:apprentice]-(z)-[:master]-(x) RETURN ID(x), ID(y), ID(z)");
-        index(4, 66, null);
-        indexForQueries456(649439727, 1522104310);
+        query("MATCH (x)-[:apprentice]->(y)-[:apprentice]->(z)-[:master]->(x) RETURN ID(x), ID(y), ID(z)");
+        indexShape(5, 251, null);
+        rectangleJoin(3, 560747377, 4, 35);
     }
 
     public void stats(){
@@ -144,7 +150,7 @@ public class AdvogadoBenchmarkExperiment {
                 //System.out.println(each);
             }
             //stringBuilder.append("\n").append(cypher);
-            //System.out.println("Begin Neo4j Transaction");
+            System.out.println(cypher);
             long startTime = System.nanoTime();
             Result queryAResult = database.execute(cypher);
             queryAResult.next();
@@ -158,41 +164,47 @@ public class AdvogadoBenchmarkExperiment {
                 count++;
             }
             long timeToLastResult = System.nanoTime();
-            //System.out.println("Number of results found in Neo4j:" + count);
+            System.out.println("Number of results found in Neo4j:" + count);
             stringBuilder.append((timeToFirstResult - startTime) / (double) 1000000).append(",");
             stringBuilder.append((timeToLastResult - startTime) / (double) 1000000).append(",");
         }
         return count;
     }
 
-
-    public int indexForQueries456(long pathID1, long pathID2) throws IOException {
+    public int rectangleJoin(int indexA, long pathIDA, int indexB, long pathIDB) throws IOException {
         long startTime = System.nanoTime();
-        long timeToLastResult = 0;
-        long timeToFirstResult= 0;
+        long timeToFirstResult;
+        long timeToLastResult;
+        long[] searchKeyA = new long[]{pathIDA};
+        long[] searchKeyB = new long[]{pathIDB};
+
+        long[] resultA;
+        long[] resultB;
         int count = 0;
-        List<long[]> entries = new ArrayList<>();
-        try (PageProxyCursor cursor = disks.get(3).getCursor(0, PagedFile.PF_SHARED_LOCK)) {
-            SearchCursor searchCursorA = indexes.get(3).find(cursor, new long[]{pathID1});
-            while (searchCursorA.hasNext(cursor)) {
-                entries.add(searchCursorA.next(cursor));
-            }
-            for (long[] resultA : entries) {
-                SearchCursor searchCursorB = indexes.get(3).find(cursor, new long[]{pathID2, resultA[2]});
-                while (searchCursorB.hasNext(cursor)) {
-                    if(timeToFirstResult == 0)
-                        timeToFirstResult = System.nanoTime();
-                    searchCursorB.next(cursor);
-                    count++;
+        SearchCursor searchCursorA = indexes.get(indexA).find(searchKeyA);
+        try (PageProxyCursor cursorA = disks.get(indexA).getCursor(searchCursorA.pageID, PagedFile.PF_SHARED_LOCK)) {
+            try (PageProxyCursor cursorB = disks.get(indexB).getCursor(0, PagedFile.PF_SHARED_LOCK)) {
+                timeToFirstResult = System.nanoTime();
+                while (searchCursorA.hasNext(cursorA)) {
+                resultA = searchCursorA.next(cursorA);
+                    SearchCursor searchCursorB = indexes.get(indexB).find(cursorB, new long[]{pathIDB, resultA[2]});
+                    resultB = searchCursorB.next(cursorB);
+                    while (searchCursorB.hasNext(cursorB)) {
+                        if (resultA[1] == resultB[3]) {
+                            count++;
+                        }
+                        resultB = searchCursorB.next(cursorB);
+                    }
                 }
+                timeToLastResult = System.nanoTime();
             }
-            timeToLastResult = System.nanoTime();
         }
+        //System.out.println("Number of results found in Index: " + count);
         stringBuilder.append((timeToFirstResult - startTime) / (double) 1000000).append(",");
-        stringBuilder.append((timeToLastResult - startTime) / (double) 1000000).append(",");
+        stringBuilder.append((timeToLastResult - startTime) / (double) 1000000);
+        System.out.println("Result Set Size index: " + count);
         return count;
     }
-
 
 
     public int indexShape(int index, long pathID, IndexConstraint constraint) throws IOException {
@@ -212,8 +224,9 @@ public class AdvogadoBenchmarkExperiment {
             timeToFirstResult = System.nanoTime();
             while(searchCursor.hasNext(cursor)) {
                 foundKey = searchCursor.next(cursor);
-                if(foundKey[1] == foundKey[foundKey.length -1])
+                if(foundKey[1] == foundKey[foundKey.length -1]) {
                     count++;
+                }
 
             }
             timeToLastResult = System.nanoTime();
@@ -223,151 +236,11 @@ public class AdvogadoBenchmarkExperiment {
         //System.out.println("Index w/ constraint Join");
         //System.out.println((timeToFirstResult - startTime) / (double) 1000000);
         //System.out.println((timeToLastResult - startTime) / (double) 1000000);
-        //System.out.println("Result Set Size index: " + count);
+        System.out.println("Result Set Size index: " + count);
 
         if(tx != null){
             tx.close();
         }
-        return count;
-    }
-
-
-    public int index(int index, long pathID, IndexConstraint constraint) throws IOException {
-        Transaction tx = null;
-        if(constraint != null){
-            tx = database.beginTx();
-        }
-        long startTime = System.nanoTime();
-        long timeToFirstResult;
-        long timeToLastResult;
-        long[] searchKey = new long[]{pathID};
-
-        long[] foundKey;
-        int count = 0;
-        SearchCursor searchCursor = indexes.get(index).find(searchKey);
-        try (PageProxyCursor cursor = disks.get(index).getCursor(searchCursor.pageID, PagedFile.PF_SHARED_LOCK)) {
-            timeToFirstResult = System.nanoTime();
-            while(searchCursor.hasNext(cursor)) {
-                foundKey = searchCursor.next(cursor);
-                count++;
-                if(constraint != null){
-                    Node n = database.getNodeById(foundKey[constraint.indexInResultSet]);
-                    String value = (String)n.getProperty(constraint.property);
-                    if(value.equals(constraint.value)){
-                        count = 1;
-                        break;
-                    }
-                }
-            }
-            timeToLastResult = System.nanoTime();
-        }
-        //System.out.println("Number of results found in Index: " + count);
-        stringBuilder.append((timeToFirstResult - startTime) / (double) 1000000).append(",");
-        stringBuilder.append((timeToLastResult - startTime) / (double) 1000000);
-        //System.out.println("Result Set Size index: " + count);
-
-        if(tx != null){
-            tx.close();
-        }
-        return count;
-    }
-
-
-    public int rectangleJoin(int indexA, long pathIDA, int indexB, long pathIDB) throws IOException {
-        long startTime = System.nanoTime();
-        long timeToFirstResult;
-        long timeToLastResult;
-        long[] searchKeyA = new long[]{pathIDA};
-        long[] searchKeyB = new long[]{pathIDB};
-
-        long[] resultA;
-        long[] resultB;
-        int count = 0;
-        SearchCursor searchCursorA = indexes.get(indexA).find(searchKeyA);
-        SearchCursor searchCursorB = indexes.get(indexB).find(searchKeyB);
-        try (PageProxyCursor cursorA = disks.get(indexA).getCursor(searchCursorA.pageID, PagedFile.PF_SHARED_LOCK)) {
-            try (PageProxyCursor cursorB = disks.get(indexB).getCursor(searchCursorB.pageID, PagedFile.PF_SHARED_LOCK)) {
-                timeToFirstResult = System.nanoTime();
-                if(searchCursorA.hasNext(cursorA) && searchCursorB.hasNext(cursorB)) {
-                    resultA = searchCursorA.next(cursorA);
-                    resultB = searchCursorB.next(cursorB);
-                    while (searchCursorA.hasNext(cursorA) && searchCursorB.hasNext(cursorB)) {
-                        if (resultA[1] == resultB[1]) {
-                            if(resultA[2] == resultB[3]) {
-                                count++;
-                                resultA = searchCursorA.next(cursorA);
-                                resultB = searchCursorB.next(cursorB);
-                            }
-                            else if(resultA[2] > resultB[3]){
-                                if (searchCursorB.hasNext(cursorB)) {
-                                    resultB = searchCursorB.next(cursorB);
-                                }
-                            }
-                            else{
-                                if (searchCursorA.hasNext(cursorA)) {
-                                    resultA = searchCursorA.next(cursorA);
-                                }
-                            }
-                        } else if (resultA[1] > resultB[1]) {
-                            if (searchCursorB.hasNext(cursorB)) {
-                                resultB = searchCursorB.next(cursorB);
-                            }
-                        } else {
-                            if (searchCursorA.hasNext(cursorA)) {
-                                resultA = searchCursorA.next(cursorA);
-                            }
-                        }
-                    }
-                }
-                timeToLastResult = System.nanoTime();
-            }
-        }
-        //System.out.println("Number of results found in Index: " + count);
-        stringBuilder.append((timeToFirstResult - startTime) / (double) 1000000).append(",");
-        stringBuilder.append((timeToLastResult - startTime) / (double) 1000000);
-        //System.out.println("Result Set Size index: " + count);
-        return count;
-    }
-    public int pathJoin(int indexA, long pathIDA, int indexB, long pathIDB) throws IOException {
-        long startTime = System.nanoTime();
-        long timeToFirstResult;
-        long timeToLastResult;
-        long[] searchKeyA = new long[]{pathIDA};
-        long[] searchKeyB = new long[]{pathIDB};
-
-        long[] resultA;
-        long[] resultB;
-        int count = 0;
-        SearchCursor searchCursorA = indexes.get(indexA).find(searchKeyA);
-        SearchCursor searchCursorB = indexes.get(indexB).find(searchKeyB);
-        try (PageProxyCursor cursorA = disks.get(indexA).getCursor(searchCursorA.pageID, PagedFile.PF_SHARED_LOCK)) {
-            try (PageProxyCursor cursorB = disks.get(indexB).getCursor(searchCursorB.pageID, PagedFile.PF_SHARED_LOCK)) {
-                timeToFirstResult = System.nanoTime();
-                if(searchCursorA.hasNext(cursorA) && searchCursorB.hasNext(cursorB)) {
-                    resultA = searchCursorA.next(cursorA);
-                    resultB = searchCursorB.next(cursorB);
-                    while (searchCursorA.hasNext(cursorA) && searchCursorB.hasNext(cursorB)) {
-                        if (resultA[1] == resultB[1]) {
-                            count++;
-                            //resultA = searchCursorA.next(cursorA);
-                            resultB = searchCursorB.next(cursorB);
-                        } else if (resultA[1] > resultB[1]) {
-                            if (searchCursorB.hasNext(cursorB)) {
-                                resultB = searchCursorB.next(cursorB);
-                            }
-                        } else {
-                            if (searchCursorA.hasNext(cursorA)) {
-                                resultA = searchCursorA.next(cursorA);
-                            }
-                        }
-                    }
-                }
-                timeToLastResult = System.nanoTime();
-            }
-        }
-        stringBuilder.append((timeToFirstResult - startTime) / (double) 1000000).append(",");
-        stringBuilder.append((timeToLastResult - startTime) / (double) 1000000);
-        //System.out.println("Result Set Size index: " + count);
         return count;
     }
 
@@ -380,16 +253,6 @@ public class AdvogadoBenchmarkExperiment {
             //exception handling left as an exercise for the reader
         }
     }
-    public void logToFile456(){
-        try(PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter("AdvogadoExperiments456_results.txt", true)))) {
-            out.println(this.cypher+"\n");
-            out.println(stringBuilder.toString());
-            System.out.println(stringBuilder.toString());
-        }catch (IOException e) {
-            //exception handling left as an exercise for the reader
-        }
-    }
-
 
 }
 

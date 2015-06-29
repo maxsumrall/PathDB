@@ -115,7 +115,7 @@ public class CleverIndexBuilder {
             buildK3Paths();
             k3DiskFiller.finish();
             logToFile("Time to build K3 edges(ns): " + (System.nanoTime() - startTime));
-            NodeTree k3Index = buildIndex(k3DiskFiller);
+            NodeTree k3Index = buildIndexK3(k3DiskFiller);
             indexes.put(3, k3Index);
         }
     }
@@ -137,6 +137,19 @@ public class CleverIndexBuilder {
         NodeBulkLoader bulkLoader = new NodeBulkLoader(sortedDisk, filler.finalPageID, filler.keyLength);
         NodeTree index = bulkLoader.run();
         File newFile = new File("K" + filler.keyLength + LUBM_INDEX_PATH);
+        sortedDisk.pageCacheFile.renameTo(newFile);
+        index.disk.pageCacheFile = newFile;
+        System.out.println("Done. Root for this index: " + index.rootNodeId);
+        logToFile("index K= " + filler.keyLength+ " root: " + index.rootNodeId);
+        return index;
+    }
+    public NodeTree buildIndexK3(SuperFillSortedDisk filler) throws IOException {
+        System.out.println("Building Index");
+        DiskCache sortedDisk = filler.compressedDisk;
+        NodeBulkLoader bulkLoader = new NodeBulkLoader(sortedDisk, filler.finalPageID, filler.keyLength);
+        NodeTree index = bulkLoader.run();
+        String folder = "/Volumes/Passport/";
+        File newFile = new File(folder + "K" + filler.keyLength + LUBM_INDEX_PATH);
         sortedDisk.pageCacheFile.renameTo(newFile);
         index.disk.pageCacheFile = newFile;
         System.out.println("Done. Root for this index: " + index.rootNodeId);
@@ -213,6 +226,11 @@ public class CleverIndexBuilder {
                         while (resultB.hasNext(cursorA)) {
                             long[] secondPath = resultB.next(cursorA);
                             PathIDBuilder builder = new PathIDBuilder(relationshipMap.get(entry[0]).getPath(), relationshipMap.get(pathIdB).getPath());
+                            /*long inverse = relationshipMap.get(pathIdA).buildInversePathID();
+                            if(inverse == pathIdB && (entry[1] == secondPath[2] && entry[2] == secondPath[1])) {
+                                continue;
+                            }*/
+
                             if (!k2PathIds.containsKey(builder.buildPath())) {
                                 k2PathIds.put(builder.buildPath(), currentShortPathID++);
                                 k2RelationshipsMap.put(k2PathIds.get(builder.buildPath()), builder);

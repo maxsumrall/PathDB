@@ -9,6 +9,7 @@ public class PathIDBuilder {
     public StringBuilder path = new StringBuilder();
     public StringBuilder prettyPrint = new StringBuilder();
     public long pathID = 0;
+    public long inverse = 0;
     public PathIDBuilder(Node node1, Relationship relationship1, Node node2){
         addRelationship(node1, relationship1);
     }
@@ -82,6 +83,12 @@ public class PathIDBuilder {
     public String getPath(){
         return path.toString();
     }
+
+    public long buildInversePathID(){
+        if(inverse == 0l){
+            inverse = Math.abs((path.reverse()).toString().hashCode());
+        }
+        return inverse;    }
 
     public boolean isOutgoing(Node node, Relationship rel){
         return rel.getStartNode().getId() == node.getId();

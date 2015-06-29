@@ -15,18 +15,22 @@ import java.io.IOException;
 public class IndexCompressor {
     public DiskCache uncompressedDisk;
     public DiskCache compressedDisk;
+    int maxNumBytes;
+    final int sameID = 128;
+    final int sameFirstNode = 64;
+
 
     public static void main(String[] args) throws IOException {
-        int keyLength = 5;
+        int keyLength = 4;
         IndexCompressor ic = new IndexCompressor(keyLength);
         long finalPageID = ic.compressDisk(keyLength);
         ic.buildIndex(finalPageID, keyLength);
     }
 
     public IndexCompressor(int keyLength) {
-        String diskPath = "workloadK3.db";
+        String diskPath = "LDBCworkloadK2.db";
         this.uncompressedDisk = DiskCache.persistentDiskCache(diskPath, false);
-        this.compressedDisk = DiskCache.persistentDiskCache(keyLength + "compressed_workload.db", false); //I'm handling compression here, so I don't want the cursor to get confused.
+        this.compressedDisk = DiskCache.persistentDiskCache(keyLength + "LDBCCompressed.db", false); //I'm handling compression here, so I don't want the cursor to get confused.
     }
 
     public void buildIndex(long finalPageID, int keyLength) throws IOException {
@@ -42,7 +46,7 @@ public class IndexCompressor {
         long[] prev = new long[keyLength];
         byte[] encodedKey;
         int keyCount = 0;
-        long nextPage = 1;
+        long nextPage = 0;
         try (PageProxyCursor compressedCursor = compressedDisk.getCursor(0, PagedFile.PF_EXCLUSIVE_LOCK)) {
             try (PageProxyCursor uncompressedCursor = uncompressedDisk.getCursor(nextPage, PagedFile.PF_SHARED_LOCK)) {
                 compressedCursor.setOffset(NodeHeader.NODE_HEADER_LENGTH);
@@ -89,26 +93,36 @@ public class IndexCompressor {
 
 
 
-    public static byte[] encodeKey(long[] key, long[] prev){
+    public byte[] encodeKey(long[] key, long[] prev){
 
-        long[] diff = new long[key.length];
-        for(int i = 0; i < key.length; i++)
-        {
-            diff[i] = key[i] - prev[i];
+        this.maxNumBytes = 0;
+        int firstEncodedIndex = 0;
+        byte header = (byte)0;
+        if(key[0] == prev[0]) {
+            //set first bit
+            firstEncodedIndex++;
+            header |= sameID;
+
+            if (key[1] == prev[1]) {
+                //set second bit
+                firstEncodedIndex++;
+                header |= sameFirstNode;
+            }
         }
 
-        int maxNumBytes = Math.max(numberOfBytes(diff[0]), 1);
-        for(int i = 1; i < key.length; i++){
-            maxNumBytes = Math.max(maxNumBytes, numberOfBytes(diff[i]));
+        for(int i = firstEncodedIndex; i < key.length; i++){
+            maxNumBytes = Math.max(maxNumBytes, numberOfBytes(key[i] - prev[i]));
         }
 
-        byte[] encoded = new byte[1 + (maxNumBytes * key.length )];
-        encoded[0] = (byte)maxNumBytes;
-        for(int i = 0; i < key.length; i++){
-            toBytes(diff[i], encoded, 1 + (i * maxNumBytes), maxNumBytes);
+        byte[] encoded = new byte[1 + (maxNumBytes * (key.length - firstEncodedIndex))];
+        header |=  maxNumBytes;
+        encoded[0] = header;
+        for(int i = 0; i < key.length - firstEncodedIndex; i++){
+            toBytes(key[i + firstEncodedIndex] - prev[i + firstEncodedIndex], encoded, 1 + (i * maxNumBytes), maxNumBytes);
         }
         return encoded;
     }
+
 
     public static int numberOfBytes(long value){
         long abs = Math.abs(value);

@@ -17,7 +17,7 @@ public class Runner {
             BenchmarkIndexBuilderLZ4.main(args);
         }
         else if (args[0].equals("5")){
-            LUBMExperiments.main(args);
+            LDBCBenchmarkExperiment.main(args);
         }
     }
 }

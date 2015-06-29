@@ -25,7 +25,9 @@ public class SuperFillSortedDisk {
     public SuperFillSortedDisk(int keyLength) throws IOException {
         this.keyLength = keyLength;
         this.prev = new long[keyLength];
-        this.compressedDisk = DiskCache.persistentDiskCache(keyLength + "compressed_disk.db", false); //I'm handling compression here, so I don't want the cursor to get confused.
+        //String folder = "";
+        String folder = "/Volumes/Passport/";
+        this.compressedDisk = DiskCache.persistentDiskCache(folder + keyLength + "compressed_disk.db", false); //I'm handling compression here, so I don't want the cursor to get confused.
         compressedCursor = compressedDisk.getCursor(0, PagedFile.PF_EXCLUSIVE_LOCK | PagedFile.PF_NO_FAULT);
         NodeHeader.setFollowingID(compressedCursor, compressedCursor.getCurrentPageId() + 1);
         NodeHeader.setPrecedingId(compressedCursor, compressedCursor.getCurrentPageId() - 1);
