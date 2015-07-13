@@ -20,7 +20,7 @@ public class NodeSize {
         return leafNodeByteSize(cursor, newKey) < DiskCache.PAGE_SIZE;
     }
 
-    public static int leafNodeByteSize(NodeTree tree, long nodeId, long[] newKey){
+    public static int leafNodeByteSize(IndexTree tree, long nodeId, long[] newKey){
         int size = 0;
         try (PageProxyCursor cursor = tree.disk.getCursor(nodeId, PagedFile.PF_EXCLUSIVE_LOCK)) {
                     size = leafNodeByteSize(cursor, newKey);
@@ -45,7 +45,7 @@ public class NodeSize {
         return internalNodeByteSize(cursor, newKey) < DiskCache.PAGE_SIZE;
     }
 
-    public static int internalNodeByteSize(NodeTree tree, long nodeId, long[] newKey){
+    public static int internalNodeByteSize(IndexTree tree, long nodeId, long[] newKey){
         int size = 0;
         try (PageProxyCursor cursor = tree.disk.getCursor(nodeId, PagedFile.PF_EXCLUSIVE_LOCK)) {
                     size = internalNodeByteSize(cursor, newKey);

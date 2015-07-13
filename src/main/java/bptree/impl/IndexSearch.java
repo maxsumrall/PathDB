@@ -6,12 +6,12 @@ import org.neo4j.io.pagecache.PagedFile;
 import java.io.IOException;
 
 
-public class NodeSearch {
+public class IndexSearch {
     private static PrimitiveLongArray arrayUtil = new PrimitiveLongArray();
     public  PageProxyCursor cursor;
-    public NodeTree tree;
+    public IndexTree tree;
 
-    public NodeSearch(NodeTree tree){
+    public IndexSearch(IndexTree tree){
         this.tree = tree;
     }
     public SearchCursor find(long[] key){
@@ -103,7 +103,7 @@ public class NodeSearch {
             for(int j = 0; j < keyLength; j++) {
                 currKey[j] = cursor.getLong();
             }
-            if(NodeTree.comparator.prefixCompare(key, currKey) < 0){
+            if(IndexTree.comparator.prefixCompare(key, currKey) < 0){
                 index = i;
                 offset = cursor.getOffset() - (8 * keyLength);
                 break;
@@ -128,7 +128,7 @@ public class NodeSearch {
             for(int j = 0; j < keyLength; j++) {
                 currKey[j] = cursor.getLong();
             }
-            if(NodeTree.comparator.prefixCompare(key, currKey) <= 0){
+            if(IndexTree.comparator.prefixCompare(key, currKey) <= 0){
                 index = i;
                 offset = cursor.getOffset() - (8 * keyLength);
                 break;

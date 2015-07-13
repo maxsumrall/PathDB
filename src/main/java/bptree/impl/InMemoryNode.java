@@ -16,7 +16,7 @@ public class InMemoryNode {
     public ArrayList<Long> children = new ArrayList<>();
     public ArrayList<Long[]> keys = new ArrayList<>();
 
-    public InMemoryNode(NodeTree tree, long id) throws IOException {
+    public InMemoryNode(IndexTree tree, long id) throws IOException {
         PageProxyCursor cursor = tree.disk.getCursor(id, PagedFile.PF_EXCLUSIVE_LOCK);
         leafNode = NodeHeader.isLeafNode(cursor);
         precedingNode = NodeHeader.getPrecedingID(cursor);

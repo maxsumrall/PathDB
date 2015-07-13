@@ -2,7 +2,7 @@ package NeoIntegration;
 
 import bptree.PageProxyCursor;
 import bptree.impl.DiskCache;
-import bptree.impl.NodeTree;
+import bptree.impl.IndexTree;
 import bptree.impl.SearchCursor;
 import org.neo4j.graphdb.*;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
@@ -20,7 +20,7 @@ import java.util.List;
  * Created by max on 5/28/15.
  */
 public class LUBMExperiments {
-    public HashMap<Integer, NodeTree> indexes = new HashMap<>();
+    public HashMap<Integer, IndexTree> indexes = new HashMap<>();
     public HashMap<Integer, DiskCache> disks = new HashMap<>();
     public GraphDatabaseService database;
     public GlobalGraphOperations ggo;
@@ -95,7 +95,7 @@ public class LUBMExperiments {
             long root = new Long(entry.get(1));
             boolean compressed = new Boolean(entry.get(2));
             DiskCache disk = DiskCache.persistentDiskCache("LUBM50IndexCompressed/K"+k+"Compressedlubm50Index.db", compressed);
-            indexes.put(k, new NodeTree(k+1, root, disk));
+            indexes.put(k, new IndexTree(k+1, root, disk));
             disks.put(k, disk);
         }
         bufferedReader.close();

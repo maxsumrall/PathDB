@@ -9,12 +9,12 @@ import java.io.IOException;
 /**
  * Created by max on 5/8/15.
  */
-public class NodeDeletion {
+public class IndexDeletion {
     public static PageProxyCursor cursor;
     public static DiskCache disk;
-    public NodeTree tree;
+    public IndexTree tree;
 
-    public NodeDeletion(NodeTree tree){
+    public IndexDeletion(IndexTree tree){
         this.tree = tree;
     }
 
@@ -24,7 +24,7 @@ public class NodeDeletion {
                     if(NodeHeader.isLeafNode(cursor)){
                         result = removeKeyFromLeafNode(cursor, cursor.getCurrentPageId(), key);
                     } else {
-                        int index = NodeSearch.search(cursor, key)[0];
+                        int index = IndexSearch.search(cursor, key)[0];
                         long child = tree.getChildIdAtIndex(cursor, index);
                         long id = cursor.getCurrentPageId();
                         cursor.next(child);
@@ -45,7 +45,7 @@ public class NodeDeletion {
             result = removeKeyFromLeafNode(cursor, cursor.getCurrentPageId(), key);
         }
         else{
-            int index = NodeSearch.search(cursor, key)[0];
+            int index = IndexSearch.search(cursor, key)[0];
             long child = tree.getChildIdAtIndex(cursor, index);
             long id = cursor.getCurrentPageId();
             cursor.next(child);
@@ -59,7 +59,7 @@ public class NodeDeletion {
     }
 
     public static RemoveResultProxy handleRemovedChildren(PageProxyCursor cursor, long id, RemoveResultProxy result){
-        int index = NodeTree.getIndexOfChild(cursor, result.removedNodeId);
+        int index = IndexTree.getIndexOfChild(cursor, result.removedNodeId);
         int numberOfKeys = NodeHeader.getNumberOfKeys(cursor);
         int numberOfChildren = numberOfKeys + 1;
         if(result.isLeaf){
@@ -99,10 +99,10 @@ public class NodeDeletion {
         RemoveResultProxy result = null;
         if(NodeHeader.getNumberOfKeys(cursor) == 1){
             result = new RemoveResultProxy(cursor.getCurrentPageId(), NodeHeader.getSiblingID(cursor), true);
-            NodeTree.updateSiblingAndFollowingIdsDeletion(cursor, nodeId);
+            IndexTree.updateSiblingAndFollowingIdsDeletion(cursor, nodeId);
         }
         else{
-            int[] searchResult = NodeSearch.search(cursor, key);
+            int[] searchResult = IndexSearch.search(cursor, key);
             removeKeyAtOffset(cursor, searchResult[1], key);
             removeChildAtIndex(cursor, searchResult[0]);
         }
@@ -124,10 +124,10 @@ public class NodeDeletion {
         RemoveResultProxy result = null;
         if(NodeHeader.getNumberOfKeys(cursor) == 1){
             result = new RemoveResultProxy(cursor.getCurrentPageId(), NodeHeader.getSiblingID(cursor), true);
-            NodeTree.updateSiblingAndFollowingIdsDeletion(cursor, nodeId);
+            IndexTree.updateSiblingAndFollowingIdsDeletion(cursor, nodeId);
         }
         else{
-            int[] searchResult = NodeSearch.search(cursor, key);
+            int[] searchResult = IndexSearch.search(cursor, key);
             removeKeyAtOffset(cursor, searchResult[1], key);
         }
         return result;

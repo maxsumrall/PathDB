@@ -2,7 +2,7 @@ package Benchmark;
 
 import bptree.PageProxyCursor;
 import bptree.impl.DiskCache;
-import bptree.impl.NodeTree;
+import bptree.impl.IndexTree;
 import bptree.impl.SearchCursor;
 import org.neo4j.io.pagecache.PagedFile;
 
@@ -17,7 +17,7 @@ public class Benchmark {
 
     public static Random random;
 
-    public static NodeTree proxy;
+    public static IndexTree proxy;
 
     public static void main(String[] args) throws IOException {
 
@@ -46,8 +46,8 @@ public class Benchmark {
     }
 
     public static void runExperiment(int items_to_insert) throws IOException {
-        DiskCache disk = DiskCache.temporaryDiskCache(items_to_insert + "experiment.dat", true);
-        proxy = new NodeTree(4, disk);
+        DiskCache disk = DiskCache.temporaryDiskCache(items_to_insert + "experiment.dat", false);
+        proxy = new IndexTree(4, disk);
 
         int number_of_paths = 10000;
 
@@ -55,7 +55,7 @@ public class Benchmark {
 
         double totalSumInsert = performInsertionExperiment(proxy, items_to_insert, number_of_paths);
         double totalSumSearch = performSearchExperiment(proxy, items_to_insert, number_of_paths);
-        //double totalSumDelete = performDeletionExperiment(proxy, items_to_insert, number_of_paths);
+        double totalSumDelete = performDeletionExperiment(proxy, items_to_insert, number_of_paths);
 
         disk.shutdown();
         long disk_size = disk.pageCacheFile.length();
@@ -66,13 +66,13 @@ public class Benchmark {
         strBuilder.append("\n Sum Insertion time(minutes): ").append(totalSumInsert / 60000000000d);
         strBuilder.append("\n Average Insertion time(micro seconds): ").append(totalSumInsert / items_to_insert);
         strBuilder.append("\n Average Search time(micro seconds): ").append(totalSumSearch / items_to_insert);
-        //strBuilder.append("\n Average Deletion time(micro seconds): ").append(totalSumDelete / items_to_insert);
+        strBuilder.append("\n Average Deletion time(micro seconds): ").append(totalSumDelete / items_to_insert);
         strBuilder.append("\n Disk Size(mb): ").append(disk_size / 1000000.0);
 
         logToFile(strBuilder.toString());
     }
 
-    public static double performInsertionExperiment(NodeTree tree, int items_to_insert, int number_of_paths){
+    public static double performInsertionExperiment(IndexTree tree, int items_to_insert, int number_of_paths){
         double totalSum = 0;
         long[] key = new long[4];
         for (int i = 1; i < items_to_insert; i++) {
@@ -93,7 +93,7 @@ public class Benchmark {
         return totalSum;
     }
 
-    public static double performSearchExperiment(NodeTree tree, int items_to_insert, int number_of_paths) throws IOException {
+    public static double performSearchExperiment(IndexTree tree, int items_to_insert, int number_of_paths) throws IOException {
         double totalSum = 0;
         long[] key = new long[4];
         for (int i = 1; i < items_to_insert; i++) {
@@ -105,7 +105,8 @@ public class Benchmark {
             //Do timed operation here
 
             SearchCursor result = tree.find(key);
-            try(PageProxyCursor cursor = tree.disk.getCursor(result.pageID, PagedFile.PF_SHARED_LOCK)) {
+            try(PageProxyCursor cursor = tree.disk.getCursor(
+                    result.pageID, PagedFile.PF_SHARED_LOCK)) {
                 assert Arrays.equals(key, result.next(cursor));
             } catch (IOException e) {
                 e.printStackTrace();
@@ -118,7 +119,7 @@ public class Benchmark {
         return totalSum;
     }
 
-    public static double performDeletionExperiment(NodeTree tree, int items_to_insert, int number_of_paths){
+    public static double performDeletionExperiment(IndexTree tree, int items_to_insert, int number_of_paths){
         double totalSum = 0;
         long[] key = new long[4];
         for (int i = 1; i < items_to_insert; i++) {

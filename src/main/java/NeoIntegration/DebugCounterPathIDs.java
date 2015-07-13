@@ -3,7 +3,7 @@ package NeoIntegration;
 import bptree.PageProxyCursor;
 import bptree.impl.DiskCache;
 import bptree.impl.NodeHeader;
-import bptree.impl.NodeTree;
+import bptree.impl.IndexTree;
 import org.neo4j.io.pagecache.PagedFile;
 
 import java.io.IOException;
@@ -39,7 +39,7 @@ public class DebugCounterPathIDs {
 
     public void brutesearch(long[] key) throws IOException {
         DiskCache disk = DiskCache.persistentDiskCache("K4Cleverlubm50Index.db", true);
-        NodeTree index = new NodeTree(4, 338335, disk);
+        IndexTree index = new IndexTree(4, 338335, disk);
         long currentPage = 0;
         try(PageProxyCursor cursor = disk.getCursor(currentPage, PagedFile.PF_SHARED_LOCK)){
             while(currentPage != -1){

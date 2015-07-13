@@ -8,7 +8,7 @@ import java.io.IOException;
 /**
  * Static class for manipulating nodes without doing any object instantiation.
  */
-public class NodeTree {
+public class IndexTree {
 
     public PagedFile pagedFile;
     public DiskCache disk;
@@ -16,28 +16,28 @@ public class NodeTree {
     public long rootNodeId = 0;
     public int keySize;
     public PageProxyCursor cursor;
-    public NodeSearch nodeSearch;
-    public NodeInsertion nodeInsertion;
-    public NodeDeletion nodeDeletion;
+    public IndexSearch nodeSearch;
+    public IndexInsertion nodeInsertion;
+    public IndexDeletion nodeDeletion;
 
-    public NodeTree(int keySize, long rootNodeId, DiskCache disk){
+    public IndexTree(int keySize, long rootNodeId, DiskCache disk){
         this.rootNodeId = rootNodeId;
         pagedFile = disk.pagedFile;
         this.disk = disk;
         this.keySize = keySize;
-        this.nodeSearch = new NodeSearch(this);
-        this.nodeInsertion = new NodeInsertion(this);
-        this.nodeDeletion = new NodeDeletion(this);
+        this.nodeSearch = new IndexSearch(this);
+        this.nodeInsertion = new IndexInsertion(this);
+        this.nodeDeletion = new IndexDeletion(this);
     }
 
-    public NodeTree(int keySize, DiskCache disk) throws IOException {
+    public IndexTree(int keySize, DiskCache disk) throws IOException {
         pagedFile = disk.pagedFile;
         this.disk = disk;
         this.keySize = keySize;
         rootNodeId = acquireNewLeafNode();
-        this.nodeSearch = new NodeSearch(this);
-        this.nodeInsertion = new NodeInsertion(this);
-        this.nodeDeletion = new NodeDeletion(this);
+        this.nodeSearch = new IndexSearch(this);
+        this.nodeInsertion = new IndexInsertion(this);
+        this.nodeDeletion = new IndexDeletion(this);
     }
 
 

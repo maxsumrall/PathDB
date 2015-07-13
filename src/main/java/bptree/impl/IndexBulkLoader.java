@@ -10,7 +10,7 @@ import java.nio.LongBuffer;
 /**
  * Created by max on 5/8/15.
  */
-public class NodeBulkLoader {
+public class IndexBulkLoader {
 
     private DiskCache disk;
     public int keySize;
@@ -23,23 +23,23 @@ public class NodeBulkLoader {
     private long previousLeaf = -1;
     private ParentBufferWriter parentWriter;
     public PageProxyCursor cursor;
-    public NodeTree tree;
+    public IndexTree tree;
 
-    public NodeBulkLoader(DiskCache disk, long finalPage, int keySize) throws IOException {
+    public IndexBulkLoader(DiskCache disk, long finalPage, int keySize) throws IOException {
         this.disk = disk;
         this.finalLeafPage = finalPage;
         AvailablePageIdPool.currentID = finalLeafPage + 1;
-        this.tree = new NodeTree(keySize, 0, this.disk);
+        this.tree = new IndexTree(keySize, 0, this.disk);
         this.keySize = keySize;
         this.MAX_PAIRS = ((DiskCache.PAGE_SIZE - NodeHeader.NODE_HEADER_LENGTH) / ((keySize + 1)*8) ) - 1;
         this.RESERVED_CHILDREN_SPACE  = (MAX_PAIRS + 1) * 8;
         parentWriter = new ParentBufferWriter();
     }
 
-    public NodeTree run() throws IOException {
+    public IndexTree run() throws IOException {
         long root;
         try (PageProxyCursor cursor = this.disk.getCursor(0, PagedFile.PF_EXCLUSIVE_LOCK)) {
-            long firstInternalNode = NodeTree.acquireNewInternalNode(cursor);
+            long firstInternalNode = IndexTree.acquireNewInternalNode(cursor);
             cursor.next(firstInternalNode);
             NodeHeader.setKeyLength(cursor, keySize);
             this.currentParent = firstInternalNode;
@@ -72,10 +72,10 @@ public class NodeBulkLoader {
             cursor.putBytes(parentWriter.getKeys());
             NodeHeader.setNumberOfKeys(cursor, MAX_PAIRS);
             cursor.resumeWriting();
-            long newParent = NodeTree.acquireNewInternalNode(cursor);
+            long newParent = IndexTree.acquireNewInternalNode(cursor);
             cursor.next(newParent);
             NodeHeader.setKeyLength(cursor, keySize);
-            NodeTree.updateSiblingAndFollowingIdsInsertion(cursor, this.currentParent, newParent);
+            IndexTree.updateSiblingAndFollowingIdsInsertion(cursor, this.currentParent, newParent);
             this.currentParent = newParent;
             this.currentOffset = 0;
             this.currentPair = 0;
@@ -86,7 +86,7 @@ public class NodeBulkLoader {
         else{
             cursor.next(leaf);
             parentWriter.addChild(leaf);
-            parentWriter.addKey(NodeInsertion.getFirstKeyInNodeAsBytes(cursor));
+            parentWriter.addKey(IndexInsertion.getFirstKeyInNodeAsBytes(cursor));
         }
         this.currentPair++;
         this.currentOffset+=8;
@@ -94,7 +94,7 @@ public class NodeBulkLoader {
     }
 
     private long buildUpperLeaves(PageProxyCursor cursor, long leftMostNode) throws IOException {
-        long firstParent = NodeTree.acquireNewInternalNode(cursor);
+        long firstParent = IndexTree.acquireNewInternalNode(cursor);
         cursor.next(firstParent);
         NodeHeader.setKeyLength(cursor, keySize);
         this.currentParent = firstParent;
@@ -138,10 +138,10 @@ public class NodeBulkLoader {
             cursor.putBytes(parentWriter.getKeys());
             NodeHeader.setNumberOfKeys(cursor, MAX_PAIRS);
             cursor.resumeWriting();
-            long newParent = NodeTree.acquireNewInternalNode(cursor);
+            long newParent = IndexTree.acquireNewInternalNode(cursor);
             cursor.next(newParent);
             NodeHeader.setKeyLength(cursor, keySize);
-            NodeTree.updateSiblingAndFollowingIdsInsertion(cursor, this.currentParent, newParent);
+            IndexTree.updateSiblingAndFollowingIdsInsertion(cursor, this.currentParent, newParent);
             this.currentParent = newParent;
             this.currentOffset = 0;
             this.currentPair = 0;
@@ -159,7 +159,7 @@ public class NodeBulkLoader {
     }
     public byte[] traverseToFindFirstKeyInLeafAsBytes(PageProxyCursor cursor) throws IOException {
         if(NodeHeader.isLeafNode(cursor)){
-            return NodeInsertion.getFirstKeyInNodeAsBytes(cursor);
+            return IndexInsertion.getFirstKeyInNodeAsBytes(cursor);
         }
         else{
             long leftMostChild = tree.getChildIdAtIndex(cursor, 0);

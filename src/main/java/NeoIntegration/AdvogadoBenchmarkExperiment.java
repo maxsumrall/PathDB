@@ -2,7 +2,7 @@ package NeoIntegration;
 
 import bptree.PageProxyCursor;
 import bptree.impl.DiskCache;
-import bptree.impl.NodeTree;
+import bptree.impl.IndexTree;
 import bptree.impl.SearchCursor;
 import org.neo4j.graphdb.*;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
@@ -20,7 +20,7 @@ import java.util.List;
  */
 public class AdvogadoBenchmarkExperiment {
     public static String DB_PATH = "graph.db";
-    public HashMap<Integer, NodeTree> indexes = new HashMap<>();
+    public HashMap<Integer, IndexTree> indexes = new HashMap<>();
     public HashMap<Integer, DiskCache> disks = new HashMap<>();
     public GraphDatabaseService database;
     public GlobalGraphOperations ggo;
@@ -85,7 +85,7 @@ public class AdvogadoBenchmarkExperiment {
             long root = new Long(entry.get(1));
             boolean compressed = new Boolean(entry.get(2));
             DiskCache disk = DiskCache.persistentDiskCache(folder + "K"+k+"Cleverlubm50Index.db", compressed);
-            indexes.put(k, new NodeTree(k+1, root, disk));
+            indexes.put(k, new IndexTree(k+1, root, disk));
             disks.put(k, disk);
         }
         bufferedReader.close();

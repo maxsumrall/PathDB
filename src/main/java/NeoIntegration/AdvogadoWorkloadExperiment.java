@@ -3,8 +3,8 @@ import NeoIntegration.PathIDBuilder;
 import PageCacheSort.Sorter;
 import bptree.PageProxyCursor;
 import bptree.impl.DiskCache;
-import bptree.impl.NodeBulkLoader;
-import bptree.impl.NodeTree;
+import bptree.impl.IndexBulkLoader;
+import bptree.impl.IndexTree;
 import bptree.impl.SearchCursor;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
@@ -25,7 +25,7 @@ import java.util.List;
  * Created by max on 6/18/15.
  */
 public class AdvogadoWorkloadExperiment {
-    public HashMap<Integer, NodeTree> indexes = new HashMap<>();
+    public HashMap<Integer, IndexTree> indexes = new HashMap<>();
     public HashMap<Integer, DiskCache> disks = new HashMap<>();
     public GraphDatabaseService database;
     public GlobalGraphOperations ggo;
@@ -58,8 +58,8 @@ public class AdvogadoWorkloadExperiment {
         disks.put(2, diskK2);
         disks.put(3, diskK3);
 
-        NodeTree indexK2 = new NodeTree(4, diskK2);
-        NodeTree indexK3 = new NodeTree(5, diskK3);
+        IndexTree indexK2 = new IndexTree(4, diskK2);
+        IndexTree indexK3 = new IndexTree(5, diskK3);
         indexes.put(2, indexK2);
         indexes.put(3, indexK3);
 
@@ -492,11 +492,11 @@ public class AdvogadoWorkloadExperiment {
         updateStats(builder);
     }
 
-    public NodeTree buildIndex(Sorter sorter) throws IOException {
+    public IndexTree buildIndex(Sorter sorter) throws IOException {
         DiskCache sortedDisk = sorter.getSortedDisk();
         disks.put(1, sortedDisk);
-        NodeBulkLoader bulkLoader = new NodeBulkLoader(sortedDisk, sorter.finalPageId(), sorter.keySize);
-        NodeTree index = bulkLoader.run();
+        IndexBulkLoader bulkLoader = new IndexBulkLoader(sortedDisk, sorter.finalPageId(), sorter.keySize);
+        IndexTree index = bulkLoader.run();
         return index;
     }
 

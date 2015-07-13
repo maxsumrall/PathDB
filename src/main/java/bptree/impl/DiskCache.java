@@ -70,7 +70,7 @@ public class DiskCache {
         }
     }
 
-    public ByteBuffer readPage(NodeTree tree, long id) {
+    public ByteBuffer readPage(IndexTree tree, long id) {
         byte[] byteArray = new byte[0];
         try (PageProxyCursor cursor = getCursor(tree.rootNodeId, PagedFile.PF_EXCLUSIVE_LOCK)) {
                     byteArray = new byte[cursor.getSize()];

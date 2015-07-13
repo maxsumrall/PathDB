@@ -27,7 +27,7 @@ public class LexicographicIndexBuilder {
     StringBuilder strBulder;
     LinkedList<String> prettyPaths = new LinkedList<>();
     HashMap<Integer, Sorter> sorters = new HashMap<>();
-    Map<Integer, NodeTree> indexes = new HashMap<>();
+    Map<Integer, IndexTree> indexes = new HashMap<>();
     TreeMap<Long, PathIDBuilder> relationshipMap = new TreeMap<>(); //relationship types to path ids
     TreeMap<Long, PathIDBuilder> k2RelationshipsMap = new TreeMap<>(); //relationship types to path ids
     TreeMap<Long, PathIDBuilder> k3RelationshipsMap = new TreeMap<>(); //relationship types to path ids
@@ -89,7 +89,7 @@ public class LexicographicIndexBuilder {
         logToFile("Time to sort K1 edges(ns): " + (endTime - startTime));
 
         startTime = System.nanoTime();
-        NodeTree k1Index = buildCompressedIndex(sorterK1, k1Iterator);
+        IndexTree k1Index = buildCompressedIndex(sorterK1, k1Iterator);
         endTime = System.nanoTime();
         logToFile("Time to bulk load K1 edges into index(ns): " + (endTime - startTime));
 
@@ -100,7 +100,7 @@ public class LexicographicIndexBuilder {
             buildK2Paths();
             Sorter sorterK2 = sorters.get(4);
             SetIterator k2Iterator = sorterK2.finishWithoutSort();
-            NodeTree k2Index = buildIndex(sorterK2, k2Iterator);
+            IndexTree k2Index = buildIndex(sorterK2, k2Iterator);
             endTime = System.nanoTime();
             logToFile("Time to build K2 edges(ns): " + (endTime - startTime));
             indexes.put(2, k2Index);
@@ -112,20 +112,20 @@ public class LexicographicIndexBuilder {
             k3DiskFiller.finish();
             endTime = System.nanoTime();
             logToFile("Time to build K3 edges(ns): " + (endTime - startTime));
-            NodeTree k3Index = buildIndex(k3DiskFiller);
+            IndexTree k3Index = buildIndex(k3DiskFiller);
             indexes.put(3, k3Index);
         }
     }
-    public NodeTree buildCompressedIndex(Sorter sorter, SetIterator finalIterator) throws IOException {
+    public IndexTree buildCompressedIndex(Sorter sorter, SetIterator finalIterator) throws IOException {
         System.out.println("Building Index");
         System.out.println("Compressing...");
         long startTime = System.nanoTime();
         DiskCache compressedSortedDisk = DiskCompressor.convertDiskToCompressed(finalIterator, sorter.keySize);//returns a DiskCache object containing the same data but compressed.
         long endTime = System.nanoTime();
         logToFile("Time to compress K2 edges(ns): " + (endTime - startTime));
-        NodeBulkLoader bulkLoader = new NodeBulkLoader(compressedSortedDisk, DiskCompressor.finalPageID, sorter.keySize);
+        IndexBulkLoader bulkLoader = new IndexBulkLoader(compressedSortedDisk, DiskCompressor.finalPageID, sorter.keySize);
         startTime = System.nanoTime();
-        NodeTree index = bulkLoader.run();
+        IndexTree index = bulkLoader.run();
         endTime = System.nanoTime();
         logToFile("Time to bulk load K2 edges(ns): " + (endTime - startTime));
         File newFile = new File(sorter.toString() + LUBM_INDEX_PATH);
@@ -135,11 +135,11 @@ public class LexicographicIndexBuilder {
         return index;
     }
 
-    public NodeTree buildIndex(SuperFillSortedDisk filler) throws IOException {
+    public IndexTree buildIndex(SuperFillSortedDisk filler) throws IOException {
         System.out.println("Building Index");
         DiskCache sortedDisk = filler.compressedDisk;
-        NodeBulkLoader bulkLoader = new NodeBulkLoader(sortedDisk, filler.finalPageID, filler.keyLength);
-        NodeTree index = bulkLoader.run();
+        IndexBulkLoader bulkLoader = new IndexBulkLoader(sortedDisk, filler.finalPageID, filler.keyLength);
+        IndexTree index = bulkLoader.run();
         File newFile = new File("K" + filler.keyLength + LUBM_INDEX_PATH);
         sortedDisk.pageCacheFile.renameTo(newFile);
         index.disk.pageCacheFile = newFile;
@@ -148,11 +148,11 @@ public class LexicographicIndexBuilder {
         return index;
     }
 
-    public NodeTree buildIndex(Sorter sorter, SetIterator finalIterator) throws IOException {
+    public IndexTree buildIndex(Sorter sorter, SetIterator finalIterator) throws IOException {
         System.out.println("Building Index");
         DiskCache sortedDisk = sorter.getSortedDisk();
-        NodeBulkLoader bulkLoader = new NodeBulkLoader(sortedDisk, sorter.finalPageId(), sorter.keySize);
-        NodeTree index = bulkLoader.run();
+        IndexBulkLoader bulkLoader = new IndexBulkLoader(sortedDisk, sorter.finalPageId(), sorter.keySize);
+        IndexTree index = bulkLoader.run();
         sortedDisk.pageCacheFile.renameTo(new File(sorter.toString() + LUBM_INDEX_PATH));
         System.out.println("Done. Root for this index: " + index.rootNodeId);
         logToFile("index K= " + sorter.keySize + " root: " + index.rootNodeId);

@@ -2,9 +2,9 @@ package NeoIntegration;
 
 import bptree.PageProxyCursor;
 import bptree.impl.DiskCache;
-import bptree.impl.NodeBulkLoader;
+import bptree.impl.IndexBulkLoader;
 import bptree.impl.NodeHeader;
-import bptree.impl.NodeTree;
+import bptree.impl.IndexTree;
 import org.neo4j.io.pagecache.PagedFile;
 
 import java.io.IOException;
@@ -34,8 +34,8 @@ public class IndexCompressor {
     }
 
     public void buildIndex(long finalPageID, int keyLength) throws IOException {
-        NodeBulkLoader bulkLoader = new NodeBulkLoader(compressedDisk, finalPageID, keyLength);
-        NodeTree index = bulkLoader.run();
+        IndexBulkLoader bulkLoader = new IndexBulkLoader(compressedDisk, finalPageID, keyLength);
+        IndexTree index = bulkLoader.run();
         System.out.println("Compressed index root: " + index.rootNodeId);
         compressedDisk.shutdown();
     }

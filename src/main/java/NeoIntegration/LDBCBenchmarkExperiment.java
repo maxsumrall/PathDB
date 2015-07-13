@@ -2,7 +2,7 @@ package NeoIntegration;
 
 import bptree.PageProxyCursor;
 import bptree.impl.DiskCache;
-import bptree.impl.NodeTree;
+import bptree.impl.IndexTree;
 import bptree.impl.SearchCursor;
 import org.neo4j.graphdb.*;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
@@ -20,7 +20,7 @@ import java.util.List;
  * Created by max on 6/21/15.
  */
 public class LDBCBenchmarkExperiment {
-    public HashMap<Integer, NodeTree> indexes = new HashMap<>();
+    public HashMap<Integer, IndexTree> indexes = new HashMap<>();
     public HashMap<Integer, DiskCache> disks = new HashMap<>();
     public GraphDatabaseService database;
     public GlobalGraphOperations ggo;
@@ -104,7 +104,7 @@ public class LDBCBenchmarkExperiment {
                 disk = DiskCache.persistentDiskCache("/Volumes/Passport/K"+k+"LDBCIndex.db", compressed);
             else
                 disk = DiskCache.persistentDiskCache("LDBC/K"+k+"LDBCIndex.db", compressed);
-            indexes.put(k, new NodeTree(k+1, root, disk));
+            indexes.put(k, new IndexTree(k+1, root, disk));
             disks.put(k, disk);
         }
         bufferedReader.close();

@@ -27,8 +27,8 @@ public class LZ4IndexCompressor {
     }
 
     public void buildIndex(long finalPageID, int keyLength) throws IOException {
-        NodeBulkLoader bulkLoader = new NodeBulkLoader(compressedDisk, finalPageID, keyLength);
-        NodeTree index = bulkLoader.run();
+        IndexBulkLoader bulkLoader = new IndexBulkLoader(compressedDisk, finalPageID, keyLength);
+        IndexTree index = bulkLoader.run();
         System.out.println("Compressed index root: " + index.rootNodeId);
         compressedDisk.shutdown();
     }

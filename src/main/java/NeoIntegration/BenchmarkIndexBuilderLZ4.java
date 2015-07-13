@@ -3,8 +3,8 @@ package NeoIntegration;
 import PageCacheSort.Sorter;
 import bptree.PageProxyCursor;
 import bptree.impl.DiskCache;
-import bptree.impl.NodeBulkLoader;
-import bptree.impl.NodeTree;
+import bptree.impl.IndexBulkLoader;
+import bptree.impl.IndexTree;
 import bptree.impl.SearchCursor;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
@@ -30,7 +30,7 @@ public class BenchmarkIndexBuilderLZ4 {
     public static final String INDEX_METADATA_PATH = "BenchmarkLZ4MetaData.dat";
     StringBuilder strBulder;
     HashMap<Integer, Sorter> sorters = new HashMap<>();
-    Map<Integer, NodeTree> indexes = new HashMap<>();
+    Map<Integer, IndexTree> indexes = new HashMap<>();
     HashMap<Long, PathIDBuilder> relationshipMap = new HashMap<>(); //relationship types to path ids
     HashMap<Long, PathIDBuilder> k2RelationshipsMap = new HashMap<>();
     HashMap<Long, PathIDBuilder> k3RelationshipsMap = new HashMap<>();
@@ -86,11 +86,11 @@ public class BenchmarkIndexBuilderLZ4 {
         }
     }
 
-    public NodeTree buildIndex(Sorter sorter) throws IOException {
+    public IndexTree buildIndex(Sorter sorter) throws IOException {
         System.out.println("Building Index");
         DiskCache sortedDisk = sorter.getSortedDisk();
-        NodeBulkLoader bulkLoader = new NodeBulkLoader(sortedDisk, sorter.finalPageId(), sorter.keySize);
-        NodeTree index = bulkLoader.run();
+        IndexBulkLoader bulkLoader = new IndexBulkLoader(sortedDisk, sorter.finalPageId(), sorter.keySize);
+        IndexTree index = bulkLoader.run();
         File newFile = new File(sorter.toString() + LUBM_INDEX_PATH);
         sortedDisk.pageCacheFile.renameTo(new File(sorter.toString() + LUBM_INDEX_PATH));
         index.disk.pageCacheFile = newFile;

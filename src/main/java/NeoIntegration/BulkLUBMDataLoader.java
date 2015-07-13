@@ -2,8 +2,8 @@ package NeoIntegration;
 
 import PageCacheSort.Sorter;
 import bptree.impl.DiskCache;
-import bptree.impl.NodeBulkLoader;
-import bptree.impl.NodeTree;
+import bptree.impl.IndexBulkLoader;
+import bptree.impl.IndexTree;
 import org.neo4j.graphdb.*;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.helpers.collection.IteratorUtil;
@@ -36,7 +36,7 @@ public class BulkLUBMDataLoader {
     HashMap<Integer, Sorter> sorters = new HashMap<>();
     HashMap<RelationshipType, Integer> relationshipTypes = new HashMap<>();
     Map<String, Long> pathMap = new HashMap<>(); //relationship types to path ids
-    Map<Integer, NodeTree> indexes = new HashMap<>();
+    Map<Integer, IndexTree> indexes = new HashMap<>();
     StringBuilder strBulder;
     LinkedList<String> prettyPaths = new LinkedList<>();
     RelationshipType headOf;
@@ -101,8 +101,8 @@ public class BulkLUBMDataLoader {
         DiskCache disk = DiskCache.persistentDiskCache(sorter.toString() + LUBM_INDEX_PATH, false);
         BulkPageSource sortedDataSource = new BulkPageSource(sortedDisk, sorter.finalPageId());
 
-        NodeBulkLoader bulkLoader = new NodeBulkLoader(disk, sorter.finalPageId(), sorter.keySize);
-        NodeTree tree = bulkLoader.run();
+        IndexBulkLoader bulkLoader = new IndexBulkLoader(disk, sorter.finalPageId(), sorter.keySize);
+        IndexTree tree = bulkLoader.run();
         System.out.println("Done. Root for this index (SAVE THIS VALUE!): " + tree.rootNodeId);
 
         disk.shutdown();

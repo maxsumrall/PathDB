@@ -8,14 +8,14 @@ import java.nio.ByteBuffer;
 import java.nio.LongBuffer;
 
 
-public class NodeInsertion {
+public class IndexInsertion {
 
     private static PrimitiveLongArray arrayUtil = new PrimitiveLongArray();
     public static PageProxyCursor cursor;
     public static DiskCache disk;
-    public NodeTree tree;
+    public IndexTree tree;
 
-    public NodeInsertion(NodeTree tree){
+    public IndexInsertion(IndexTree tree){
         this.tree = tree;
     }
 
@@ -25,7 +25,7 @@ public class NodeInsertion {
                     if(NodeHeader.isLeafNode(cursor)){
                         result = addKeyToLeafNode(cursor, key);
                     } else{
-                        int index = NodeSearch.search(cursor, key)[0];
+                        int index = IndexSearch.search(cursor, key)[0];
                         long child = tree.getChildIdAtIndex(cursor, index);
                         long id = cursor.getCurrentPageId();
                         cursor.next(child);
@@ -46,7 +46,7 @@ public class NodeInsertion {
             result = addKeyToLeafNode(cursor, key);
         }
         else{
-            int index = NodeSearch.search(cursor, key)[0];
+            int index = IndexSearch.search(cursor, key)[0];
             long child = tree.getChildIdAtIndex(cursor, index);
             long id = cursor.getCurrentPageId();
             cursor.next(child);
@@ -71,18 +71,18 @@ public class NodeInsertion {
     public static SplitResult addKeyAndChildToInternalNode(PageProxyCursor cursor, long nodeId, long[] key, long child) throws IOException {
         SplitResult result = null;
         if(!cursor.internalNodeContainsSpaceForNewKeyAndChild(key)){
-            long newInternalNodeId = NodeTree.acquireNewInternalNode(cursor);
+            long newInternalNodeId = IndexTree.acquireNewInternalNode(cursor);
             result = new SplitResult();
             result.left = nodeId;
             result.right = newInternalNodeId;
-            NodeTree.updateSiblingAndFollowingIdsInsertion(cursor, nodeId, newInternalNodeId);
+            IndexTree.updateSiblingAndFollowingIdsInsertion(cursor, nodeId, newInternalNodeId);
             result.primkey = insertAndBalanceKeysBetweenInternalNodes(cursor, nodeId, newInternalNodeId, key, child);
             if(!newKeyBelongsInNewNode(cursor, key)){
                 cursor.next(nodeId);
             }
         }
         else{
-            int[] searchResult = NodeSearch.search(cursor, key);
+            int[] searchResult = IndexSearch.search(cursor, key);
             insertKeyAtIndex(cursor, searchResult[1], key);
             insertChildAtIndex(cursor, searchResult[0] + 1, child);
         }
@@ -105,13 +105,13 @@ public class NodeInsertion {
         if(!cursor.leafNodeContainsSpaceForNewKey(key)){
             result = new SplitResult();
             result.left = cursor.getCurrentPageId();
-            long newLeafNodeId = NodeTree.acquireNewLeafNode(cursor);
+            long newLeafNodeId = IndexTree.acquireNewLeafNode(cursor);
             result.right = newLeafNodeId;
-            NodeTree.updateSiblingAndFollowingIdsInsertion(cursor, result.left, newLeafNodeId);
+            IndexTree.updateSiblingAndFollowingIdsInsertion(cursor, result.left, newLeafNodeId);
             result.primkey = insertAndBalanceKeysBetweenLeafNodes(cursor, result.left, result.right, key);
         }
         else{
-            int[] searchResult = NodeSearch.search(cursor, key);
+            int[] searchResult = IndexSearch.search(cursor, key);
             insertKeyAtIndex(cursor, searchResult[1], key);
         }
         return result;
@@ -123,7 +123,7 @@ public class NodeInsertion {
         byte[] keysA = null;
         byte[] keysB = null;
 
-        int[] searchResults = NodeSearch.search(cursor, newKey);
+        int[] searchResults = IndexSearch.search(cursor, newKey);
         int keyLength = NodeHeader.getKeyLength(cursor);
         int originalNumberOfKeys = NodeHeader.getNumberOfKeys(cursor);
         int keysInclInsert = originalNumberOfKeys + 1;
@@ -164,7 +164,7 @@ public class NodeInsertion {
 
         cursor.setOffset(NodeHeader.NODE_HEADER_LENGTH);
 
-        int[] searchResults = NodeSearch.search(cursor, newKey);
+        int[] searchResults = IndexSearch.search(cursor, newKey);
         int keyLength = NodeHeader.getKeyLength(cursor);
         int originalNumberOfKeys = NodeHeader.getNumberOfKeys(cursor);
         int keysInclInsert = originalNumberOfKeys + 1;
@@ -210,7 +210,7 @@ public class NodeInsertion {
     }
 
     private static boolean newKeyBelongsInNewNode(PageProxyCursor cursor, long[] newKey){
-        return NodeTree.comparator.prefixCompare(newKey, getFirstKeyInNode(cursor)) > 0;
+        return IndexTree.comparator.prefixCompare(newKey, getFirstKeyInNode(cursor)) > 0;
 
     }
     public static long[] getFirstKeyInNode(PageProxyCursor cursor){
