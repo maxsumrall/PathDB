@@ -2,21 +2,19 @@ package bptree.impl;
 
 import java.util.LinkedList;
 
-/**
- * Created by max on 4/13/15.
- */
-public class AvailablePageIdPool {
+public class TreeNodeIDManager
+{
     private static LinkedList<Long> pool = null;
     public static long currentID = 0;
     //private long maximumNumberOfPages;
 
-    public AvailablePageIdPool(long maximumNumberOfPages){
+    public TreeNodeIDManager(long maximumNumberOfPages){
         if(pool == null) {
             pool = new LinkedList<>();
         }
     }
 
-    public static Long acquireId(){
+    public static Long acquire(){
         if(pool == null) {
             pool = new LinkedList<>();
         }
@@ -28,7 +26,7 @@ public class AvailablePageIdPool {
         }
     }
 
-    public static void releaseId(Long id){
+    public static void release(Long id){
         pool.push(id);
     }
 

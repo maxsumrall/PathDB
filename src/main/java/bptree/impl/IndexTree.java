@@ -1,9 +1,10 @@
 package bptree.impl;
 
 import bptree.PageProxyCursor;
-import org.neo4j.io.pagecache.PagedFile;
 
 import java.io.IOException;
+
+import org.neo4j.io.pagecache.PagedFile;
 
 /**
  * Static class for manipulating nodes without doing any object instantiation.
@@ -165,13 +166,13 @@ public class IndexTree {
     }
 
     public static long acquireNewLeafNode(PageProxyCursor cursor) throws IOException {
-        long newNodeId = AvailablePageIdPool.acquireId();
+        long newNodeId = TreeNodeIDManager.acquire();
         cursor.next(newNodeId);
         NodeHeader.initializeLeafNode(cursor);
         return newNodeId;
     }
     public long acquireNewLeafNode() throws IOException {
-        long newNodeId = AvailablePageIdPool.acquireId();
+        long newNodeId = TreeNodeIDManager.acquire();
         try(PageProxyCursor cursor = disk.getCursor(newNodeId, PagedFile.PF_EXCLUSIVE_LOCK)) {
             NodeHeader.initializeLeafNode(cursor, this.keySize);
         }
@@ -182,14 +183,14 @@ public class IndexTree {
     }
 
     public static long acquireNewInternalNode(PageProxyCursor cursor) throws IOException {
-        long newNodeId = AvailablePageIdPool.acquireId();
+        long newNodeId = TreeNodeIDManager.acquire();
         cursor.next(newNodeId);
         NodeHeader.initializeInternalNode(cursor);
         return newNodeId;
     }
 
     public static void releaseNode(long nodeId){
-        AvailablePageIdPool.releaseId(nodeId);
+        TreeNodeIDManager.release(nodeId);
     }
 
     public static void removeFirstKeyInInternalNode(PageProxyCursor cursor){
