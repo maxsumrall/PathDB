@@ -1,10 +1,11 @@
-package NeoIntegration;
+/**
+ * Copyright (C) 2015-2016 - All rights reserved.
+ * This file is part of the PathIndex project which is released under the GPLv3 license.
+ * See file LICENSE.txt or go to http://www.gnu.org/licenses/gpl.txt for full license details.
+ * You may use, distribute and modify this code under the terms of the GPLv3 license.
+ */
 
-import org.neo4j.graphdb.DynamicRelationshipType;
-import org.neo4j.graphdb.RelationshipType;
-import org.neo4j.io.fs.FileUtils;
-import org.neo4j.unsafe.batchinsert.BatchInserter;
-import org.neo4j.unsafe.batchinsert.BatchInserters;
+package NeoIntegration;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -12,9 +13,12 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.HashMap;
 
-/**
- * Created by max on 6/17/15.
- */
+import org.neo4j.graphdb.DynamicRelationshipType;
+import org.neo4j.graphdb.RelationshipType;
+import org.neo4j.io.fs.FileUtils;
+import org.neo4j.unsafe.batchinsert.BatchInserter;
+import org.neo4j.unsafe.batchinsert.BatchInserters;
+
 public class AdvogadoLoader {
     public static String filePath = "out.advogato";
     public static final String DB_PATH = "graph.db/";

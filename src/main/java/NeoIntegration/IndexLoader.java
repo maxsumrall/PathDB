@@ -1,4 +1,16 @@
+/**
+ * Copyright (C) 2015-2016 - All rights reserved.
+ * This file is part of the PathIndex project which is released under the GPLv3 license.
+ * See file LICENSE.txt or go to http://www.gnu.org/licenses/gpl.txt for full license details.
+ * You may use, distribute and modify this code under the terms of the GPLv3 license.
+ */
+
 package NeoIntegration;
+
+import java.io.IOException;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
@@ -7,14 +19,6 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.helpers.collection.IteratorUtil;
 
-import java.io.IOException;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-
-/**
- * Created by max on 5/7/15.
- */
 public class IndexLoader {
     private static final String DB_PATH = "/Users/max/Desktop/datasets/recommendations/graph.db";
     String resultString;

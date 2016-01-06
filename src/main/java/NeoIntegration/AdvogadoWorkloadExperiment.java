@@ -1,3 +1,10 @@
+/**
+ * Copyright (C) 2015-2016 - All rights reserved.
+ * This file is part of the PathIndex project which is released under the GPLv3 license.
+ * See file LICENSE.txt or go to http://www.gnu.org/licenses/gpl.txt for full license details.
+ * You may use, distribute and modify this code under the terms of the GPLv3 license.
+ */
+
 import NeoIntegration.AdvogadoBenchmarkExperiment;
 import NeoIntegration.PathIDBuilder;
 import PageCacheSort.Sorter;
@@ -6,6 +13,13 @@ import bptree.impl.DiskCache;
 import bptree.impl.IndexBulkLoader;
 import bptree.impl.IndexTree;
 import bptree.impl.SearchCursor;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
@@ -15,15 +29,6 @@ import org.neo4j.helpers.collection.IteratorUtil;
 import org.neo4j.io.pagecache.PagedFile;
 import org.neo4j.tooling.GlobalGraphOperations;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-
-/**
- * Created by max on 6/18/15.
- */
 public class AdvogadoWorkloadExperiment {
     public HashMap<Integer, IndexTree> indexes = new HashMap<>();
     public HashMap<Integer, DiskCache> disks = new HashMap<>();
