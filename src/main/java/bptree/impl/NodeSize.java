@@ -1,15 +1,20 @@
 package bptree.impl;
 
 import bptree.PageProxyCursor;
+import org.neo4j.io.pagecache.PagedFile;
 
 import java.io.IOException;
 
-import org.neo4j.io.pagecache.PagedFile;
-
-
+/**
+ * Created by max on 5/8/15.
+ */
 public class NodeSize {
 
     public static PageProxyCursor cursor;
+
+    //public static boolean leafNodeContainsSpaceForNewKey(long nodeId, long[] newKey){
+//        return leafNodeByteSize(nodeId, newKey) < DiskCache.PAGE_SIZE;
+  //  }
 
     public static boolean leafNodeContainsSpaceForNewKey(PageProxyCursor cursor, long[] newKey){
         return leafNodeByteSize(cursor, newKey) < DiskCache.PAGE_SIZE;

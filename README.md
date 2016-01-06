@@ -1,6 +1,6 @@
 Path Index
 =====
 
-[![Build Status](https://travis-ci.org/maxsumrall/Path-Index.svg)](https://travis-ci.org/maxsumrall/Path-Index)
+[![Build Status](https://travis-ci.org/maxsumrall/Path-Index.svg?branch=legacy)](https://travis-ci.org/maxsumrall/Path-Index)
 
-A b-tree backed index for querying paths of k-length.
+A path index for indexing in Neo4j

@@ -1,12 +1,11 @@
 package bptree.impl;
 
 import bptree.PageProxyCursor;
+import org.neo4j.io.pagecache.PagedFile;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.LongBuffer;
-
-import org.neo4j.io.pagecache.PagedFile;
 
 /**
  * Created by max on 5/8/15.
@@ -29,7 +28,7 @@ public class IndexBulkLoader {
     public IndexBulkLoader(DiskCache disk, long finalPage, int keySize) throws IOException {
         this.disk = disk;
         this.finalLeafPage = finalPage;
-        TreeNodeIDManager.currentID = finalLeafPage + 1;
+        AvailablePageIdPool.currentID = finalLeafPage + 1;
         this.tree = new IndexTree(keySize, 0, this.disk);
         this.keySize = keySize;
         this.MAX_PAIRS = ((DiskCache.PAGE_SIZE - NodeHeader.NODE_HEADER_LENGTH) / ((keySize + 1)*8) ) - 1;
