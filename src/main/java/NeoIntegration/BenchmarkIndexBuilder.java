@@ -1,9 +1,30 @@
+/**
+ * Copyright (C) 2015-2016 - All rights reserved.
+ * This file is part of the PathIndex project which is released under the GPLv3 license.
+ * See file LICENSE.txt or go to http://www.gnu.org/licenses/gpl.txt for full license details.
+ * You may use, distribute and modify this code under the terms of the GPLv3 license.
+ */
+
 package NeoIntegration;
 
 import PageCacheSort.SetIterator;
 import PageCacheSort.Sorter;
 import bptree.PageProxyCursor;
-import bptree.impl.*;
+import bptree.impl.DiskCache;
+import bptree.impl.DiskCompressor;
+import bptree.impl.IndexBulkLoader;
+import bptree.impl.IndexTree;
+import bptree.impl.SearchCursor;
+
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
@@ -13,14 +34,6 @@ import org.neo4j.helpers.collection.IteratorUtil;
 import org.neo4j.io.pagecache.PagedFile;
 import org.neo4j.tooling.GlobalGraphOperations;
 
-import java.io.*;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-
-/**
- * Created by max on 6/2/15.
- */
 public class BenchmarkIndexBuilder {
     public static final int MAX_K = 2;
     public static final String DB_PATH = "graph.db/";
