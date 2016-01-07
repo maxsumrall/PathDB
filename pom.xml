@@ -3,11 +3,11 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>max</groupId>
-  <artifactId>PathIndex</artifactId>
+  <artifactId>PathDB</artifactId>
   <version>1.0-SNAPSHOT</version>
   <packaging>jar</packaging>
 
-  <name>PathIndex</name>
+  <name>PathDB</name>
   <url>http://maven.apache.org</url>
 
   <properties>
