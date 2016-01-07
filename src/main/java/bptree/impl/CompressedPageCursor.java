@@ -1,10 +1,9 @@
 /**
  * Copyright (C) 2015-2016 - All rights reserved.
- * This file is part of the PathIndex project which is released under the GPLv3 license.
+ * This file is part of the PathDB project which is released under the GPLv3 license.
  * See file LICENSE.txt or go to http://www.gnu.org/licenses/gpl.txt for full license details.
  * You may use, distribute and modify this code under the terms of the GPLv3 license.
  */
-
 
 package bptree.impl;
 
@@ -19,11 +18,13 @@ import org.neo4j.io.pagecache.PageCursor;
 
 public class CompressedPageCursor extends PageProxyCursor{
     PageCursor cursor;
-    int maxPageSize = DiskCache.PAGE_SIZE * 7;
+    int maxPageSize = DiskCache.PAGE_SIZE * 15;
     ByteBuffer dBuffer = ByteBuffer.allocate(maxPageSize);
     int mostRecentCompressedLeafSize = DiskCache.PAGE_SIZE;//the default value
     boolean deferWriting = false;
     int maxNumBytes;
+    final int sameID = 128;
+    final int sameFirstNode = 64;
 
     public CompressedPageCursor(DiskCache disk, long pageId, int lock) throws IOException {
         this.cursor = disk.pagedFile.io(pageId, lock);
@@ -64,11 +65,12 @@ public class CompressedPageCursor extends PageProxyCursor{
         //assumption that this is a leaf node.
         //will just check if the path id is zero, if so, this is the end of this block.
         int decompressedSize = getLastUsedLeafBufferPosition() - NodeHeader.NODE_HEADER_LENGTH;
+        writeHeaderToCursor();
         if(decompressedSize != 0) {
             byte[] compresedMinusHeader = compress();
-            writeHeaderToCursor();
             cursor.setOffset(NodeHeader.NODE_HEADER_LENGTH);
             cursor.putBytes(compresedMinusHeader);
+            mostRecentCompressedLeafSize = compresedMinusHeader.length + NodeHeader.NODE_HEADER_LENGTH;
         }
     }
 
@@ -93,15 +95,30 @@ public class CompressedPageCursor extends PageProxyCursor{
 
     public byte[] encodeKey(long[] key, long[] prev){
 
-        maxNumBytes = 0;
-        for(int i = 0; i < key.length; i++){
+        this.maxNumBytes = 0;
+        int firstEncodedIndex = 0;
+        byte header = (byte)0;
+        if(key[0] == prev[0]) {
+            //set first bit
+            firstEncodedIndex++;
+            header |= sameID;
+
+            if (key[1] == prev[1]) {
+                //set second bit
+                firstEncodedIndex++;
+                header |= sameFirstNode;
+            }
+        }
+
+        for(int i = firstEncodedIndex; i < key.length; i++){
             maxNumBytes = Math.max(maxNumBytes, numberOfBytes(key[i] - prev[i]));
         }
 
-        byte[] encoded = new byte[1 + (maxNumBytes * key.length )];
-        encoded[0] = (byte) maxNumBytes;
-        for(int i = 0; i < key.length; i++){
-            toBytes(key[i] - prev[i], encoded, 1 + (i * maxNumBytes), maxNumBytes);
+        byte[] encoded = new byte[1 + (maxNumBytes * (key.length - firstEncodedIndex))];
+        header |=  maxNumBytes;
+        encoded[0] = header;
+        for(int i = 0; i < key.length - firstEncodedIndex; i++){
+            toBytes(key[i + firstEncodedIndex] - prev[i + firstEncodedIndex], encoded, 1 + (i * maxNumBytes), maxNumBytes);
         }
         return encoded;
     }
@@ -186,7 +203,6 @@ public class CompressedPageCursor extends PageProxyCursor{
         int keyLength = NodeHeader.getKeyLength(cursor);
         int numberOfKeys = NodeHeader.getNumberOfKeys(cursor);
         dBuffer.limit(maxPageSize);
-        //Arrays.fill(dBuffer.array(), (byte)0);
         dBuffer.position(0);
         cursor.setOffset(0);
         for(int i = 0; i < NodeHeader.NODE_HEADER_LENGTH; i++){
@@ -194,12 +210,36 @@ public class CompressedPageCursor extends PageProxyCursor{
         }
 
         int position = NodeHeader.NODE_HEADER_LENGTH;
-        int reqBytes = cursor.getByte(position);
+        int reqBytes;
         long val;
+        byte header;
+        int firstEncodedIndex;
+        boolean samePath;
+        boolean sameFirstID;
         long[] prev = new long[keyLength];
         for(int i = 0; i < numberOfKeys; i++){
-            reqBytes = cursor.getByte(position++);
-            for(int j = 0; j < keyLength; j++){
+            header = cursor.getByte(position++);
+
+            //
+            firstEncodedIndex = 0;
+            samePath = (sameID & header) == sameID;
+            sameFirstID = (sameFirstNode & header) == sameFirstNode;
+            if(samePath) {
+                firstEncodedIndex++;
+                val = prev[0];
+                dBuffer.putLong(val);
+            }
+            if(sameFirstID) {
+                firstEncodedIndex++;
+                val = prev[1];
+                dBuffer.putLong(val);
+            }
+            header &= ~(1 << 7);
+            header &= ~(1 << 6);
+            reqBytes = header;
+            //
+
+            for(int j = firstEncodedIndex; j < (keyLength); j++){
                 val = prev[j] + toLong(cursor, position, reqBytes);
                 dBuffer.putLong(val);
                 prev[j] = val;
@@ -319,7 +359,8 @@ public class CompressedPageCursor extends PageProxyCursor{
     @Override
     public boolean leafNodeContainsSpaceForNewKey(long[] newKey){
         //return NodeSize.leafNodeContainsSpaceForNewKey(this, newKey);
-        return mostRecentCompressedLeafSize + (newKey.length * Long.BYTES) < DiskCache.PAGE_SIZE;
+        int magic = 10;
+        return mostRecentCompressedLeafSize + (newKey.length * Long.BYTES) + magic < DiskCache.PAGE_SIZE;
     }
 
     @Override
