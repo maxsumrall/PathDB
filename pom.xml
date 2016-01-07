@@ -25,12 +25,7 @@
       <dependency>
           <groupId>org.neo4j</groupId>
           <artifactId>neo4j</artifactId>
-          <version>2.3.0-M01</version>
-      </dependency>
-      <dependency>
-          <groupId>net.jpountz.lz4</groupId>
-          <artifactId>lz4</artifactId>
-          <version>1.3.0</version>
+          <version>3.0.0-M02</version>
       </dependency>
   </dependencies>
     <licenses>
@@ -61,29 +56,6 @@
                         </goals>
                     </execution>
                 </executions>
-                <configuration>
-                    <executable>java</executable>
-                    <mainClass>NeoIntegration.Runner</mainClass>
-                    <arguments>
-                        <argument>-Xmx2G -Xms2G</argument>
-                        <argument>-XX:+UseFastAccessorMethods</argument>
-                        <argument>-XX:+DisableExplicitGC</argument>
-                        <argument>-XX:+UseConcMarkSweepGC</argument>
-                        <argument>-XX:+UseNUMA</argument>
-                        <argument>-XX:+CMSParallelRemarkEnabled</argument>
-                        <argument>-XX:MaxTenuringThreshold=15</argument>
-                        <argument>-XX:MaxGCPauseMillis=30</argument>
-                        <argument>-XX:GCPauseIntervalMillis=150</argument>
-                        <argument>-XX:+UseAdaptiveGCBoundary</argument>
-                        <argument>-XX:-UseGCOverheadLimit</argument>
-                        <argument>-XX:+UseBiasedLocking</argument>
-                        <argument>-XX:SurvivorRatio=8</argument>
-                        <argument>-XX:TargetSurvivorRatio=90</argument>
-                        <argument>-XX:MaxTenuringThreshold=15</argument>
-                        <argument>-XX:+UseCompressedOops</argument>
-                    </arguments>
-                    <cleanupDaemonThreads>false</cleanupDaemonThreads>
-                </configuration>
             </plugin>
             <!-- Creating current year element -->
             <plugin>
