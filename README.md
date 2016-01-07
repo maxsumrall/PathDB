@@ -1,6 +1,6 @@
-Path Index
+PathDB
 =====
 
-[![Build Status](https://travis-ci.org/maxsumrall/Path-Index.svg?branch=master)](https://travis-ci.org/maxsumrall/Path-Index)
+[![Build Status](https://travis-ci.org/maxsumrall/PathDB.svg?branch=master)](https://travis-ci.org/maxsumrall/PathDB)
 
-A b-tree backed index for querying paths of k-length.
+A data store for graph paths.
