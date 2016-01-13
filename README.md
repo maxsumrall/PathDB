@@ -7,11 +7,11 @@ A data store for graph paths.
 
 #### Current implementation
 
-PathDB is a _k-path_ index implemented as a B+ tree. Datasets can be bulk-loaded into the index
+PathDB is a _k-path_ index implemented as a B+ tree. Datasets can be bulk-loaded into the index. The index can be sorted and paths can be found and merged into new entries of the index. The index and operations are disk-based and cached into memory. _IndexTree_ is the main class which handles most of the operations.
 
 #### Goal implementation
 
-PathDB consists out of __B+ tree implementation__ for the _k-path_ index. The B+ tree has operations for inserting, deleting and selecting. Query plans are interpreted by our __interpreter__ and are able to execute these plans by combining the B+ tree operators with merge-join and hash-join. PathDB is able to handle large files by reading and writing to disk. The module __DiskManager__ handles the reading and writing to disk.
+PathDB consists out of __B+ tree implementation__ for the _k-path_ index. The B+ tree has operations for inserting, deleting and selecting. Query plans are interpreted by the __Interpreter__ module and this module is able to execute query plans by extending the B+ tree operations with merge-join and hash-join. PathDB is able to handle large files by reading and writing to disk. The module __DiskManager__ handles the reading and writing to disk.
 
 B+ tree implementation
 -----
@@ -90,15 +90,25 @@ The following public methods are available in an _IndexTree_:
 
 ### InMemoryNode
 
+Class to convert nodes from their compressed state to their uncompressed state. Note: nodes are saved to disk in their compressed state.
+
 ### KeyImpl
+
+Class with the definition of the indexable form of a path, e.g. its key.
 
 ### NodeHeader
 
+_final_ class containing the specification for the header of a node.
+
 ### NodeSize
+
+Class to check if a node fits into a page.
 
 ### RemoveResultProxy
 
 ### SearchCursor
+
+Class to define a cursor for search operations on the B+ tree. This class has public functions _next()_ and _hasNext()_.
 
 ### SplitResult
 
