@@ -20,7 +20,34 @@ This section describes each class of our B+ tree implementation.
 
 ### CompressedPageCursor
 
+This class extends the _PageProxyCursor_ abstract class which implements the _Closeable_ class from _java<i></i>.io_.
 
+This class describes the cursor which can be used for compressed pages. The following public methods are available:
+- next
+- pushChangesToDisk
+- compress
+- encodeKey
+- numberOfBytes
+- toBytes
+- toLong
+- getCurrentPageId
+- capacity
+- getSize
+- setOffset
+- getOffset
+- getBytes
+- getByte
+- putBytes
+- putByte
+- getLong
+- putLong
+- getInt
+- putInt
+- leafNodeContainsSpaceForNewKey
+- deferWriting
+- resumeWriting
+- internalNodeContainsSpaceForNewKeyAndChild
+- close
 
 ### DiskCache
 
@@ -31,6 +58,13 @@ Class responsible for caching pages from disk by using the libraries _DefaultFil
 Class responsible for compressing a _DiskCache_.
 
 ### IndexBulkLoader
+
+Build an _IndexTree_ from a given _DiskCache_. It has a public method _run_ to generate the B+ tree. It has one other public method to return the first key from a leaf: _traverseToFindFirstKeyInLeafAsBytes_. This last method uses the _getFirstKeyInNodeAsBytes_ method from the _IndexInsertion_ class.
+
+It uses the following private methods to build the B+ tree:
+- addLeafToParent
+- buildUpperLeaves
+- copyUpLeafToParent
 
 ### IndexDeletion
 
@@ -68,11 +102,16 @@ Private methods:
 
 ### IndexSearch
 
+This class contains methods to find elements in the index given a key as input. There are methods to return the result as an _int[]_ or as a _SearchCursor_. Public methods:
+- find
+- findWithCursor
+- search
+
 ### IndexTree
 
 This is the __main class__ which has class attributes instantiated from the classes _DiskCache, KeyImpl, IndexSearch, IndexInsertion and IndexDeletion_.
 
-The following public methods are available in an _IndexTree_:
+The following public methods are available in an instance of _IndexTree_:
 - newRoot
 - find
 - insert
@@ -106,13 +145,22 @@ Class to check if a node fits into a page.
 
 ### RemoveResultProxy
 
+This is a class used by the _IndexDeletion_ class. A _RemoveResultProxy_ instance is created when a node will be deleted from the index. To handle the updates of siblings and children in the process of deletion, necessary information, e.g. _removedNodeId, siblingNodeID, isLeaf_, is stored in the _RemoveResultProxy_ instance.
+
 ### SearchCursor
 
 Class to define a cursor for search operations on the B+ tree. This class has public functions _next()_ and _hasNext()_.
 
 ### SplitResult
 
+The same way as the class _RemoveResultProxy_ is used for deletion, _SplitResult_ is used for insertion. The attributes _key, primkey, left and right_ are stored in an instance of _SplitResult_.
+
 ### TreeNodeIDManager
+
+This class manages which ids a node of the tree can obtain. The following public methods are available to manage these ids:
+- acquire
+- release
+- isNodeIdInFreePool
 
 DiskManager
 -----
