@@ -1,8 +1,11 @@
 ---
 layout: default
-img: ipad.png
+img: paths_space.png
 category: Services
-title: Death to the Stock Photo:<br>Special Thanks
+title: A Simple Way To Store and Query Your Data.
 description: |
 ---
-  A special thanks to [Death to the Stock Photo](http://join.deathtothestockphoto.com/) for providing the photographs that you see in this template.  Visit their website to become a member!
+  The power behind PathDB is the form your data gets stored. Connected data is stored with their connections. By knowing
+  you will query the data, paths of connections are expanded on to improve query time. And by how PathDB works,
+  you can choose the balance between query speed and storage space. With the cost of disk space rapidly declining,
+   this cost-analysis become more in favor of this type of data storage technique.

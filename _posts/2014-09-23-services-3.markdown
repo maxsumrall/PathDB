@@ -1,8 +1,8 @@
 ---
 layout: default
-img: phones.png
+img: me-400.jpg
 category: Services
-title: Google Web Fonts and<br>Font Awesome Icons
+title: People
 description: |
 ---
-This template features the 'Lato' font, part of the [Google Web Font library](http://www.google.com/fonts), as well as [icons from Font Awesome](http://fontawesome.io).
+PathDB is the work of Max Sumrall.
