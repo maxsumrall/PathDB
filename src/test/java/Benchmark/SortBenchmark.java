@@ -7,8 +7,8 @@
 
 package Benchmark;
 
-import PageCacheSort.SetIterator;
-import PageCacheSort.Sorter;
+import pageCacheSort.SetIterator;
+import pageCacheSort.Sorter;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;
