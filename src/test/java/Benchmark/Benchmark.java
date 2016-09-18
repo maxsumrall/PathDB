@@ -7,10 +7,10 @@
 
 package Benchmark;
 
-import PathIndex.PageProxyCursor;
-import PathIndex.DiskCache;
-import PathIndex.IndexTree;
-import PathIndex.SearchCursor;
+import storage.PageProxyCursor;
+import storage.DiskCache;
+import pathIndex.tree.IndexTree;
+import pathIndex.tree.SearchCursor;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;
