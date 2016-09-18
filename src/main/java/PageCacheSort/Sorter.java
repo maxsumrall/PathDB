@@ -7,10 +7,10 @@
 
 package PageCacheSort;
 
-import bptree.PageProxyCursor;
-import bptree.impl.DiskCache;
-import bptree.impl.KeyImpl;
-import bptree.impl.NodeHeader;
+import PathIndex.PageProxyCursor;
+import PathIndex.DiskCache;
+import PathIndex.KeyImpl;
+import PathIndex.NodeHeader;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
