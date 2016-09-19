@@ -15,7 +15,6 @@ import org.neo4j.io.pagecache.PageCursor;
 
 import static storage.DiskCache.PAGE_SIZE;
 
-
 public class CompressedPageCursor extends PageProxyCursor
 {
     private final int maxPageSize = PAGE_SIZE * 15;
@@ -30,7 +29,7 @@ public class CompressedPageCursor extends PageProxyCursor
     private int mostRecentCompressedLeafSize = PAGE_SIZE;//the default value
 
 
-    public CompressedPageCursor( DiskCache disk, long pageId, int lock ) throws IOException
+    public CompressedPageCursor( DiskCache disk, long pageId ) throws IOException
     {
         inMemoryBlockStorage = new InMemoryBlockStorage( PAGE_SIZE );
         goToPage( pageId );
