@@ -7,21 +7,20 @@
 
 package util;
 
+import pathIndex.tree.IndexInsertion;
+import pathIndex.tree.IndexTree;
+import pathIndex.tree.TreeNodeIDManager;
 import storage.DiskCache;
 import storage.NodeHeader;
 import storage.PageProxyCursor;
-import pathIndex.tree.TreeNodeIDManager;
-import pathIndex.tree.IndexInsertion;
-import pathIndex.tree.IndexTree;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.LongBuffer;
 
-import org.neo4j.io.pagecache.PagedFile;
 
-
-public class IndexBulkLoader {
+public class IndexBulkLoader
+{
 
     private DiskCache disk;
     public int keySize;
@@ -36,180 +35,207 @@ public class IndexBulkLoader {
     public PageProxyCursor cursor;
     public IndexTree tree;
 
-    public IndexBulkLoader(DiskCache disk, long finalPage, int keySize) throws IOException {
+    public IndexBulkLoader( DiskCache disk, long finalPage, int keySize ) throws IOException
+    {
         this.disk = disk;
         this.finalLeafPage = finalPage;
         TreeNodeIDManager.currentID = finalLeafPage + 1;
-        this.tree = new IndexTree(keySize, 0, this.disk);
+        this.tree = new IndexTree( keySize, 0, this.disk );
         this.keySize = keySize;
-        this.MAX_PAIRS = ((DiskCache.PAGE_SIZE - NodeHeader.NODE_HEADER_LENGTH) / ((keySize + 1)*8) ) - 1;
-        this.RESERVED_CHILDREN_SPACE  = (MAX_PAIRS + 1) * 8;
+        this.MAX_PAIRS = ((DiskCache.PAGE_SIZE - NodeHeader.NODE_HEADER_LENGTH) / ((keySize + 1) * 8)) - 1;
+        this.RESERVED_CHILDREN_SPACE = (MAX_PAIRS + 1) * 8;
         parentWriter = new ParentBufferWriter();
     }
 
-    public IndexTree run() throws IOException {
+    public IndexTree run() throws IOException
+    {
         long root;
-        try (PageProxyCursor cursor = this.disk.getCursor(0, PagedFile.PF_EXCLUSIVE_LOCK)) {
-            long firstInternalNode = IndexTree.acquireNewInternalNode(cursor);
-            cursor.goToPage(firstInternalNode);
-            NodeHeader.setKeyLength(cursor, keySize);
-            this.currentParent = firstInternalNode;
+        PageProxyCursor cursor = this.disk.getCursor( 0 );
+        long firstInternalNode = IndexTree.acquireNewInternalNode( cursor );
+        cursor.goToPage( firstInternalNode );
+        NodeHeader.setKeyLength( cursor, keySize );
+        this.currentParent = firstInternalNode;
 
-            for (int i = 0; i < finalLeafPage; i++) {
-                addLeafToParent(cursor, i);
-            }
-            cursor.goToPage(currentParent);
-            cursor.setOffset(NodeHeader.NODE_HEADER_LENGTH);
-            byte[] children = parentWriter.getChildren();
-            cursor.putBytes(children);
-            byte[] keys = parentWriter.getKeys();
-            cursor.putBytes(keys);
-            NodeHeader.setNumberOfKeys(cursor, ((keys.length / keySize) / 8));
-            //Leaf row and one parent row made.
-            //Build tree above internal nodes.
-            root = buildUpperLeaves(cursor, firstInternalNode);
-            tree.rootNodeId = root;
+        for ( int i = 0; i < finalLeafPage; i++ )
+        {
+            addLeafToParent( cursor, i );
         }
+        cursor.goToPage( currentParent );
+        cursor.setOffset( NodeHeader.NODE_HEADER_LENGTH );
+        byte[] children = parentWriter.getChildren();
+        cursor.putBytes( children );
+        byte[] keys = parentWriter.getKeys();
+        cursor.putBytes( keys );
+        NodeHeader.setNumberOfKeys( cursor, ((keys.length / keySize) / 8) );
+        //Leaf row and one parent row made.
+        //Build tree above internal nodes.
+        root = buildUpperLeaves( cursor, firstInternalNode );
+        tree.rootNodeId = root;
         return tree;
     }
 
 
-    private void addLeafToParent(PageProxyCursor cursor, long leaf) throws IOException {
-        if(currentPair > MAX_PAIRS){
-            cursor.goToPage(this.currentParent);
+    private void addLeafToParent( PageProxyCursor cursor, long leaf ) throws IOException
+    {
+        if ( currentPair > MAX_PAIRS )
+        {
+            cursor.goToPage( this.currentParent );
             cursor.deferWriting();
-            cursor.setOffset(NodeHeader.NODE_HEADER_LENGTH);
-            cursor.putBytes(parentWriter.getChildren());
-            cursor.putBytes(parentWriter.getKeys());
-            NodeHeader.setNumberOfKeys(cursor, MAX_PAIRS);
+            cursor.setOffset( NodeHeader.NODE_HEADER_LENGTH );
+            cursor.putBytes( parentWriter.getChildren() );
+            cursor.putBytes( parentWriter.getKeys() );
+            NodeHeader.setNumberOfKeys( cursor, MAX_PAIRS );
             cursor.resumeWriting();
-            long newParent = IndexTree.acquireNewInternalNode(cursor);
-            cursor.goToPage(newParent);
-            NodeHeader.setKeyLength(cursor, keySize);
-            IndexTree.updateSiblingAndFollowingIdsInsertion(cursor, this.currentParent, newParent);
+            long newParent = IndexTree.acquireNewInternalNode( cursor );
+            cursor.goToPage( newParent );
+            NodeHeader.setKeyLength( cursor, keySize );
+            IndexTree.updateSiblingAndFollowingIdsInsertion( cursor, this.currentParent, newParent );
             this.currentParent = newParent;
             this.currentOffset = 0;
             this.currentPair = 0;
         }
-        if(this.currentOffset == 0){
-            parentWriter.addChild(leaf);
+        if ( this.currentOffset == 0 )
+        {
+            parentWriter.addChild( leaf );
         }
-        else{
-            cursor.goToPage(leaf);
-            parentWriter.addChild(leaf);
-            parentWriter.addKey( IndexInsertion.getFirstKeyInNodeAsBytes(cursor));
+        else
+        {
+            cursor.goToPage( leaf );
+            parentWriter.addChild( leaf );
+            parentWriter.addKey( IndexInsertion.getFirstKeyInNodeAsBytes( cursor ) );
         }
         this.currentPair++;
-        this.currentOffset+=8;
+        this.currentOffset += 8;
 
     }
 
-    private long buildUpperLeaves(PageProxyCursor cursor, long leftMostNode) throws IOException {
-        long firstParent = IndexTree.acquireNewInternalNode(cursor);
-        cursor.goToPage(firstParent);
-        NodeHeader.setKeyLength(cursor, keySize);
+    private long buildUpperLeaves( PageProxyCursor cursor, long leftMostNode ) throws IOException
+    {
+        long firstParent = IndexTree.acquireNewInternalNode( cursor );
+        cursor.goToPage( firstParent );
+        NodeHeader.setKeyLength( cursor, keySize );
         this.currentParent = firstParent;
         this.currentOffset = 0;
         this.currentPair = 0;
         long currentNode = leftMostNode;
-        cursor.goToPage(leftMostNode);
-        long nextNode = NodeHeader.getSiblingID(cursor);
+        cursor.goToPage( leftMostNode );
+        long nextNode = NodeHeader.getSiblingID( cursor );
 
-        while(nextNode != -1l){
-            copyUpLeafToParent(cursor, currentNode);
+        while ( nextNode != -1l )
+        {
+            copyUpLeafToParent( cursor, currentNode );
             currentNode = nextNode;
-            cursor.goToPage(nextNode);
-            nextNode = NodeHeader.getSiblingID(cursor);
+            cursor.goToPage( nextNode );
+            nextNode = NodeHeader.getSiblingID( cursor );
         }
-        copyUpLeafToParent(cursor, currentNode);
-        cursor.goToPage(currentParent);
+        copyUpLeafToParent( cursor, currentNode );
+        cursor.goToPage( currentParent );
         cursor.deferWriting();
-        cursor.setOffset(NodeHeader.NODE_HEADER_LENGTH);
-        cursor.putBytes(parentWriter.getChildren());
+        cursor.setOffset( NodeHeader.NODE_HEADER_LENGTH );
+        cursor.putBytes( parentWriter.getChildren() );
         byte[] keys = parentWriter.getKeys();
-        cursor.putBytes(keys);
-        NodeHeader.setNumberOfKeys(cursor, ((keys.length/ keySize) / 8));
+        cursor.putBytes( keys );
+        NodeHeader.setNumberOfKeys( cursor, ((keys.length / keySize) / 8) );
         cursor.resumeWriting();
 
-        if(firstParent != this.currentParent){
-            return buildUpperLeaves(cursor, firstParent);
+        if ( firstParent != this.currentParent )
+        {
+            return buildUpperLeaves( cursor, firstParent );
         }
 
-        else{
+        else
+        {
             return firstParent;
         }
     }
 
-    private void copyUpLeafToParent(PageProxyCursor cursor, long leaf) throws IOException {
-        if(currentPair > MAX_PAIRS){
-            cursor.goToPage(this.currentParent);
+    private void copyUpLeafToParent( PageProxyCursor cursor, long leaf ) throws IOException
+    {
+        if ( currentPair > MAX_PAIRS )
+        {
+            cursor.goToPage( this.currentParent );
             cursor.deferWriting();
-            cursor.setOffset(NodeHeader.NODE_HEADER_LENGTH);
-            cursor.putBytes(parentWriter.getChildren());
-            cursor.putBytes(parentWriter.getKeys());
-            NodeHeader.setNumberOfKeys(cursor, MAX_PAIRS);
+            cursor.setOffset( NodeHeader.NODE_HEADER_LENGTH );
+            cursor.putBytes( parentWriter.getChildren() );
+            cursor.putBytes( parentWriter.getKeys() );
+            NodeHeader.setNumberOfKeys( cursor, MAX_PAIRS );
             cursor.resumeWriting();
-            long newParent = IndexTree.acquireNewInternalNode(cursor);
-            cursor.goToPage(newParent);
-            NodeHeader.setKeyLength(cursor, keySize);
-            IndexTree.updateSiblingAndFollowingIdsInsertion(cursor, this.currentParent, newParent);
+            long newParent = IndexTree.acquireNewInternalNode( cursor );
+            cursor.goToPage( newParent );
+            NodeHeader.setKeyLength( cursor, keySize );
+            IndexTree.updateSiblingAndFollowingIdsInsertion( cursor, this.currentParent, newParent );
             this.currentParent = newParent;
             this.currentOffset = 0;
             this.currentPair = 0;
         }
-        if(this.currentOffset == 0){
-            parentWriter.addChild(leaf);
+        if ( this.currentOffset == 0 )
+        {
+            parentWriter.addChild( leaf );
         }
-        else{
-            cursor.goToPage(leaf);
-            parentWriter.addChild(leaf);
-            parentWriter.addKey(traverseToFindFirstKeyInLeafAsBytes(cursor));
+        else
+        {
+            cursor.goToPage( leaf );
+            parentWriter.addChild( leaf );
+            parentWriter.addKey( traverseToFindFirstKeyInLeafAsBytes( cursor ) );
         }
         this.currentPair++;
-        this.currentOffset+=8;
+        this.currentOffset += 8;
     }
-    public byte[] traverseToFindFirstKeyInLeafAsBytes(PageProxyCursor cursor) throws IOException {
-        if(NodeHeader.isLeafNode(cursor)){
-            return IndexInsertion.getFirstKeyInNodeAsBytes(cursor);
+
+    public byte[] traverseToFindFirstKeyInLeafAsBytes( PageProxyCursor cursor ) throws IOException
+    {
+        if ( NodeHeader.isLeafNode( cursor ) )
+        {
+            return IndexInsertion.getFirstKeyInNodeAsBytes( cursor );
         }
-        else{
-            long leftMostChild = tree.getChildIdAtIndex(cursor, 0);
-            cursor.goToPage(leftMostChild);
-            return traverseToFindFirstKeyInLeafAsBytes(cursor);
+        else
+        {
+            long leftMostChild = tree.getChildIdAtIndex( cursor, 0 );
+            cursor.goToPage( leftMostChild );
+            return traverseToFindFirstKeyInLeafAsBytes( cursor );
         }
     }
 
 
-    private class ParentBufferWriter {
+    private class ParentBufferWriter
+    {
         byte[] children = new byte[RESERVED_CHILDREN_SPACE];
         byte[] keys = new byte[MAX_PAIRS * keySize * 8];
-        ByteBuffer cb = ByteBuffer.wrap(children);
+        ByteBuffer cb = ByteBuffer.wrap( children );
         LongBuffer cBuffer = cb.asLongBuffer();
-        ByteBuffer kb = ByteBuffer.wrap(keys);
+        ByteBuffer kb = ByteBuffer.wrap( keys );
 
-        void addChild(long child) {
-            cBuffer.put(child);
-        }
-        void addKey(byte[] key){
-            kb.put(key);
+        void addChild( long child )
+        {
+            cBuffer.put( child );
         }
 
-        byte[] getChildren(){
+        void addKey( byte[] key )
+        {
+            kb.put( key );
+        }
+
+        byte[] getChildren()
+        {
             int index = cBuffer.position();
-            cBuffer.position(0);
-            if(index != cBuffer.limit()){
+            cBuffer.position( 0 );
+            if ( index != cBuffer.limit() )
+            {
                 byte[] partialBytes = new byte[index * 8];
-                System.arraycopy(children, 0, partialBytes, 0, partialBytes.length);
+                System.arraycopy( children, 0, partialBytes, 0, partialBytes.length );
                 return partialBytes;
             }
             return children;
         }
-        byte[] getKeys(){
+
+        byte[] getKeys()
+        {
             int index = kb.position();
-            kb.position(0);
-            if(index != kb.limit()){
+            kb.position( 0 );
+            if ( index != kb.limit() )
+            {
                 byte[] partialBytes = new byte[index];
-                System.arraycopy(keys, 0, partialBytes, 0, partialBytes.length);
+                System.arraycopy( keys, 0, partialBytes, 0, partialBytes.length );
                 return partialBytes;
             }
             return keys;

@@ -14,8 +14,6 @@ import storage.PageProxyCursor;
 import java.io.IOException;
 import java.util.ArrayList;
 
-import org.neo4j.io.pagecache.PagedFile;
-
 
 public class InMemoryNode {
     public boolean leafNode = false;
@@ -27,7 +25,7 @@ public class InMemoryNode {
     public ArrayList<Long[]> keys = new ArrayList<>();
 
     public InMemoryNode(IndexTree tree, long id) throws IOException {
-        PageProxyCursor cursor = tree.disk.getCursor(id, PagedFile.PF_EXCLUSIVE_LOCK);
+        PageProxyCursor cursor = tree.disk.getCursor(id );
         leafNode = NodeHeader.isLeafNode(cursor);
         precedingNode = NodeHeader.getPrecedingID(cursor);
         followingNode = NodeHeader.getSiblingID(cursor);

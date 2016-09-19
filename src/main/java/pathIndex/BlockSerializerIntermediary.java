@@ -11,6 +11,6 @@ public class BlockSerializerIntermediary
 
     public void writeBlock(Block block)
     {
-        serializer.
+//        serializer.
     }
 }
