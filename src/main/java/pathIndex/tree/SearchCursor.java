@@ -12,7 +12,8 @@ import storage.PageProxyCursor;
 
 import java.io.IOException;
 
-public class SearchCursor {
+public class SearchCursor
+{
     long siblingNode;
     int currentKeyIndex;
     int keyLength;
@@ -21,7 +22,8 @@ public class SearchCursor {
     int keysInNode;
 
 
-    public SearchCursor(long pageID, long siblingNode, int position, long[] searchKey, int keyLength, int keysInNode){
+    public SearchCursor( long pageID, long siblingNode, int position, long[] searchKey, int keyLength, int keysInNode )
+    {
         this.siblingNode = siblingNode;
         this.searchKey = searchKey;
         this.keyLength = keyLength;
@@ -30,49 +32,62 @@ public class SearchCursor {
         this.keysInNode = keysInNode;
     }
 
-    public long[] next( PageProxyCursor cursor) throws IOException {
-        long[] next = getNext(cursor);
-        if(next != null){
+    public long[] next( PageProxyCursor cursor ) throws IOException
+    {
+        long[] next = getNext( cursor );
+        if ( next != null )
+        {
             currentKeyIndex++;
         }
         return next;
     }
 
-    private long[] getNext(PageProxyCursor cursor) throws IOException {
-        if(cursor.getCurrentPageId() != pageID)
-            cursor.goToPage(pageID);
+    private long[] getNext( PageProxyCursor cursor ) throws IOException
+    {
+        if ( cursor.getCurrentPageId() != pageID )
+        {
+            cursor.goToPage( pageID );
+        }
         long[] currentKey = new long[keyLength];
-        if(currentKeyIndex < keysInNode){
-            for(int i = 0; i < keyLength; i++){
+        if ( currentKeyIndex < keysInNode )
+        {
+            for ( int i = 0; i < keyLength; i++ )
+            {
                 int bytePosition = NodeHeader.NODE_HEADER_LENGTH + (currentKeyIndex * keyLength * 8) + (i * 8);
-                currentKey[i] = cursor.getLong(bytePosition);
+                currentKey[i] = cursor.getLong( bytePosition );
             }
         }
-        else{
-            if(siblingNode != -1) {
-                loadSiblingNode(cursor);
-                return getNext(cursor);
+        else
+        {
+            if ( siblingNode != -1 )
+            {
+                loadSiblingNode( cursor );
+                return getNext( cursor );
             }
-            else{
+            else
+            {
                 return null;
             }
         }
-        if( KeyImpl.getComparator().validPrefix(searchKey, currentKey)){
+        if ( KeyImpl.getComparator().validPrefix( searchKey, currentKey ) )
+        {
             return currentKey;
         }
         return null;
     }
 
-    public boolean hasNext(PageProxyCursor cursor) throws IOException {
-        return getNext(cursor) != null;
+    public boolean hasNext( PageProxyCursor cursor ) throws IOException
+    {
+        return getNext( cursor ) != null;
     }
 
 
-    private void loadSiblingNode(PageProxyCursor cursor) throws IOException {
-        cursor.goToPage(siblingNode);
+    private void loadSiblingNode( PageProxyCursor cursor ) throws IOException
+    {
+        cursor.goToPage( siblingNode );
         this.pageID = siblingNode;
-        this.keysInNode = NodeHeader.getNumberOfKeys(cursor);
+        this.keysInNode = NodeHeader.getNumberOfKeys( cursor );
         this.currentKeyIndex = 0;
-        this.siblingNode = NodeHeader.getSiblingID(cursor);
+        this.siblingNode = NodeHeader.getSiblingID( cursor );
     }
 }

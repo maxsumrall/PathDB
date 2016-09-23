@@ -9,8 +9,10 @@ package util;
 
 import java.io.IOException;
 
-public interface BulkLoadDataSource {
+public interface BulkLoadDataSource
+{
 
     byte[] nextPage() throws IOException;
+
     boolean hasNext() throws IOException;
 }

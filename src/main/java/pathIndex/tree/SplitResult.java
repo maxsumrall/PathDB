@@ -7,10 +7,14 @@
 
 package pathIndex.tree;
 
-public class SplitResult {
+public class SplitResult
+{
     public Long[] key = null;
     public long[] primkey = null;
     public long left;
     public long right;
-    public SplitResult(){}
+
+    public SplitResult()
+    {
+    }
 }
