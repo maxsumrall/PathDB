@@ -74,7 +74,6 @@ public class IndexBulkLoader
         return tree;
     }
 
-
     private void addLeafToParent( PageProxyCursor cursor, long leaf ) throws IOException
     {
         if ( currentPair > MAX_PAIRS )

@@ -7,14 +7,16 @@
 
 package pathIndex.tree;
 
-public class RemoveResultProxy{
+public class RemoveResultProxy
+{
     public long removedNodeId;
     public long siblingNodeID;
     public boolean isLeaf;
 
-    public RemoveResultProxy(long removedNodeId, long siblingNodeID, boolean isLeaf){
+    public RemoveResultProxy( long removedNodeId, long siblingNodeID, boolean isLeaf )
+    {
         this.removedNodeId = removedNodeId;
-        this.siblingNodeID  = siblingNodeID;
+        this.siblingNodeID = siblingNodeID;
         this.isLeaf = isLeaf;
     }
 }
