@@ -69,7 +69,6 @@ public class KeyImpl implements Comparator<long[]>
      */
     public int compare( Long[] a, Long[] b )
     {
-
         if ( a.length != b.length )
         {
             return a.length - b.length;

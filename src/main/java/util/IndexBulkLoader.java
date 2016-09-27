@@ -21,7 +21,6 @@ import java.nio.LongBuffer;
 
 public class IndexBulkLoader
 {
-
     private DiskCache disk;
     public int keySize;
     public long finalLeafPage;
