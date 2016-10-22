@@ -3,27 +3,26 @@ package pathDB;
 import org.junit.Test;
 
 import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
-import java.util.stream.IntStream;
-import java.util.stream.LongStream;
 
 import static java.util.Collections.sort;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static pathDB.PathTest.equalNodes;
+import static pathDB.PathTest.incrementingNodes;
 
-public class PathTest
+public class PathPrefixTest
 {
     private static final Random random = new Random();
 
     @Test
-    public void samePathsEqualEachOtherTest() throws Exception
+    public void samePathPrefixPrefixesEqualEachOtherTest() throws Exception
     {
         // given
-        Path a = new Path( equalNodes( 4, 42 ) );
-        Path b = new Path( equalNodes( 4, 42 ) );
+        PathPrefix a = new PathPrefix( 6, equalNodes( 4, 42 ) );
+        PathPrefix b = new PathPrefix( 6, equalNodes( 4, 42 ) );
 
         // then
         assertEquals( a, a );
@@ -31,18 +30,18 @@ public class PathTest
     }
 
     @Test
-    public void differentPathsAreNotEqualsTest() throws Exception
+    public void differentPathPrefixPrefixesAreNotEqualsTest() throws Exception
     {
         // given
-        Path a = new Path( equalNodes( 4, 42 ) );
-        Path b = new Path( equalNodes( 4, 24 ) );
-        Path c = new Path( equalNodes( 3, 42 ) );
+        PathPrefix a = new PathPrefix( 6, equalNodes( 4, 42 ) );
+        PathPrefix b = new PathPrefix( 6, equalNodes( 4, 24 ) );
+        PathPrefix c = new PathPrefix( 6, equalNodes( 3, 42 ) );
 
         List<Node> differentNodes = equalNodes( 3, 42 );
         differentNodes.remove( differentNodes.size() - 1 );
         differentNodes.add( new Node( 43 ) );
 
-        Path d = new Path( differentNodes );
+        PathPrefix d = new PathPrefix( 6, differentNodes );
 
         // then
         assertFalse( a.equals( b ) );
@@ -54,12 +53,12 @@ public class PathTest
     }
 
     @Test
-    public void pathOrderingOnFirstNodeTest() throws Exception
+    public void pathPrefixOrderingOnFirstNodeTest() throws Exception
     {
         // given
-        Path a = new Path( incrementingNodes( 4, 1 ) );
-        Path b = new Path( incrementingNodes( 4, 2 ) );
-        Path c = new Path( incrementingNodes( 4, 3 ) );
+        PathPrefix a = new PathPrefix( 6, incrementingNodes( 4, 1 ) );
+        PathPrefix b = new PathPrefix( 6, incrementingNodes( 4, 2 ) );
+        PathPrefix c = new PathPrefix( 6, incrementingNodes( 4, 3 ) );
 
         // then
         assertEquals( -1, a.compareTo( b ) );
@@ -85,9 +84,9 @@ public class PathTest
         nodesC.add( new Node( 4 ) );
 
         // given
-        Path a = new Path( nodesA );
-        Path b = new Path( nodesB );
-        Path c = new Path( nodesC );
+        PathPrefix a = new PathPrefix( 6, nodesA );
+        PathPrefix b = new PathPrefix( 6, nodesB );
+        PathPrefix c = new PathPrefix( 6, nodesC );
 
         // then
         assertEquals( -1, a.compareTo( b ) );
@@ -101,37 +100,37 @@ public class PathTest
     }
 
     @Test
-    public void sequentialPathsComparisionTest() throws Exception
+    public void sequentialPathPrefixesComparisionTest() throws Exception
     {
         // given
-        List<Path> paths = generateSequentialPaths( 4, 10 );
+        List<PathPrefix> paths = generateSequentialPathPrefixes( 6, 4, 10 );
 
         //then
-        assertTrue( pathsAreSorted( paths ) );
+        assertTrue( pathPrefixesAreSorted( paths ) );
     }
 
     @Test
     public void pathSortingTest() throws Exception
     {
         // given
-        List<Path> paths = generateRandomPaths( 4, 10 );
+        List<PathPrefix> paths = generateRandomPathPrefixes( 6, 4, 10 );
 
         // when
         sort( paths );
 
         // then
-        assertTrue( pathsAreSorted( paths ) );
+        assertTrue( pathPrefixesAreSorted( paths ) );
 
     }
 
-    private boolean pathsAreSorted( List<Path> paths )
+    private boolean pathPrefixesAreSorted( List<PathPrefix> pathPrefixes )
     {
-        for ( int i = 0; i < paths.size(); i++ )
+        for ( int i = 0; i < pathPrefixes.size(); i++ )
         {
-            if ( i < paths.size() - 1 )
+            if ( i < pathPrefixes.size() - 1 )
             {
                 //then
-                if ( paths.get( i ).compareTo( paths.get( i + 1 ) ) != -1 )
+                if ( pathPrefixes.get( i ).compareTo( pathPrefixes.get( i + 1 ) ) != -1 )
                 {
                     return false;
                 }
@@ -140,21 +139,7 @@ public class PathTest
         return true;
     }
 
-    public static List<Node> equalNodes( int count, long id )
-    {
-        List<Node> nodes = new LinkedList<>();
-        IntStream.range( 0, count ).forEach( ( i ) -> nodes.add( new Node( id ) ) );
-        return nodes;
-    }
-
-    public static List<Node> incrementingNodes( int count, long startingId )
-    {
-        List<Node> nodes = new LinkedList<>();
-        LongStream.range( startingId, startingId + count ).forEach( ( i ) -> nodes.add( new Node( i ) ) );
-        return nodes;
-    }
-
-    public static Path simplePath( int length, Long value )
+    public static PathPrefix simplePathPrefix( int prefixLength, int length, Long value )
     {
         List<Node> nodes = new ArrayList<>( length + 1 );
 
@@ -163,37 +148,38 @@ public class PathTest
             nodes.add( new Node( value ) );
         }
 
-        return new Path( nodes );
+        return new PathPrefix( prefixLength, nodes );
     }
 
-    public static Path randomPath( int length )
+    public static PathPrefix randomPathPrefix( int prefixLength, int length )
     {
         List<Node> nodes = new ArrayList<>( length );
         for ( int i = 0; i < length; i++ )
         {
             nodes.add( new Node( random.nextLong() ) );
         }
-        return new Path( nodes );
+        return new PathPrefix( prefixLength, nodes );
     }
 
-    public static List<Path> generateRandomPaths( int length, int amount )
+
+    public static List<PathPrefix> generateRandomPathPrefixes( int prefixLength, int length, int amount )
     {
-        List<Path> paths = new ArrayList<>( amount );
+        List<PathPrefix> pathPrefixes = new ArrayList<>( amount );
         for ( long i = 0; i < amount; i++ )
         {
-            paths.add( randomPath( length ) );
+            pathPrefixes.add( randomPathPrefix( prefixLength, length ) );
         }
-        return paths;
+        return pathPrefixes;
     }
 
-    public static List<Path> generateSequentialPaths( int length, int amount )
+    public static List<PathPrefix> generateSequentialPathPrefixes( int prefixLength, int length, int amount )
     {
-        List<Path> paths = new ArrayList<>( amount );
+        List<PathPrefix> pathPrefixes = new ArrayList<>( amount );
         for ( long i = 0; i < amount; i++ )
         {
-            paths.add( simplePath( length, i ) );
+            pathPrefixes.add( simplePathPrefix( prefixLength, length, i ) );
         }
-        return paths;
+        return pathPrefixes;
     }
 
 }

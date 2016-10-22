@@ -3,16 +3,18 @@ package pathDB;
 import java.util.List;
 import java.util.Objects;
 
-
-public class Path extends AbstractPath
+public class PathPrefix extends AbstractPath
 {
     public final int length;
-    public List<Node> nodes;
+    public final List<Node> nodes;
+    public final int prefixLength;
 
-    public Path( List<Node> nodes )
+
+    public PathPrefix( int pathLength, List<Node> nodes )
     {
-        this.length = nodes.size();
+        this.length = pathLength;
         this.nodes = nodes;
+        this.prefixLength = nodes.size();
     }
 
     @Override
@@ -26,8 +28,8 @@ public class Path extends AbstractPath
         {
             return false;
         }
-        Path path = (Path) o;
-        return length == path.length && Objects.equals( nodes, path.nodes );
+        PathPrefix that = (PathPrefix) o;
+        return length == that.length && Objects.equals( nodes, that.nodes );
     }
 
     @Override
@@ -39,9 +41,6 @@ public class Path extends AbstractPath
     @Override
     public String toString()
     {
-        return "Path{" + "length=" + length + ", nodes=" + nodes + "}\n";
+        return "PathPrefix{" + "length=" + length + ", nodes=" + nodes + '}';
     }
-
-
 }
-
