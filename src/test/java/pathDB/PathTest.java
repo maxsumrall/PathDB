@@ -156,9 +156,9 @@ public class PathTest
 
     public static Path simplePath( int length, Long value )
     {
-        List<Node> nodes = new ArrayList<>( length + 1 );
+        List<Node> nodes = new ArrayList<>( length );
 
-        for ( int i = 0; i < length + 1; i++ )
+        for ( int i = 0; i < length; i++ )
         {
             nodes.add( new Node( value ) );
         }
