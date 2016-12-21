@@ -15,9 +15,9 @@ import java.io.IOException;
 public class NodeSize
 {
 
-    public static PageProxyCursor cursor;
+    public static CompressedPageFile cursor;
 
-    public static boolean leafNodeContainsSpaceForNewKey( PageProxyCursor cursor, long[] newKey )
+    public static boolean leafNodeContainsSpaceForNewKey( CompressedPageFile cursor, long[] newKey )
     {
         return leafNodeByteSize( cursor, newKey ) < DiskCache.PAGE_SIZE;
     }
@@ -27,7 +27,7 @@ public class NodeSize
         int size = 0;
         try
         {
-            PageProxyCursor cursor = tree.disk.getCursor( nodeId );
+            CompressedPageFile cursor = tree.disk.getCursor( nodeId );
             size = leafNodeByteSize( cursor, newKey );
         }
         catch ( IOException e )
@@ -37,19 +37,19 @@ public class NodeSize
         return size;
     }
 
-    public static int leafNodeByteSize( PageProxyCursor cursor, long[] newKey )
+    public static int leafNodeByteSize( CompressedPageFile cursor, long[] newKey )
     {
         int byteSize = 0;
-        int numberOfKeys = NodeHeader.getNumberOfKeys( cursor );
-        byteSize += NodeHeader.NODE_HEADER_LENGTH;
+        int numberOfKeys = PersistedPageHeader.getNumberOfKeys( cursor );
+        byteSize += PersistedPageHeader.NODE_HEADER_LENGTH;
 
-        int keyLength = NodeHeader.getKeyLength( cursor );
+        int keyLength = PersistedPageHeader.getKeyLength( cursor );
         byteSize += ((numberOfKeys + 1) * keyLength * 8);
 
         return byteSize;
     }
 
-    public static boolean internalNodeContainsSpaceForNewKeyAndChild( PageProxyCursor cursor, long[] newKey )
+    public static boolean internalNodeContainsSpaceForNewKeyAndChild( CompressedPageFile cursor, long[] newKey )
     {
         return internalNodeByteSize( cursor, newKey ) < DiskCache.PAGE_SIZE;
     }
@@ -59,7 +59,7 @@ public class NodeSize
         int size = 0;
         try
         {
-            PageProxyCursor cursor = tree.disk.getCursor( nodeId );
+            CompressedPageFile cursor = tree.disk.getCursor( nodeId );
             size = internalNodeByteSize( cursor, newKey );
         }
         catch ( IOException e )
@@ -69,14 +69,14 @@ public class NodeSize
         return size;
     }
 
-    public static int internalNodeByteSize( PageProxyCursor cursor, long[] newKey )
+    public static int internalNodeByteSize( CompressedPageFile cursor, long[] newKey )
     {
         int byteSize = 0;
-        int numberOfKeys = NodeHeader.getNumberOfKeys( cursor );
-        byteSize += NodeHeader.NODE_HEADER_LENGTH;
+        int numberOfKeys = PersistedPageHeader.getNumberOfKeys( cursor );
+        byteSize += PersistedPageHeader.NODE_HEADER_LENGTH;
         byteSize += (numberOfKeys + 2) * 8; //calculate number of children;
 
-        int keyLength = NodeHeader.getKeyLength( cursor );
+        int keyLength = PersistedPageHeader.getKeyLength( cursor );
         byteSize += ((numberOfKeys + 1) * keyLength * 8);
 
         return byteSize;

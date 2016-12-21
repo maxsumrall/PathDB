@@ -2,6 +2,8 @@ package pathDB;
 
 import pathIndex.tree.IndexTree;
 
+import java.io.IOException;
+
 public class PathDB
 {
     private final IndexTree pathIndex;
@@ -11,14 +13,13 @@ public class PathDB
         this.pathIndex = pathIndex;
     }
 
-    public Path getPaths( Path partialPath )
+    public Iterable<Path> getPaths( PathPrefix pathPrefix ) throws IOException
     {
-        return null;
+        return pathIndex.find( pathPrefix );
     }
 
-    public void writePath( Path path )
+    public void insert( Path path )
     {
 
     }
-
 }

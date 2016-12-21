@@ -8,7 +8,7 @@
     <packaging>jar</packaging>
 
     <name>PathDB</name>
-    <url>http://maven.apache.org</url>
+    <url>http://pathdb.com</url>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -32,6 +32,11 @@
             <artifactId>hamcrest-all</artifactId>
             <version>1.3</version>
             <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.neo4j</groupId>
+            <artifactId>neo4j-io</artifactId>
+            <version>3.0.6</version>
         </dependency>
     </dependencies>
     <licenses>
