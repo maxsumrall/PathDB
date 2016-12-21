@@ -11,7 +11,8 @@ import org.junit.Test;
 
 import java.util.LinkedList;
 
-public class CompressedPageCursorTest {
+public class CompressedPageFileTest
+{
 
     @Test
     public void insertTest(){

@@ -8,8 +8,7 @@
 package pathIndex;
 
 import storage.DiskCache;
-import storage.NodeHeader;
-import storage.PageProxyCursor;
+import storage.PersistedPageHeader;
 
 import java.io.IOException;
 
@@ -19,7 +18,7 @@ public class SimpleDataGenerator
 
     public int numberOfPages;
     public int keyLength = 4;
-    public int keysPerPage = (((DiskCache.PAGE_SIZE - NodeHeader.NODE_HEADER_LENGTH) / Long.BYTES) / keyLength);
+    public int keysPerPage = (((DiskCache.PAGE_SIZE - PersistedPageHeader.NODE_HEADER_LENGTH) / Long.BYTES) / keyLength);
     public DiskCache disk = DiskCache.temporaryDiskCache( false );
 
     public SimpleDataGenerator( int numberOfPages ) throws IOException
@@ -28,12 +27,12 @@ public class SimpleDataGenerator
         for ( int i = 0; i < numberOfPages; i++ )
         {
             PageProxyCursor cursor = disk.getCursor( i );
-            NodeHeader.setNodeTypeLeaf( cursor );
-            NodeHeader.setFollowingID( cursor, cursor.getCurrentPageId() + 1 );
-            NodeHeader.setPrecedingId( cursor, cursor.getCurrentPageId() - 1 );
-            NodeHeader.setKeyLength( cursor, keyLength );
-            NodeHeader.setNumberOfKeys( cursor, keysPerPage );
-            cursor.setOffset( NodeHeader.NODE_HEADER_LENGTH );
+            PersistedPageHeader.setNodeTypeLeaf( cursor );
+            PersistedPageHeader.setFollowingID( cursor, cursor.getCurrentPageId() + 1 );
+            PersistedPageHeader.setPrecedingId( cursor, cursor.getCurrentPageId() - 1 );
+            PersistedPageHeader.setKeyLength( cursor, keyLength );
+            PersistedPageHeader.setNumberOfKeys( cursor, keysPerPage );
+            cursor.setOffset( PersistedPageHeader.NODE_HEADER_LENGTH );
             for ( int j = 0; j < keysPerPage; j++ )
             {
                 for ( int k = 0; k < keyLength; k++ )

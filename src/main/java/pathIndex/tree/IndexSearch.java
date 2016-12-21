@@ -7,8 +7,8 @@
 
 package pathIndex.tree;
 
-import storage.NodeHeader;
-import storage.PageProxyCursor;
+import pathDB.PathPrefix;
+import storage.PersistedPageHeader;
 
 import java.io.IOException;
 
@@ -23,7 +23,7 @@ public class IndexSearch
         this.tree = tree;
     }
 
-    public SearchCursor find( long[] key )
+    public SearchCursor find( PathPrefix key )
     {
         long[] entry = null;
         SearchCursor resultsCursor = null;
@@ -42,8 +42,8 @@ public class IndexSearch
                 }
             }
             resultsCursor =
-                    new SearchCursor( cursor.getCurrentPageId(), NodeHeader.getSiblingID( cursor ), searchResult[0],
-                            key, NodeHeader.getKeyLength( cursor ), NodeHeader.getNumberOfKeys( cursor ) );
+                    new SearchCursor( cursor.getCurrentPageId(), PersistedPageHeader.getSiblingID( cursor ), searchResult[0],
+                            key, PersistedPageHeader.getKeyLength( cursor ), PersistedPageHeader.getNumberOfKeys( cursor ) );
         }
         catch ( IOException e )
         {
@@ -70,8 +70,8 @@ public class IndexSearch
                 }
             }
             resultsCursor =
-                    new SearchCursor( cursor.getCurrentPageId(), NodeHeader.getSiblingID( cursor ), searchResult[0],
-                            key, NodeHeader.getKeyLength( cursor ), NodeHeader.getNumberOfKeys( cursor ) );
+                    new SearchCursor( cursor.getCurrentPageId(), PersistedPageHeader.getSiblingID( cursor ), searchResult[0],
+                            key, PersistedPageHeader.getKeyLength( cursor ), PersistedPageHeader.getNumberOfKeys( cursor ) );
         }
         catch ( IOException e )
         {
@@ -83,7 +83,7 @@ public class IndexSearch
     public int[] find( PageProxyCursor cursor, long[] key ) throws IOException
     {
         int[] searchResult;
-        if ( NodeHeader.isLeafNode( cursor ) )
+        if ( PersistedPageHeader.isLeafNode( cursor ) )
         {
             searchResult = search( cursor, key );
         }
@@ -116,7 +116,7 @@ public class IndexSearch
 
     static int[] search( PageProxyCursor cursor, long[] key )
     {
-        if ( NodeHeader.isLeafNode( cursor ) )
+        if ( PersistedPageHeader.isLeafNode( cursor ) )
         {
             return searchLeafNodeSameLengthKeys( cursor, key );
         }
@@ -130,13 +130,13 @@ public class IndexSearch
     {
         int index = -1;
         int offset = -1;
-        int numberOfKeys = NodeHeader.getNumberOfKeys( cursor );
+        int numberOfKeys = PersistedPageHeader.getNumberOfKeys( cursor );
         if ( numberOfKeys == 0 )
         {
-            return new int[]{0, NodeHeader.NODE_HEADER_LENGTH};
+            return new int[]{0, PersistedPageHeader.NODE_HEADER_LENGTH};
         }
-        int keyLength = NodeHeader.getKeyLength( cursor );
-        cursor.setOffset( NodeHeader.NODE_HEADER_LENGTH + ((numberOfKeys + 1) * 8) ); //header + children
+        int keyLength = PersistedPageHeader.getKeyLength( cursor );
+        cursor.setOffset( PersistedPageHeader.NODE_HEADER_LENGTH + ((numberOfKeys + 1) * 8) ); //header + children
         long[] currKey = new long[keyLength];
         for ( int i = 0; i < numberOfKeys; i++ )
         {
@@ -164,9 +164,9 @@ public class IndexSearch
     {
         int index = -1;
         int offset = -1;
-        int numberOfKeys = cursor.getInt( NodeHeader.BYTE_POSITION_KEY_COUNT );
-        int keyLength = NodeHeader.getKeyLength( cursor );
-        cursor.setOffset( NodeHeader.NODE_HEADER_LENGTH );
+        int numberOfKeys = cursor.getInt( PersistedPageHeader.BYTE_POSITION_KEY_COUNT );
+        int keyLength = PersistedPageHeader.getKeyLength( cursor );
+        cursor.setOffset( PersistedPageHeader.NODE_HEADER_LENGTH );
         long[] currKey = new long[keyLength];
         for ( int i = 0; i < numberOfKeys; i++ )
         {
@@ -194,13 +194,13 @@ public class IndexSearch
             throws IOException
     {
         long currentNode = cursor.getCurrentPageId();
-        long previousNode = NodeHeader.getPrecedingID( cursor );
+        long previousNode = PersistedPageHeader.getPrecedingID( cursor );
         if ( previousNode != -1 )
         {
             cursor.goToPage( previousNode );
         }
         int[] result = search( cursor, key );
-        if ( result[0] == NodeHeader.getNumberOfKeys( cursor ) )
+        if ( result[0] == PersistedPageHeader.getNumberOfKeys( cursor ) )
         {
             cursor.goToPage( currentNode );
         }

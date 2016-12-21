@@ -8,8 +8,7 @@
 package pathIndex.tree;
 
 import storage.DiskCache;
-import storage.NodeHeader;
-import storage.PageProxyCursor;
+import storage.PersistedPageHeader;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -35,7 +34,7 @@ public class IndexInsertion
         try
         {
             cursor = tree.disk.getCursor( tree.rootNodeId );
-            if ( NodeHeader.isLeafNode( cursor ) )
+            if ( PersistedPageHeader.isLeafNode( cursor ) )
             {
                 result = addKeyToLeafNode( cursor, key );
             }
@@ -64,7 +63,7 @@ public class IndexInsertion
     private SplitResult insert( PageProxyCursor cursor, long[] key ) throws IOException
     {
         SplitResult result = null;
-        if ( NodeHeader.isLeafNode( cursor ) )
+        if ( PersistedPageHeader.isLeafNode( cursor ) )
         {
             result = addKeyToLeafNode( cursor, key );
         }
@@ -171,13 +170,13 @@ public class IndexInsertion
         byte[] keysB;
 
         int[] searchResults = IndexSearch.search( cursor, newKey );
-        int keyLength = NodeHeader.getKeyLength( cursor );
-        int originalNumberOfKeys = NodeHeader.getNumberOfKeys( cursor );
+        int keyLength = PersistedPageHeader.getKeyLength( cursor );
+        int originalNumberOfKeys = PersistedPageHeader.getNumberOfKeys( cursor );
         int keysInclInsert = originalNumberOfKeys + 1;
 
         returnedKey = new long[keyLength];
         byte[] keys = new byte[originalNumberOfKeys * keyLength * Long.BYTES];
-        cursor.setOffset( NodeHeader.NODE_HEADER_LENGTH );
+        cursor.setOffset( PersistedPageHeader.NODE_HEADER_LENGTH );
         cursor.getBytes( keys );
         keys = insertKeyAtIndex( keys, newKey, searchResults[0],
                 returnedKey );//TODO there is something wrong here in this function and splitting
@@ -187,14 +186,14 @@ public class IndexInsertion
         System.arraycopy( keys, keysA.length, keysB, 0, keysB.length );
 
 
-        NodeHeader.setNumberOfKeys( cursor, keysInclInsert / 2 );
-        cursor.setOffset( NodeHeader.NODE_HEADER_LENGTH );
+        PersistedPageHeader.setNumberOfKeys( cursor, keysInclInsert / 2 );
+        cursor.setOffset( PersistedPageHeader.NODE_HEADER_LENGTH );
         cursor.putBytes( keysA );
 
         cursor.goToPage( emptyNode );
-        NodeHeader.setNumberOfKeys( cursor, (keysInclInsert + 1) / 2 );
-        NodeHeader.setKeyLength( cursor, keyLength );
-        cursor.setOffset( NodeHeader.NODE_HEADER_LENGTH );
+        PersistedPageHeader.setNumberOfKeys( cursor, (keysInclInsert + 1) / 2 );
+        PersistedPageHeader.setKeyLength( cursor, keyLength );
+        cursor.setOffset( PersistedPageHeader.NODE_HEADER_LENGTH );
         cursor.putBytes( keysB );
 
         return returnedKey;
@@ -211,17 +210,17 @@ public class IndexInsertion
         byte[] keysA;
         byte[] keysB;
 
-        cursor.setOffset( NodeHeader.NODE_HEADER_LENGTH );
+        cursor.setOffset( PersistedPageHeader.NODE_HEADER_LENGTH );
 
         int[] searchResults = IndexSearch.search( cursor, newKey );
-        int keyLength = NodeHeader.getKeyLength( cursor );
-        int originalNumberOfKeys = NodeHeader.getNumberOfKeys( cursor );
+        int keyLength = PersistedPageHeader.getKeyLength( cursor );
+        int originalNumberOfKeys = PersistedPageHeader.getNumberOfKeys( cursor );
         int keysInclInsert = originalNumberOfKeys + 1;
 
         returnedKey = new long[keyLength];
         byte[] keys = new byte[originalNumberOfKeys * keyLength * Long.BYTES];
         byte[] children = new byte[(originalNumberOfKeys + 1) * Long.BYTES];
-        cursor.setOffset( NodeHeader.NODE_HEADER_LENGTH );
+        cursor.setOffset( PersistedPageHeader.NODE_HEADER_LENGTH );
         cursor.getBytes( children );
         cursor.getBytes( keys );
         keys = insertKeyAtIndex( keys, newKey, searchResults[0], returnedKey );
@@ -241,17 +240,17 @@ public class IndexInsertion
         System.arraycopy( children, childrenA.length, childrenB, 0, childrenB.length );
 
         cursor.deferWriting();
-        NodeHeader.setNumberOfKeys( cursor, keysInclInsert / 2 );
-        cursor.setOffset( NodeHeader.NODE_HEADER_LENGTH );
+        PersistedPageHeader.setNumberOfKeys( cursor, keysInclInsert / 2 );
+        cursor.setOffset( PersistedPageHeader.NODE_HEADER_LENGTH );
         cursor.putBytes( childrenA );
         cursor.putBytes( keysA );
         cursor.resumeWriting();
 
         cursor.goToPage( emptyNode );
         cursor.deferWriting();
-        NodeHeader.setNumberOfKeys( cursor, originalNumberOfKeys / 2 );
-        NodeHeader.setKeyLength( cursor, keyLength );
-        cursor.setOffset( NodeHeader.NODE_HEADER_LENGTH );
+        PersistedPageHeader.setNumberOfKeys( cursor, originalNumberOfKeys / 2 );
+        PersistedPageHeader.setKeyLength( cursor, keyLength );
+        cursor.setOffset( PersistedPageHeader.NODE_HEADER_LENGTH );
         cursor.putBytes( childrenB );
         cursor.putBytes( keysB );
         cursor.resumeWriting();
@@ -268,17 +267,17 @@ public class IndexInsertion
     private static long[] getFirstKeyInNode( PageProxyCursor cursor )
     {
         long[] firstKey;
-        if ( NodeHeader.isLeafNode( cursor ) )
+        if ( PersistedPageHeader.isLeafNode( cursor ) )
         {
-            cursor.setOffset( NodeHeader.NODE_HEADER_LENGTH );
+            cursor.setOffset( PersistedPageHeader.NODE_HEADER_LENGTH );
         }
         else
         {
-            int children = NodeHeader.getNumberOfKeys( cursor ) + 1;
-            cursor.setOffset( NodeHeader.NODE_HEADER_LENGTH + children * Long.BYTES );
+            int children = PersistedPageHeader.getNumberOfKeys( cursor ) + 1;
+            cursor.setOffset( PersistedPageHeader.NODE_HEADER_LENGTH + children * Long.BYTES );
         }
 
-        int keyLength = NodeHeader.getKeyLength( cursor );
+        int keyLength = PersistedPageHeader.getKeyLength( cursor );
         firstKey = new long[keyLength];
         for ( int i = 0; i < keyLength; i++ )
         {
@@ -292,17 +291,17 @@ public class IndexInsertion
     public static byte[] getFirstKeyInNodeAsBytes( PageProxyCursor cursor )
     {
         byte[] firstKey;
-        if ( NodeHeader.isLeafNode( cursor ) )
+        if ( PersistedPageHeader.isLeafNode( cursor ) )
         {
-            cursor.setOffset( NodeHeader.NODE_HEADER_LENGTH );
+            cursor.setOffset( PersistedPageHeader.NODE_HEADER_LENGTH );
         }
         else
         {
-            int children = NodeHeader.getNumberOfKeys( cursor ) + 1;
-            cursor.setOffset( NodeHeader.NODE_HEADER_LENGTH + children * Long.BYTES );
+            int children = PersistedPageHeader.getNumberOfKeys( cursor ) + 1;
+            cursor.setOffset( PersistedPageHeader.NODE_HEADER_LENGTH + children * Long.BYTES );
         }
 
-        int keyLength = NodeHeader.getKeyLength( cursor );
+        int keyLength = PersistedPageHeader.getKeyLength( cursor );
         firstKey = new byte[keyLength * Long.BYTES];
         cursor.getBytes( firstKey );
 
@@ -312,17 +311,17 @@ public class IndexInsertion
     public static byte[] popFirstKeyInNodeAsBytes( PageProxyCursor cursor )
     {
         byte[] firstKey;
-        if ( NodeHeader.isLeafNode( cursor ) )
+        if ( PersistedPageHeader.isLeafNode( cursor ) )
         {
-            cursor.setOffset( NodeHeader.NODE_HEADER_LENGTH );
+            cursor.setOffset( PersistedPageHeader.NODE_HEADER_LENGTH );
         }
         else
         {
-            int children = NodeHeader.getNumberOfKeys( cursor ) + 1;
-            cursor.setOffset( NodeHeader.NODE_HEADER_LENGTH + children * Long.BYTES );
+            int children = PersistedPageHeader.getNumberOfKeys( cursor ) + 1;
+            cursor.setOffset( PersistedPageHeader.NODE_HEADER_LENGTH + children * Long.BYTES );
         }
 
-        int keyLength = NodeHeader.getKeyLength( cursor );
+        int keyLength = PersistedPageHeader.getKeyLength( cursor );
         firstKey = new byte[keyLength * Long.BYTES];
         cursor.getBytes( firstKey );
 
@@ -333,7 +332,7 @@ public class IndexInsertion
     private static void insertKeyAtIndex( PageProxyCursor cursor, int offset, long[] key )
     {
         byte[] tmp_bytes;
-        NodeHeader.setNumberOfKeys( cursor, NodeHeader.getNumberOfKeys( cursor ) + 1 );
+        PersistedPageHeader.setNumberOfKeys( cursor, PersistedPageHeader.getNumberOfKeys( cursor ) + 1 );
 
         tmp_bytes = new byte[cursor.capacity() - offset - (key.length * Long.BYTES)];
 
@@ -355,7 +354,7 @@ public class IndexInsertion
     private static void insertChildAtIndex( PageProxyCursor cursor, int index, long child )
     {
         cursor.deferWriting();
-        int childInsertionOffset = NodeHeader.NODE_HEADER_LENGTH + (index * Long.BYTES);
+        int childInsertionOffset = PersistedPageHeader.NODE_HEADER_LENGTH + (index * Long.BYTES);
         byte[] shiftDownBytes = new byte[DiskCache.PAGE_SIZE - childInsertionOffset - Long.BYTES];
         cursor.setOffset( childInsertionOffset );
         cursor.getBytes( shiftDownBytes );

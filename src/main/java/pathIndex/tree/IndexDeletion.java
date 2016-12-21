@@ -9,8 +9,7 @@ package pathIndex.tree;
 
 
 import storage.DiskCache;
-import storage.NodeHeader;
-import storage.PageProxyCursor;
+import storage.PersistedPageHeader;
 
 import java.io.IOException;
 
@@ -31,7 +30,7 @@ public class IndexDeletion
         try
         {
             PageProxyCursor cursor = tree.disk.getCursor( tree.rootNodeId );
-            if ( NodeHeader.isLeafNode( cursor ) )
+            if ( PersistedPageHeader.isLeafNode( cursor ) )
             {
                 result = removeKeyFromLeafNode( cursor, cursor.getCurrentPageId(), key );
             }
@@ -59,7 +58,7 @@ public class IndexDeletion
     private RemoveResultProxy remove( PageProxyCursor cursor, long[] key ) throws IOException
     {
         RemoveResultProxy result = null;
-        if ( NodeHeader.isLeafNode( cursor ) )
+        if ( PersistedPageHeader.isLeafNode( cursor ) )
         {
             result = removeKeyFromLeafNode( cursor, cursor.getCurrentPageId(), key );
         }
@@ -82,7 +81,7 @@ public class IndexDeletion
     public static RemoveResultProxy handleRemovedChildren( PageProxyCursor cursor, long id, RemoveResultProxy result )
     {
         int index = IndexTree.getIndexOfChild( cursor, result.removedNodeId );
-        int numberOfKeys = NodeHeader.getNumberOfKeys( cursor );
+        int numberOfKeys = PersistedPageHeader.getNumberOfKeys( cursor );
         int numberOfChildren = numberOfKeys + 1;
         if ( result.isLeaf )
         {
@@ -112,10 +111,10 @@ public class IndexDeletion
             }
             removeChildAtIndex( cursor, index );
         }
-        if ( NodeHeader.getNumberOfKeys( cursor ) == -1 )
+        if ( PersistedPageHeader.getNumberOfKeys( cursor ) == -1 )
         {
             result.removedNodeId = cursor.getCurrentPageId();
-            result.siblingNodeID = NodeHeader.getSiblingID( cursor );
+            result.siblingNodeID = PersistedPageHeader.getSiblingID( cursor );
             result.isLeaf = false;
         }
         else
@@ -129,9 +128,9 @@ public class IndexDeletion
             long child ) throws IOException
     {
         RemoveResultProxy result = null;
-        if ( NodeHeader.getNumberOfKeys( cursor ) == 1 )
+        if ( PersistedPageHeader.getNumberOfKeys( cursor ) == 1 )
         {
-            result = new RemoveResultProxy( cursor.getCurrentPageId(), NodeHeader.getSiblingID( cursor ), true );
+            result = new RemoveResultProxy( cursor.getCurrentPageId(), PersistedPageHeader.getSiblingID( cursor ), true );
             IndexTree.updateSiblingAndFollowingIdsDeletion( cursor, nodeId );
         }
         else
@@ -163,9 +162,9 @@ public class IndexDeletion
             throws IOException
     {
         RemoveResultProxy result = null;
-        if ( NodeHeader.getNumberOfKeys( cursor ) == 1 )
+        if ( PersistedPageHeader.getNumberOfKeys( cursor ) == 1 )
         {
-            result = new RemoveResultProxy( cursor.getCurrentPageId(), NodeHeader.getSiblingID( cursor ), true );
+            result = new RemoveResultProxy( cursor.getCurrentPageId(), PersistedPageHeader.getSiblingID( cursor ), true );
             IndexTree.updateSiblingAndFollowingIdsDeletion( cursor, nodeId );
         }
         else
@@ -189,7 +188,7 @@ public class IndexDeletion
 
         cursor.putBytes( tmp_bytes );
 
-        NodeHeader.setNumberOfKeys( cursor, NodeHeader.getNumberOfKeys( cursor ) - 1 );
+        PersistedPageHeader.setNumberOfKeys( cursor, PersistedPageHeader.getNumberOfKeys( cursor ) - 1 );
 
     }
 
@@ -197,9 +196,9 @@ public class IndexDeletion
     {
         byte[] tmp_bytes;
         int offset;
-        int nodeHeaderOffset = NodeHeader.NODE_HEADER_LENGTH +
-                (NodeHeader.isLeafNode( cursor ) ? 0 : (NodeHeader.getNumberOfKeys( cursor ) + 1) * 8);
-        int keyLength = NodeHeader.getKeyLength( cursor );
+        int nodeHeaderOffset = PersistedPageHeader.NODE_HEADER_LENGTH +
+                (PersistedPageHeader.isLeafNode( cursor ) ? 0 : (PersistedPageHeader.getNumberOfKeys( cursor ) + 1) * 8);
+        int keyLength = PersistedPageHeader.getKeyLength( cursor );
         offset = nodeHeaderOffset + (index * (keyLength * 8));
         tmp_bytes = new byte[cursor.capacity() - offset - keyLength * 8];
         cursor.setOffset( offset + (keyLength * 8) );
@@ -216,14 +215,14 @@ public class IndexDeletion
 
         cursor.putBytes( tmp_bytes );
 
-        NodeHeader.setNumberOfKeys( cursor, NodeHeader.getNumberOfKeys( cursor ) - 1 );
+        PersistedPageHeader.setNumberOfKeys( cursor, PersistedPageHeader.getNumberOfKeys( cursor ) - 1 );
 
     }
 
     public static void removeChildAtIndex( PageProxyCursor cursor, int index )
     {
         byte[] tmp_bytes;
-        int offset = NodeHeader.NODE_HEADER_LENGTH + (index * 8);
+        int offset = PersistedPageHeader.NODE_HEADER_LENGTH + (index * 8);
         tmp_bytes = new byte[cursor.capacity() - offset - 8];
         cursor.setOffset( offset + 8 );
 

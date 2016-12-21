@@ -7,8 +7,7 @@
 
 package pathIndex.tree;
 
-import storage.NodeHeader;
-import storage.PageProxyCursor;
+import storage.PersistedPageHeader;
 
 import java.io.IOException;
 
@@ -53,7 +52,7 @@ public class SearchCursor
         {
             for ( int i = 0; i < keyLength; i++ )
             {
-                int bytePosition = NodeHeader.NODE_HEADER_LENGTH + (currentKeyIndex * keyLength * 8) + (i * 8);
+                int bytePosition = PersistedPageHeader.NODE_HEADER_LENGTH + (currentKeyIndex * keyLength * 8) + (i * 8);
                 currentKey[i] = cursor.getLong( bytePosition );
             }
         }
@@ -86,8 +85,8 @@ public class SearchCursor
     {
         cursor.goToPage( siblingNode );
         this.pageID = siblingNode;
-        this.keysInNode = NodeHeader.getNumberOfKeys( cursor );
+        this.keysInNode = PersistedPageHeader.getNumberOfKeys( cursor );
         this.currentKeyIndex = 0;
-        this.siblingNode = NodeHeader.getSiblingID( cursor );
+        this.siblingNode = PersistedPageHeader.getSiblingID( cursor );
     }
 }
