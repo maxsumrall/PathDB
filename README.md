@@ -20,7 +20,7 @@ PathDB is the result of a significant amount of research of graph data and graph
 
 1. *Path Indexing for Efficient Path Query Processing in Graph Databases*, Max Sumrall, M.Sc. Thesis, Technical University of Eindhoven. [PDF](http://alexandria.tue.nl/extra1/afstversl/wsk-i/Sumrall_2015.pdf)
 
-2. *Investigations on path indexing for graph databases.*, Max Sumrall, George H. L. Fletcher, Alexandra Poulovassilis et al, Proc. PELGA 2016, in press, EuroPar 2016, Grenoble, France. [PDF](http://graal.ens-lyon.fr/~desprez/WS/PELGA/Euro-Par_2016_WS_paper_69.pdf)
+2. *Investigations on path indexing for graph databases.*, Max Sumrall, George H. L. Fletcher, Alexandra Poulovassilis et al, Proc. PELGA 2016, in press, EuroPar 2016, Grenoble, France. [PDF](http://eprints.bbk.ac.uk/16329/7/16329.pdf)
 
 ###People
 
