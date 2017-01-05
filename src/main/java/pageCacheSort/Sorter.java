@@ -9,8 +9,7 @@ package pageCacheSort;
 
 import pathIndex.tree.KeyImpl;
 import storage.DiskCache;
-import storage.NodeHeader;
-import storage.PageProxyCursor;
+import storage.PersistedPageHeader;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -33,7 +32,7 @@ public class Sorter
     PageProxyCursor writeToCursor;
     KeyImpl comparator = KeyImpl.getComparator();
     PageSet postSortSet;
-    public static final int ALT_MAX_PAGE_SIZE = DiskCache.PAGE_SIZE - NodeHeader.NODE_HEADER_LENGTH;
+    public static final int ALT_MAX_PAGE_SIZE = DiskCache.PAGE_SIZE - PersistedPageHeader.NODE_HEADER_LENGTH;
     long finalPage;
     public final int keySize;
     final int keyByteSize;
@@ -56,7 +55,7 @@ public class Sorter
     {
         flushAfterSortedKey();
         writeToCursor.goToPage( writeToCursor.getCurrentPageId() - 1 );
-        NodeHeader.setFollowingID( writeToCursor, -1 );
+        PersistedPageHeader.setFollowingID( writeToCursor, -1 );
         readFromDisk.shutdown();
         readFromDisk.pageCacheFile.delete();
         setIteratorCursor = null;
@@ -73,7 +72,7 @@ public class Sorter
     {
         flushBulkLoadedKeys(); //check the contents of last page
         writeToCursor.goToPage( writeToCursor.getCurrentPageId() - 1 );
-        NodeHeader.setFollowingID( writeToCursor, -1 );
+        PersistedPageHeader.setFollowingID( writeToCursor, -1 );
 
         sortHelper();
         readFromDisk.shutdown();
@@ -215,12 +214,12 @@ public class Sorter
     private void flushSortedBulkLoadedKeys() throws IOException
     {
         //dump sorted keys to page,
-        NodeHeader.setNodeTypeLeaf( writeToCursor );
-        NodeHeader.setKeyLength( writeToCursor, keySize );
-        NodeHeader.setNumberOfKeys( writeToCursor, sortedKeys.size() );
-        NodeHeader.setPrecedingId( writeToCursor, writeToCursor.getCurrentPageId() - 1 );
-        NodeHeader.setFollowingID( writeToCursor, writeToCursor.getCurrentPageId() + 1 );
-        writeToCursor.setOffset( NodeHeader.NODE_HEADER_LENGTH );
+        PersistedPageHeader.setNodeTypeLeaf( writeToCursor );
+        PersistedPageHeader.setKeyLength( writeToCursor, keySize );
+        PersistedPageHeader.setNumberOfKeys( writeToCursor, sortedKeys.size() );
+        PersistedPageHeader.setPrecedingId( writeToCursor, writeToCursor.getCurrentPageId() - 1 );
+        PersistedPageHeader.setFollowingID( writeToCursor, writeToCursor.getCurrentPageId() + 1 );
+        writeToCursor.setOffset( PersistedPageHeader.NODE_HEADER_LENGTH );
         for ( long[] sortedKey : sortedKeys )
         {
             for ( long val : sortedKey )
@@ -237,12 +236,12 @@ public class Sorter
     private void flushBulkLoadedKeys() throws IOException
     {
         //dump sorted keys to page,
-        NodeHeader.setNodeTypeLeaf( writeToCursor );
-        NodeHeader.setKeyLength( writeToCursor, keySize );
-        NodeHeader.setNumberOfKeys( writeToCursor, bulkLoadedKeys.size() );
-        NodeHeader.setPrecedingId( writeToCursor, writeToCursor.getCurrentPageId() - 1 );
-        NodeHeader.setFollowingID( writeToCursor, writeToCursor.getCurrentPageId() + 1 );
-        writeToCursor.setOffset( NodeHeader.NODE_HEADER_LENGTH );
+        PersistedPageHeader.setNodeTypeLeaf( writeToCursor );
+        PersistedPageHeader.setKeyLength( writeToCursor, keySize );
+        PersistedPageHeader.setNumberOfKeys( writeToCursor, bulkLoadedKeys.size() );
+        PersistedPageHeader.setPrecedingId( writeToCursor, writeToCursor.getCurrentPageId() - 1 );
+        PersistedPageHeader.setFollowingID( writeToCursor, writeToCursor.getCurrentPageId() + 1 );
+        writeToCursor.setOffset( PersistedPageHeader.NODE_HEADER_LENGTH );
         while ( bulkLoadedKeys.size() > 0 )
         {
             long[] sortedKey = bulkLoadedKeys.poll();
@@ -259,12 +258,12 @@ public class Sorter
 
     private void flushAfterSortedKey() throws IOException
     {
-        NodeHeader.setNodeTypeLeaf( writeToCursor );
-        NodeHeader.setKeyLength( writeToCursor, keySize );
-        NodeHeader.setNumberOfKeys( writeToCursor, sortedKeys.size() );
-        NodeHeader.setPrecedingId( writeToCursor, writeToCursor.getCurrentPageId() - 1 );
-        NodeHeader.setFollowingID( writeToCursor, writeToCursor.getCurrentPageId() + 1 );
-        writeToCursor.setOffset( NodeHeader.NODE_HEADER_LENGTH );
+        PersistedPageHeader.setNodeTypeLeaf( writeToCursor );
+        PersistedPageHeader.setKeyLength( writeToCursor, keySize );
+        PersistedPageHeader.setNumberOfKeys( writeToCursor, sortedKeys.size() );
+        PersistedPageHeader.setPrecedingId( writeToCursor, writeToCursor.getCurrentPageId() - 1 );
+        PersistedPageHeader.setFollowingID( writeToCursor, writeToCursor.getCurrentPageId() + 1 );
+        writeToCursor.setOffset( PersistedPageHeader.NODE_HEADER_LENGTH );
         //dump sorted keys to page,
         for ( long[] sortedKey : sortedKeys )
         {
@@ -302,8 +301,8 @@ public class Sorter
             if ( setIteratorCursor != null )
             {
                 setIteratorCursor.goToPage( pageId );
-                int byteAmount = NodeHeader.getNumberOfKeys( setIteratorCursor ) * keySize * 8;
-                setIteratorCursor.setOffset( NodeHeader.NODE_HEADER_LENGTH );
+                int byteAmount = PersistedPageHeader.getNumberOfKeys( setIteratorCursor ) * keySize * 8;
+                setIteratorCursor.setOffset( PersistedPageHeader.NODE_HEADER_LENGTH );
                 if ( byteAmount != byteRep.length )
                 {
                     byteRep = new byte[byteAmount];
@@ -314,8 +313,8 @@ public class Sorter
             else
             {
                 PageProxyCursor cursor = readFromDisk.getCursor( pageId );
-                int byteAmount = NodeHeader.getNumberOfKeys( cursor ) * keySize * 8;
-                cursor.setOffset( NodeHeader.NODE_HEADER_LENGTH );
+                int byteAmount = PersistedPageHeader.getNumberOfKeys( cursor ) * keySize * 8;
+                cursor.setOffset( PersistedPageHeader.NODE_HEADER_LENGTH );
                 if ( byteAmount != byteRep.length )
                 {
                     byteRep = new byte[byteAmount];

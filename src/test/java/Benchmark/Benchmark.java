@@ -10,7 +10,6 @@ package Benchmark;
 import pathIndex.tree.IndexTree;
 import pathIndex.tree.SearchCursor;
 import storage.DiskCache;
-import storage.PageProxyCursor;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;

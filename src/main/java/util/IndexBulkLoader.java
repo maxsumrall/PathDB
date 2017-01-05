@@ -11,8 +11,7 @@ import pathIndex.tree.IndexInsertion;
 import pathIndex.tree.IndexTree;
 import pathIndex.tree.TreeNodeIDManager;
 import storage.DiskCache;
-import storage.NodeHeader;
-import storage.PageProxyCursor;
+import storage.PersistedPageHeader;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -41,7 +40,7 @@ public class IndexBulkLoader
         TreeNodeIDManager.currentID = finalLeafPage + 1;
         this.tree = new IndexTree( keySize, 0, this.disk );
         this.keySize = keySize;
-        this.MAX_PAIRS = ((DiskCache.PAGE_SIZE - NodeHeader.NODE_HEADER_LENGTH) / ((keySize + 1) * 8)) - 1;
+        this.MAX_PAIRS = ((DiskCache.PAGE_SIZE - PersistedPageHeader.NODE_HEADER_LENGTH) / ((keySize + 1) * 8)) - 1;
         this.RESERVED_CHILDREN_SPACE = (MAX_PAIRS + 1) * 8;
         parentWriter = new ParentBufferWriter();
     }
@@ -52,7 +51,7 @@ public class IndexBulkLoader
         PageProxyCursor cursor = this.disk.getCursor( 0 );
         long firstInternalNode = IndexTree.acquireNewInternalNode( cursor );
         cursor.goToPage( firstInternalNode );
-        NodeHeader.setKeyLength( cursor, keySize );
+        PersistedPageHeader.setKeyLength( cursor, keySize );
         this.currentParent = firstInternalNode;
 
         for ( int i = 0; i < finalLeafPage; i++ )
@@ -60,12 +59,12 @@ public class IndexBulkLoader
             addLeafToParent( cursor, i );
         }
         cursor.goToPage( currentParent );
-        cursor.setOffset( NodeHeader.NODE_HEADER_LENGTH );
+        cursor.setOffset( PersistedPageHeader.NODE_HEADER_LENGTH );
         byte[] children = parentWriter.getChildren();
         cursor.putBytes( children );
         byte[] keys = parentWriter.getKeys();
         cursor.putBytes( keys );
-        NodeHeader.setNumberOfKeys( cursor, ((keys.length / keySize) / 8) );
+        PersistedPageHeader.setNumberOfKeys( cursor, ((keys.length / keySize) / 8) );
         //Leaf row and one parent row made.
         //Build tree above internal nodes.
         root = buildUpperLeaves( cursor, firstInternalNode );
@@ -79,14 +78,14 @@ public class IndexBulkLoader
         {
             cursor.goToPage( this.currentParent );
             cursor.deferWriting();
-            cursor.setOffset( NodeHeader.NODE_HEADER_LENGTH );
+            cursor.setOffset( PersistedPageHeader.NODE_HEADER_LENGTH );
             cursor.putBytes( parentWriter.getChildren() );
             cursor.putBytes( parentWriter.getKeys() );
-            NodeHeader.setNumberOfKeys( cursor, MAX_PAIRS );
+            PersistedPageHeader.setNumberOfKeys( cursor, MAX_PAIRS );
             cursor.resumeWriting();
             long newParent = IndexTree.acquireNewInternalNode( cursor );
             cursor.goToPage( newParent );
-            NodeHeader.setKeyLength( cursor, keySize );
+            PersistedPageHeader.setKeyLength( cursor, keySize );
             IndexTree.updateSiblingAndFollowingIdsInsertion( cursor, this.currentParent, newParent );
             this.currentParent = newParent;
             this.currentOffset = 0;
@@ -111,29 +110,29 @@ public class IndexBulkLoader
     {
         long firstParent = IndexTree.acquireNewInternalNode( cursor );
         cursor.goToPage( firstParent );
-        NodeHeader.setKeyLength( cursor, keySize );
+        PersistedPageHeader.setKeyLength( cursor, keySize );
         this.currentParent = firstParent;
         this.currentOffset = 0;
         this.currentPair = 0;
         long currentNode = leftMostNode;
         cursor.goToPage( leftMostNode );
-        long nextNode = NodeHeader.getSiblingID( cursor );
+        long nextNode = PersistedPageHeader.getSiblingID( cursor );
 
         while ( nextNode != -1l )
         {
             copyUpLeafToParent( cursor, currentNode );
             currentNode = nextNode;
             cursor.goToPage( nextNode );
-            nextNode = NodeHeader.getSiblingID( cursor );
+            nextNode = PersistedPageHeader.getSiblingID( cursor );
         }
         copyUpLeafToParent( cursor, currentNode );
         cursor.goToPage( currentParent );
         cursor.deferWriting();
-        cursor.setOffset( NodeHeader.NODE_HEADER_LENGTH );
+        cursor.setOffset( PersistedPageHeader.NODE_HEADER_LENGTH );
         cursor.putBytes( parentWriter.getChildren() );
         byte[] keys = parentWriter.getKeys();
         cursor.putBytes( keys );
-        NodeHeader.setNumberOfKeys( cursor, ((keys.length / keySize) / 8) );
+        PersistedPageHeader.setNumberOfKeys( cursor, ((keys.length / keySize) / 8) );
         cursor.resumeWriting();
 
         if ( firstParent != this.currentParent )
@@ -153,14 +152,14 @@ public class IndexBulkLoader
         {
             cursor.goToPage( this.currentParent );
             cursor.deferWriting();
-            cursor.setOffset( NodeHeader.NODE_HEADER_LENGTH );
+            cursor.setOffset( PersistedPageHeader.NODE_HEADER_LENGTH );
             cursor.putBytes( parentWriter.getChildren() );
             cursor.putBytes( parentWriter.getKeys() );
-            NodeHeader.setNumberOfKeys( cursor, MAX_PAIRS );
+            PersistedPageHeader.setNumberOfKeys( cursor, MAX_PAIRS );
             cursor.resumeWriting();
             long newParent = IndexTree.acquireNewInternalNode( cursor );
             cursor.goToPage( newParent );
-            NodeHeader.setKeyLength( cursor, keySize );
+            PersistedPageHeader.setKeyLength( cursor, keySize );
             IndexTree.updateSiblingAndFollowingIdsInsertion( cursor, this.currentParent, newParent );
             this.currentParent = newParent;
             this.currentOffset = 0;
@@ -182,7 +181,7 @@ public class IndexBulkLoader
 
     public byte[] traverseToFindFirstKeyInLeafAsBytes( PageProxyCursor cursor ) throws IOException
     {
-        if ( NodeHeader.isLeafNode( cursor ) )
+        if ( PersistedPageHeader.isLeafNode( cursor ) )
         {
             return IndexInsertion.getFirstKeyInNodeAsBytes( cursor );
         }

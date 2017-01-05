@@ -8,8 +8,7 @@
 package pathIndex;
 
 import pathIndex.tree.IndexTree;
-import storage.NodeHeader;
-import storage.PageProxyCursor;
+import storage.PersistedPageHeader;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -28,10 +27,10 @@ public class InMemoryNode
     public InMemoryNode( IndexTree tree, long id ) throws IOException
     {
         PageProxyCursor cursor = tree.disk.getCursor( id );
-        leafNode = NodeHeader.isLeafNode( cursor );
-        precedingNode = NodeHeader.getPrecedingID( cursor );
-        followingNode = NodeHeader.getSiblingID( cursor );
-        if ( NodeHeader.isLeafNode( cursor ) )
+        leafNode = PersistedPageHeader.isLeafNode( cursor );
+        precedingNode = PersistedPageHeader.getPrecedingID( cursor );
+        followingNode = PersistedPageHeader.getSiblingID( cursor );
+        if ( PersistedPageHeader.isLeafNode( cursor ) )
         {
             leafNodeSameLengthKeyDeserialization( cursor );
         }
@@ -43,10 +42,10 @@ public class InMemoryNode
 
     public InMemoryNode( PageProxyCursor cursor ) throws IOException
     {
-        leafNode = NodeHeader.isLeafNode( cursor );
-        precedingNode = NodeHeader.getPrecedingID( cursor );
-        followingNode = NodeHeader.getSiblingID( cursor );
-        if ( NodeHeader.isLeafNode( cursor ) )
+        leafNode = PersistedPageHeader.isLeafNode( cursor );
+        precedingNode = PersistedPageHeader.getPrecedingID( cursor );
+        followingNode = PersistedPageHeader.getSiblingID( cursor );
+        if ( PersistedPageHeader.isLeafNode( cursor ) )
         {
             leafNodeSameLengthKeyDeserialization( cursor );
         }
@@ -58,10 +57,10 @@ public class InMemoryNode
 
     protected void iNodeSameLengthKeyDeserialization( PageProxyCursor cursor )
     {
-        keyLength = NodeHeader.getKeyLength( cursor );
-        numberOfKeys = NodeHeader.getNumberOfKeys( cursor );
+        keyLength = PersistedPageHeader.getKeyLength( cursor );
+        numberOfKeys = PersistedPageHeader.getNumberOfKeys( cursor );
         //ArrayList<Long> newKey = new ArrayList<>();
-        cursor.setOffset( NodeHeader.NODE_HEADER_LENGTH );
+        cursor.setOffset( PersistedPageHeader.NODE_HEADER_LENGTH );
         //Read all of the children id values
         //for(int i = 0; (numberOfKeys > 0) && i < (numberOfKeys + 1); i++){ //There is +1 children ids more than the number of keys
         for ( int i = 0; i < (numberOfKeys + 1); i++ )
@@ -84,11 +83,11 @@ public class InMemoryNode
 
     protected void leafNodeSameLengthKeyDeserialization( PageProxyCursor cursor )
     {
-        this.keyLength = NodeHeader.getKeyLength( cursor );
-        this.numberOfKeys = NodeHeader.getNumberOfKeys( cursor );
+        this.keyLength = PersistedPageHeader.getKeyLength( cursor );
+        this.numberOfKeys = PersistedPageHeader.getNumberOfKeys( cursor );
         ArrayList<Long[]> deserialize_keys = new ArrayList<>();
         //LinkedList<Long> newKey = new LinkedList<>();
-        cursor.setOffset( NodeHeader.NODE_HEADER_LENGTH );
+        cursor.setOffset( PersistedPageHeader.NODE_HEADER_LENGTH );
         for ( int i = 0; i < numberOfKeys; i++ )
         {
             Long[] newKey = new Long[keyLength];
