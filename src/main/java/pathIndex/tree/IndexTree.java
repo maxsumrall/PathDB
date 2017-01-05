@@ -7,17 +7,14 @@
 
 package pathIndex.tree;
 
+import pathDB.PathPrefix;
 import storage.DiskCache;
-import storage.NodeHeader;
-import storage.PageProxyCursor;
+import storage.PersistedPageHeader;
 
 import java.io.IOException;
 
 import org.neo4j.io.pagecache.PagedFile;
 
-/**
- * Static class for manipulating nodes without doing any object instantiation.
- */
 public class IndexTree
 {
 
@@ -61,15 +58,15 @@ public class IndexTree
             PageProxyCursor cursor = disk.getCursor( rootNodeId );
             rootNodeId = acquireNewInternalNode( cursor );
             cursor.goToPage( rootNodeId );
-            cursor.setOffset( NodeHeader.NODE_HEADER_LENGTH );
+            cursor.setOffset( PersistedPageHeader.NODE_HEADER_LENGTH );
             cursor.putLong( childA );
             cursor.putLong( childB );
             for ( int i = 0; i < key.length; i++ )
             {
                 cursor.putLong( key[i] );
             }
-            NodeHeader.setKeyLength( cursor, key.length );
-            NodeHeader.setNumberOfKeys( cursor, 1 );
+            PersistedPageHeader.setKeyLength( cursor, key.length );
+            PersistedPageHeader.setNumberOfKeys( cursor, 1 );
         }
         catch ( IOException e )
         {
@@ -78,9 +75,9 @@ public class IndexTree
     }
 
 
-    public SearchCursor find( long[] key ) throws IOException
+    public SearchCursor find( PathPrefix path) throws IOException
     {
-        return nodeSearch.find( key );
+        return nodeSearch.find( path );
     }
 
     public SearchCursor find( PageProxyCursor cursor, long[] key ) throws IOException
@@ -109,7 +106,7 @@ public class IndexTree
         try
         {
             PageProxyCursor cursor = disk.getCursor( rootNodeId );
-            NodeHeader.setPrecedingId( cursor, newPrecedingId );
+            PersistedPageHeader.setPrecedingId( cursor, newPrecedingId );
 
         }
         catch ( IOException e )
@@ -123,7 +120,7 @@ public class IndexTree
         try
         {
             PageProxyCursor cursor = disk.getCursor( rootNodeId );
-            NodeHeader.setFollowingID( cursor, newFollowingId );
+            PersistedPageHeader.setFollowingID( cursor, newFollowingId );
         }
         catch ( IOException e )
         {
@@ -134,7 +131,7 @@ public class IndexTree
     public long getChildIdAtIndex( PageProxyCursor cursor, int indexOfChild )
     {
         long childId = 0;
-        childId = cursor.getLong( NodeHeader.NODE_HEADER_LENGTH + indexOfChild * 8 );
+        childId = cursor.getLong( PersistedPageHeader.NODE_HEADER_LENGTH + indexOfChild * 8 );
         return childId;
     }
 
@@ -173,7 +170,7 @@ public class IndexTree
     public static int getIndexOfChild( PageProxyCursor cursor, long childId )
     {
         int childIndex = 0;
-        cursor.setOffset( NodeHeader.NODE_HEADER_LENGTH );
+        cursor.setOffset( PersistedPageHeader.NODE_HEADER_LENGTH );
         long child = cursor.getLong();
         while ( child != childId )
         {
@@ -188,32 +185,32 @@ public class IndexTree
             throws IOException
     {
         cursor.goToPage( nodeId );
-        long oldFollowing = NodeHeader.getSiblingID( cursor );
-        NodeHeader.setFollowingID( cursor, newNodeId );
+        long oldFollowing = PersistedPageHeader.getSiblingID( cursor );
+        PersistedPageHeader.setFollowingID( cursor, newNodeId );
         if ( oldFollowing != -1l )
         {
             cursor.goToPage( oldFollowing );
-            NodeHeader.setPrecedingId( cursor, newNodeId );
+            PersistedPageHeader.setPrecedingId( cursor, newNodeId );
         }
         cursor.goToPage( newNodeId );
-        NodeHeader.setFollowingID( cursor, oldFollowing );
-        NodeHeader.setPrecedingId( cursor, nodeId );
+        PersistedPageHeader.setFollowingID( cursor, oldFollowing );
+        PersistedPageHeader.setPrecedingId( cursor, nodeId );
     }
 
     public static void updateSiblingAndFollowingIdsDeletion( PageProxyCursor cursor, long nodeId ) throws IOException
     {
         cursor.goToPage( nodeId );
-        long following = NodeHeader.getSiblingID( cursor );
-        long preceding = NodeHeader.getPrecedingID( cursor );
+        long following = PersistedPageHeader.getSiblingID( cursor );
+        long preceding = PersistedPageHeader.getPrecedingID( cursor );
         if ( following != -1l )
         {
             cursor.goToPage( following );
-            NodeHeader.setPrecedingId( cursor, preceding );
+            PersistedPageHeader.setPrecedingId( cursor, preceding );
         }
         if ( preceding != -1l )
         {
             cursor.goToPage( preceding );
-            NodeHeader.setFollowingID( cursor, following );
+            PersistedPageHeader.setFollowingID( cursor, following );
         }
     }
 
@@ -221,7 +218,7 @@ public class IndexTree
     {
         long newNodeId = TreeNodeIDManager.acquire();
         cursor.goToPage( newNodeId );
-        NodeHeader.initializeLeafNode( cursor );
+        PersistedPageHeader.initializeLeafNode( cursor );
         return newNodeId;
     }
 
@@ -231,7 +228,7 @@ public class IndexTree
         try
         {
             PageProxyCursor cursor = disk.getCursor( newNodeId );
-            NodeHeader.initializeLeafNode( cursor, this.keySize );
+            PersistedPageHeader.initializeLeafNode( cursor, this.keySize );
         }
         catch ( Exception e )
         {
@@ -244,7 +241,7 @@ public class IndexTree
     {
         long newNodeId = TreeNodeIDManager.acquire();
         cursor.goToPage( newNodeId );
-        NodeHeader.initializeInternalNode( cursor );
+        PersistedPageHeader.initializeInternalNode( cursor );
         return newNodeId;
     }
 
@@ -255,22 +252,22 @@ public class IndexTree
 
     public static void removeFirstKeyInInternalNode( PageProxyCursor cursor )
     {
-        byte[] compactionBytes = new byte[DiskCache.PAGE_SIZE - NodeHeader.NODE_HEADER_LENGTH - 8]; //removing child
-        cursor.setOffset( NodeHeader.NODE_HEADER_LENGTH + 8 );
+        byte[] compactionBytes = new byte[DiskCache.PAGE_SIZE - PersistedPageHeader.NODE_HEADER_LENGTH - 8]; //removing child
+        cursor.setOffset( PersistedPageHeader.NODE_HEADER_LENGTH + 8 );
         cursor.getBytes( compactionBytes );
-        cursor.setOffset( NodeHeader.NODE_HEADER_LENGTH );
+        cursor.setOffset( PersistedPageHeader.NODE_HEADER_LENGTH );
         cursor.putBytes( compactionBytes );
 
-        int numberOfKeys = NodeHeader.getNumberOfKeys( cursor );
+        int numberOfKeys = PersistedPageHeader.getNumberOfKeys( cursor );
 
-        int keyLength = NodeHeader.getKeyLength( cursor );
+        int keyLength = PersistedPageHeader.getKeyLength( cursor );
         compactionBytes =
-                new byte[DiskCache.PAGE_SIZE - NodeHeader.NODE_HEADER_LENGTH - (numberOfKeys * 8) - (8 * keyLength)];
-        cursor.setOffset( NodeHeader.NODE_HEADER_LENGTH + (numberOfKeys * 8) + (8 * keyLength) );
+                new byte[DiskCache.PAGE_SIZE - PersistedPageHeader.NODE_HEADER_LENGTH - (numberOfKeys * 8) - (8 * keyLength)];
+        cursor.setOffset( PersistedPageHeader.NODE_HEADER_LENGTH + (numberOfKeys * 8) + (8 * keyLength) );
         cursor.getBytes( compactionBytes );
-        cursor.setOffset( NodeHeader.NODE_HEADER_LENGTH + (numberOfKeys * 8) );
+        cursor.setOffset( PersistedPageHeader.NODE_HEADER_LENGTH + (numberOfKeys * 8) );
         cursor.putBytes( compactionBytes );
 
-        NodeHeader.setNumberOfKeys( cursor, numberOfKeys - 1 );
+        PersistedPageHeader.setNumberOfKeys( cursor, numberOfKeys - 1 );
     }
 }
