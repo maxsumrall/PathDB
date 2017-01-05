@@ -1,11 +1,34 @@
 PathDB
 =====
 
-[![Build Status](https://travis-ci.org/maxsumrall/PathDB.svg?branch=master)](https://travis-ci.org/maxsumrall/PathDB)
+<!-- TODO: Current build is not ready yet for Travis, enable this batch again after refactoring is done -->
+<!-- [![Build Status](https://travis-ci.org/maxsumrall/PathDB.svg?branch=master)](https://travis-ci.org/maxsumrall/PathDB) -->
 
-A data store for graph paths.
+A data store for graph paths. Take a look at our [website](http://www.pathdb.com/).
 
-#### Current implementation
+### What is PathDB?
+
+PathDB, a data store for path shaped data. Use PathDB to super-charge your path-oriented graph queries. Built by a Graph Database expert, PathDB is an easy way to store and query your data. Primarliy used adjacent to fully-featured database as a graph-specific index.
+
+###A simple way to store and query your data
+
+The power behind PathDB is the form your data gets stored. Connected data is stored with their connections. By knowing you will query the data, paths of connections are expanded on to improve query time. And by how PathDB works, you can choose the balance between query speed and storage space. With the cost of disk space rapidly declining, this cost-analysis become more in favor of this type of data storage technique.
+
+###Based on extensive research
+
+PathDB is the result of a significant amount of research of graph data and graph structured indexing data structures. Based on the research, using PathDB can improve the speed of path queries by 1000x! To find out how PathDB works on a deeper level, dive into the research yourself.
+
+1. *Path Indexing for Efficient Path Query Processing in Graph Databases*, Max Sumrall, M.Sc. Thesis, Technical University of Eindhoven. [PDF](http://alexandria.tue.nl/extra1/afstversl/wsk-i/Sumrall_2015.pdf)
+
+2. *Investigations on path indexing for graph databases.*, Max Sumrall, George H. L. Fletcher, Alexandra Poulovassilis et al, Proc. PELGA 2016, in press, EuroPar 2016, Grenoble, France. [PDF](http://graal.ens-lyon.fr/~desprez/WS/PELGA/Euro-Par_2016_WS_paper_69.pdf)
+
+###People
+
+PathDB is the work of Max Sumrall. [[Github]](https://github.com/maxsumrall) [[LinkedIn]](http://www.linkedin.com/in/maxsumrall)
+
+
+<!-- Old readme which described classes of the implementation before the refactoring -->
+<!-- #### Current implementation
 
 PathDB is a _k-path_ index implemented as a B+ tree. Datasets can be bulk-loaded into the index. The index can be sorted and paths can be found and merged into new entries of the index. The index and operations are disk-based and cached into memory. _IndexTree_ is the main class which handles most of the operations.
 
@@ -176,4 +199,4 @@ Interpreter
 
 _WORK IN PROGRESS_
 
-This section describes how query-plans are executed and where join-algorithms fit in.
+This section describes how query-plans are executed and where join-algorithms fit in. -->
