@@ -2,7 +2,8 @@ PathDB
 =====
 
 <!-- TODO: Current build is not ready yet for Travis, enable this batch again after refactoring is done -->
-<!-- [![Build Status](https://travis-ci.org/maxsumrall/PathDB.svg?branch=master)](https://travis-ci.org/maxsumrall/PathDB) -->
+[![Build Status](https://travis-ci.org/maxsumrall/PathDB.svg?branch=in-memory-tree)](https://travis-ci
+.org/maxsumrall/PathDB)
 
 A data store for graph paths. Take a look at our [website](http://www.pathdb.com/).
 
