@@ -2,8 +2,8 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>max</groupId>
-    <artifactId>PathDB</artifactId>
+    <groupId>com.pathdb</groupId>
+    <artifactId>pathdb</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>jar</packaging>
 
@@ -15,7 +15,22 @@
         <inceptionYear>2015</inceptionYear>
     </properties>
 
+    <!-- DEPENDENCIES -->
     <dependencies>
+        <!-- Neo4J-->
+        <dependency>
+            <groupId>org.neo4j</groupId>
+            <artifactId>neo4j</artifactId>
+            <version>3.0.6</version>
+        </dependency>
+        <!-- Neo4J IO-->
+        <dependency>
+            <groupId>org.neo4j</groupId>
+            <artifactId>neo4j-io</artifactId>
+            <version>3.0.6</version>
+        </dependency>
+
+        <!-- TESTING -->
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
@@ -23,29 +38,15 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.neo4j</groupId>
-            <artifactId>neo4j</artifactId>
-            <version>3.0.6</version>
-        </dependency>
-        <dependency>
             <groupId>org.hamcrest</groupId>
             <artifactId>hamcrest-all</artifactId>
             <version>1.3</version>
             <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>org.neo4j</groupId>
-            <artifactId>neo4j-io</artifactId>
-            <version>3.0.6</version>
-        </dependency>
     </dependencies>
-    <licenses>
-        <license>
-            <name>GNU General Public License (GPL)</name>
-            <url>http://www.gnu.org/licenses/gpl.txt</url>
-        </license>
-    </licenses>
+
     <build>
+        <!-- PLUGINS -->
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -68,7 +69,8 @@
                     </execution>
                 </executions>
             </plugin>
-            <!-- Creating current year element -->
+
+            <!-- Set currentYear variable, which we need for adding licenses to files -->
             <plugin>
                 <groupId>org.codehaus.groovy.maven</groupId>
                 <artifactId>gmaven-plugin</artifactId>
@@ -91,7 +93,8 @@
                     </execution>
                 </executions>
             </plugin>
-            <!-- Adding header to file -->
+
+            <!-- Add licence header to all appropriate files -->
             <plugin>
                 <groupId>com.mycila.maven-license-plugin</groupId>
                 <artifactId>maven-license-plugin</artifactId>
@@ -130,4 +133,11 @@
             </plugin>
         </plugins>
     </build>
+
+    <licenses>
+        <license>
+            <name>GNU General Public License (GPL)</name>
+            <url>http://www.gnu.org/licenses/gpl.txt</url>
+        </license>
+    </licenses>
 </project>
