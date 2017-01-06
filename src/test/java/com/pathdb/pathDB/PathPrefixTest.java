@@ -28,8 +28,8 @@ public class PathPrefixTest
     public void samePathPrefixPrefixesEqualEachOtherTest() throws Exception
     {
         // given
-        PathPrefix a = new PathPrefix( 6, equalNodes( 4, 42 ) );
-        PathPrefix b = new PathPrefix( 6, equalNodes( 4, 42 ) );
+        PathPrefix a = new PathPrefix(42, 6, equalNodes( 4, 42 ) );
+        PathPrefix b = new PathPrefix(42, 6, equalNodes( 4, 42 ) );
 
         // then
         assertEquals( a, a );
@@ -40,15 +40,15 @@ public class PathPrefixTest
     public void differentPathPrefixPrefixesAreNotEqualsTest() throws Exception
     {
         // given
-        PathPrefix a = new PathPrefix( 6, equalNodes( 4, 42 ) );
-        PathPrefix b = new PathPrefix( 6, equalNodes( 4, 24 ) );
-        PathPrefix c = new PathPrefix( 6, equalNodes( 3, 42 ) );
+        PathPrefix a = new PathPrefix(42, 6, equalNodes( 4, 42 ) );
+        PathPrefix b = new PathPrefix(42, 6, equalNodes( 4, 24 ) );
+        PathPrefix c = new PathPrefix(42, 6, equalNodes( 3, 42 ) );
 
         List<Node> differentNodes = equalNodes( 3, 42 );
         differentNodes.remove( differentNodes.size() - 1 );
         differentNodes.add( new Node( 43 ) );
 
-        PathPrefix d = new PathPrefix( 6, differentNodes );
+        PathPrefix d = new PathPrefix(42, 6, differentNodes );
 
         // then
         assertFalse( a.equals( b ) );
@@ -63,9 +63,9 @@ public class PathPrefixTest
     public void pathPrefixOrderingOnFirstNodeTest() throws Exception
     {
         // given
-        PathPrefix a = new PathPrefix( 6, incrementingNodes( 4, 1 ) );
-        PathPrefix b = new PathPrefix( 6, incrementingNodes( 4, 2 ) );
-        PathPrefix c = new PathPrefix( 6, incrementingNodes( 4, 3 ) );
+        PathPrefix a = new PathPrefix(42, 6, incrementingNodes( 4, 1 ) );
+        PathPrefix b = new PathPrefix(42, 6, incrementingNodes( 4, 2 ) );
+        PathPrefix c = new PathPrefix(42, 6, incrementingNodes( 4, 3 ) );
 
         // then
         assertEquals( -1, a.compareTo( b ) );
@@ -91,9 +91,9 @@ public class PathPrefixTest
         nodesC.add( new Node( 4 ) );
 
         // given
-        PathPrefix a = new PathPrefix( 6, nodesA );
-        PathPrefix b = new PathPrefix( 6, nodesB );
-        PathPrefix c = new PathPrefix( 6, nodesC );
+        PathPrefix a = new PathPrefix(42, 6, nodesA );
+        PathPrefix b = new PathPrefix(42, 6, nodesB );
+        PathPrefix c = new PathPrefix(42, 6, nodesC );
 
         // then
         assertEquals( -1, a.compareTo( b ) );
@@ -155,7 +155,7 @@ public class PathPrefixTest
             nodes.add( new Node( value ) );
         }
 
-        return new PathPrefix( prefixLength, nodes );
+        return new PathPrefix(42, prefixLength, nodes );
     }
 
     public static PathPrefix randomPathPrefix( int prefixLength, int length )
@@ -165,7 +165,7 @@ public class PathPrefixTest
         {
             nodes.add( new Node( random.nextLong() ) );
         }
-        return new PathPrefix( prefixLength, nodes );
+        return new PathPrefix(42,  prefixLength, nodes );
     }
 
 

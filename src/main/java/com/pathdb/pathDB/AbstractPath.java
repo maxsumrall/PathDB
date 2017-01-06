@@ -12,6 +12,13 @@ package com.pathdb.pathDB;
  */
 public class AbstractPath implements Comparable<AbstractPath>
 {
+    final long pathId;
+
+    public AbstractPath( long pathId )
+    {
+        this.pathId = pathId;
+    }
+
     @Override
     public int compareTo( AbstractPath o )
     {
@@ -45,6 +52,10 @@ public class AbstractPath implements Comparable<AbstractPath>
 
     private int comparePathPrefixToPath( PathPrefix a, Path b )
     {
+        if ( a.pathId != b.pathId )
+        {
+            return a.pathId > b.pathId ? 1 : -1;
+        }
         if ( a.length != b.length )
         {
             return a.length - b.length;
@@ -56,7 +67,7 @@ public class AbstractPath implements Comparable<AbstractPath>
                 return Long.compare( a.nodes.get( i ).getId(), b.nodes.get( i ).getId() );
             }
         }
-        return 0;
+        return -1;
     }
 
     private int comparePathPrefixToPathPrefix( PathPrefix a, PathPrefix b )
@@ -64,6 +75,10 @@ public class AbstractPath implements Comparable<AbstractPath>
         if ( a == b )
         {
             return 0;
+        }
+        if ( a.pathId != b.pathId )
+        {
+            return a.pathId > b.pathId ? 1 : -1;
         }
         if ( a.length != b.length )
         {
@@ -88,6 +103,10 @@ public class AbstractPath implements Comparable<AbstractPath>
         if ( a == b )
         {
             return 0;
+        }
+        if ( a.pathId != b.pathId )
+        {
+            return a.pathId > b.pathId ? 1 : -1;
         }
         if ( a.length != b.length )
         {

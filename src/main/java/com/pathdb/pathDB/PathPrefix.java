@@ -10,16 +10,26 @@ package com.pathdb.pathDB;
 import java.util.List;
 import java.util.Objects;
 
+import static java.util.Collections.emptyList;
+
 public class PathPrefix extends AbstractPath
 {
     public final int length;
     public final List<Node> nodes;
-    public final int prefixLength;
+    final int prefixLength;
 
-
-    public PathPrefix( int pathLength, List<Node> nodes )
+    public PathPrefix( long pathId, int length )
     {
-        this.length = pathLength;
+        super(pathId);
+        this.length = length;
+        this.nodes = emptyList();
+        this.prefixLength = 0;
+    }
+
+    public PathPrefix( long pathId, int length, List<Node> nodes )
+    {
+        super( pathId );
+        this.length = length;
         this.nodes = nodes;
         this.prefixLength = nodes.size();
     }
@@ -36,7 +46,7 @@ public class PathPrefix extends AbstractPath
             return false;
         }
         PathPrefix that = (PathPrefix) o;
-        return length == that.length && Objects.equals( nodes, that.nodes );
+        return pathId == that.pathId && length == that.length && Objects.equals( nodes, that.nodes );
     }
 
     @Override

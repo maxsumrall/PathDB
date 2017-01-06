@@ -16,8 +16,9 @@ public class Path extends AbstractPath
     public final int length;
     public List<Node> nodes;
 
-    public Path( List<Node> nodes )
+    public Path( long pathId, List<Node> nodes )
     {
+        super( pathId );
         this.length = nodes.size();
         this.nodes = nodes;
     }
