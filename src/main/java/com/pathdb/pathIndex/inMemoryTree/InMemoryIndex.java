@@ -1,10 +1,11 @@
-package com.pathdb.pathIndex.inMemory;
+package com.pathdb.pathIndex.inMemoryTree;
 
-import pathIndex.AbstractPath;
-import pathIndex.Node;
-import pathIndex.Path;
-import pathIndex.PathIndex;
-import pathIndex.PathPrefix;
+
+import com.pathdb.pathIndex.AbstractPath;
+import com.pathdb.pathIndex.Node;
+import com.pathdb.pathIndex.Path;
+import com.pathdb.pathIndex.PathIndex;
+import com.pathdb.pathIndex.PathPrefix;
 
 import java.io.IOException;
 import java.util.ArrayList;

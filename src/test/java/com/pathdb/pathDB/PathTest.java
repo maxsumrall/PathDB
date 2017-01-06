@@ -7,6 +7,8 @@
 
 package com.pathdb.pathDB;
 
+import com.pathdb.pathIndex.Node;
+import com.pathdb.pathIndex.Path;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -111,7 +113,7 @@ public class PathTest
     public void sequentialPathsComparisionTest() throws Exception
     {
         // given
-        List<Path> paths = generateSequentialPaths( 4, 10 );
+        List<Path> paths = generateSequentialPaths( 42, 4, 10 );
 
         //then
         assertTrue( pathsAreSorted( paths ) );
@@ -161,7 +163,7 @@ public class PathTest
         return nodes;
     }
 
-    public static Path simplePath( int length, Long value )
+    public static Path simplePath( long pathID, int length, Long value )
     {
         List<Node> nodes = new ArrayList<>( length );
 
@@ -170,7 +172,7 @@ public class PathTest
             nodes.add( new Node( value ) );
         }
 
-        return new Path(42,  nodes );
+        return new Path( pathID, nodes );
     }
 
     public static Path randomPath( int length )
@@ -180,7 +182,7 @@ public class PathTest
         {
             nodes.add( new Node( random.nextLong() ) );
         }
-        return new Path(42,  nodes );
+        return new Path( 42, nodes );
     }
 
     public static List<Path> generateRandomPaths( int length, int amount )
@@ -193,12 +195,12 @@ public class PathTest
         return paths;
     }
 
-    public static List<Path> generateSequentialPaths( int length, int amount )
+    public static List<Path> generateSequentialPaths( long pathId, int length, int amount )
     {
         List<Path> paths = new ArrayList<>( amount );
         for ( long i = 0; i < amount; i++ )
         {
-            paths.add( simplePath( length, i ) );
+            paths.add( simplePath( pathId, length, i ) );
         }
         return paths;
     }

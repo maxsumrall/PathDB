@@ -5,7 +5,7 @@
  * You may use, distribute and modify this code under the terms of the GPLv3 license.
  */
 
-package com.pathdb.pathDB;
+package com.pathdb.pathIndex;
 
 import java.util.List;
 import java.util.Objects;
@@ -52,12 +52,12 @@ public class PathPrefix extends AbstractPath
     @Override
     public int hashCode()
     {
-        return Objects.hash( length, nodes );
+        return Objects.hash( pathId, length, nodes );
     }
 
     @Override
     public String toString()
     {
-        return "PathPrefix{" + "length=" + length + ", nodes=" + nodes + '}';
+        return "PathPrefix{" + "pathId=" + pathId + ", length=" + length + ", nodes=" + nodes + "}\n";
     }
 }

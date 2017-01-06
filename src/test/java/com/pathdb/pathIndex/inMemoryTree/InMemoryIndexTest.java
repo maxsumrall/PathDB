@@ -1,9 +1,9 @@
-package com.pathdb.pathIndex.inMemory;
+package com.pathdb.pathIndex.inMemoryTree;
 
+import com.pathdb.pathIndex.Node;
+import com.pathdb.pathIndex.Path;
+import com.pathdb.pathIndex.PathPrefix;
 import org.junit.Test;
-import pathIndex.Node;
-import pathIndex.Path;
-import pathIndex.PathPrefix;
 
 import java.util.ArrayList;
 import java.util.List;
