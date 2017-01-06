@@ -5,16 +5,16 @@
  * You may use, distribute and modify this code under the terms of the GPLv3 license.
  */
 
-package com.pathdb.pathDB;
+package com.pathdb.pathIndex;
 
 /**
  * Exists for abstracting this comparision logic between path prefixes and paths.
  */
 public class AbstractPath implements Comparable<AbstractPath>
 {
-    final long pathId;
+    public final long pathId;
 
-    public AbstractPath( long pathId )
+    AbstractPath( long pathId )
     {
         this.pathId = pathId;
     }
@@ -67,7 +67,11 @@ public class AbstractPath implements Comparable<AbstractPath>
                 return Long.compare( a.nodes.get( i ).getId(), b.nodes.get( i ).getId() );
             }
         }
-        return -1;
+        if ( a.prefixLength != b.length )
+        {
+            return a.prefixLength - b.length;
+        }
+        return 0;
     }
 
     private int comparePathPrefixToPathPrefix( PathPrefix a, PathPrefix b )

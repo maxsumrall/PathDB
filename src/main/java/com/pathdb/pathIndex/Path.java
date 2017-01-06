@@ -5,7 +5,7 @@
  * You may use, distribute and modify this code under the terms of the GPLv3 license.
  */
 
-package com.pathdb.pathDB;
+package com.pathdb.pathIndex;
 
 import java.util.List;
 import java.util.Objects;
@@ -34,8 +34,10 @@ public class Path extends AbstractPath
         {
             return false;
         }
-        Path path = (Path) o;
-        return length == path.length && Objects.equals( nodes, path.nodes );
+        Path that = (Path) o;
+        return  pathId == that.pathId &&
+                length == that.length &&
+                Objects.equals( nodes, that.nodes );
     }
 
     @Override
@@ -47,9 +49,7 @@ public class Path extends AbstractPath
     @Override
     public String toString()
     {
-        return "Path{" + "length=" + length + ", nodes=" + nodes + "}\n";
+        return "Path{" + "pathId=" + pathId + ", length=" + length + ", nodes=" + nodes + "}\n";
     }
-
-
 }
 
