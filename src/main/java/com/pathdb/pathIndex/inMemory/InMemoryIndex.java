@@ -1,4 +1,4 @@
-package pathIndex.inMemoryTree;
+package com.pathdb.pathIndex.inMemory;
 
 import pathIndex.AbstractPath;
 import pathIndex.Node;

@@ -7,7 +7,7 @@
 
 package com.pathdb.pathDB;
 
-import com.pathdb.pathIndex.tree.IndexTree;
+import com.pathdb.pathIndex.diskBased.IndexTree;
 
 import java.io.IOException;
 

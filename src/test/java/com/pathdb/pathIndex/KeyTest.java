@@ -7,8 +7,8 @@
 
 package com.pathdb.pathIndex;
 
+import com.pathdb.pathIndex.diskBased.KeyImpl;
 import org.junit.Test;
-import com.pathdb.pathIndex.tree.KeyImpl;
 
 import java.util.Random;
 

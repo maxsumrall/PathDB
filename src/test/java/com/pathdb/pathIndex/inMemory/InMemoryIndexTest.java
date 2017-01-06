@@ -1,4 +1,4 @@
-package pathIndex.inMemoryTree;
+package com.pathdb.pathIndex.inMemory;
 
 import org.junit.Test;
 import pathIndex.Node;

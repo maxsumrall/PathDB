@@ -15,7 +15,6 @@ public class Node
 
     public Node( long id )
     {
-
         this.id = id;
     }
 
