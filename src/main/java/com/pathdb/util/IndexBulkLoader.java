@@ -7,9 +7,9 @@
 
 package com.pathdb.util;
 
-import com.pathdb.pathIndex.tree.IndexInsertion;
-import com.pathdb.pathIndex.tree.IndexTree;
-import com.pathdb.pathIndex.tree.TreeNodeIDManager;
+import com.pathdb.pathIndex.diskBased.IndexInsertion;
+import com.pathdb.pathIndex.diskBased.IndexTree;
+import com.pathdb.pathIndex.diskBased.TreeNodeIDManager;
 import com.pathdb.storage.DiskCache;
 import com.pathdb.storage.PersistedPageHeader;
 

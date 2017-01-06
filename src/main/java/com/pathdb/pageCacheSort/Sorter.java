@@ -7,7 +7,7 @@
 
 package com.pathdb.pageCacheSort;
 
-import com.pathdb.pathIndex.tree.KeyImpl;
+import com.pathdb.pathIndex.diskBased.KeyImpl;
 import com.pathdb.storage.DiskCache;
 import com.pathdb.storage.PersistedPageHeader;
 

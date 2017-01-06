@@ -5,7 +5,7 @@
  * You may use, distribute and modify this code under the terms of the GPLv3 license.
  */
 
-package com.pathdb.pathIndex.tree;
+package com.pathdb.pathIndex.diskBased;
 
 public class RemoveResultProxy
 {

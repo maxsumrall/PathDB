@@ -7,8 +7,8 @@
 
 package com.pathdb.Benchmark;
 
-import com.pathdb.pathIndex.tree.IndexTree;
-import com.pathdb.pathIndex.tree.SearchCursor;
+import com.pathdb.pathIndex.diskBased.IndexTree;
+import com.pathdb.pathIndex.diskBased.SearchCursor;
 import com.pathdb.storage.DiskCache;
 
 import java.io.BufferedWriter;

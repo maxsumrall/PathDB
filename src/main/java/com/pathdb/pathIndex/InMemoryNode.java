@@ -7,7 +7,7 @@
 
 package com.pathdb.pathIndex;
 
-import com.pathdb.pathIndex.tree.IndexTree;
+import com.pathdb.pathIndex.diskBased.IndexTree;
 import com.pathdb.storage.PersistedPageHeader;
 
 import java.io.IOException;

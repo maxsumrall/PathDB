@@ -7,10 +7,10 @@
 
 package com.pathdb.pathIndex;
 
-import org.junit.Ignore;
-import com.pathdb.pathIndex.tree.IndexTree;
+import com.pathdb.pathIndex.diskBased.IndexTree;
 import com.pathdb.storage.DiskCache;
 import com.pathdb.util.IndexBulkLoader;
+import org.junit.Ignore;
 
 import java.io.IOException;
 
