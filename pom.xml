@@ -29,6 +29,11 @@
             <artifactId>neo4j-io</artifactId>
             <version>3.0.6</version>
         </dependency>
+        <dependency>
+            <groupId>com.opencsv</groupId>
+            <artifactId>opencsv</artifactId>
+            <version>3.8</version>
+        </dependency>
 
         <!-- TESTING -->
         <dependency>

@@ -19,7 +19,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.TreeMap;
 
-public class InMemoryIndex implements PathIndex
+class InMemoryIndex implements PathIndex
 {
     private TreeMap<AbstractPath,AbstractPath> treeMap;
 
