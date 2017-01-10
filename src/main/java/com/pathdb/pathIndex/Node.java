@@ -5,7 +5,7 @@
  * You may use, distribute and modify this code under the terms of the GPLv3 license.
  */
 
-package com.pathdb.pathDB;
+package com.pathdb.pathIndex;
 
 import java.util.Objects;
 
@@ -15,7 +15,6 @@ public class Node
 
     public Node( long id )
     {
-
         this.id = id;
     }
 

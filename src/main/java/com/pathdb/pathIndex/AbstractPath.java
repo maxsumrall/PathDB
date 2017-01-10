@@ -5,13 +5,20 @@
  * You may use, distribute and modify this code under the terms of the GPLv3 license.
  */
 
-package com.pathdb.pathDB;
+package com.pathdb.pathIndex;
 
 /**
  * Exists for abstracting this comparision logic between path prefixes and paths.
  */
 public class AbstractPath implements Comparable<AbstractPath>
 {
+    public final long pathId;
+
+    AbstractPath( long pathId )
+    {
+        this.pathId = pathId;
+    }
+
     @Override
     public int compareTo( AbstractPath o )
     {
@@ -45,6 +52,10 @@ public class AbstractPath implements Comparable<AbstractPath>
 
     private int comparePathPrefixToPath( PathPrefix a, Path b )
     {
+        if ( a.pathId != b.pathId )
+        {
+            return a.pathId > b.pathId ? 1 : -1;
+        }
         if ( a.length != b.length )
         {
             return a.length - b.length;
@@ -56,6 +67,10 @@ public class AbstractPath implements Comparable<AbstractPath>
                 return Long.compare( a.nodes.get( i ).getId(), b.nodes.get( i ).getId() );
             }
         }
+        if ( a.prefixLength != b.length )
+        {
+            return a.prefixLength - b.length;
+        }
         return 0;
     }
 
@@ -64,6 +79,10 @@ public class AbstractPath implements Comparable<AbstractPath>
         if ( a == b )
         {
             return 0;
+        }
+        if ( a.pathId != b.pathId )
+        {
+            return a.pathId > b.pathId ? 1 : -1;
         }
         if ( a.length != b.length )
         {
@@ -88,6 +107,10 @@ public class AbstractPath implements Comparable<AbstractPath>
         if ( a == b )
         {
             return 0;
+        }
+        if ( a.pathId != b.pathId )
+        {
+            return a.pathId > b.pathId ? 1 : -1;
         }
         if ( a.length != b.length )
         {

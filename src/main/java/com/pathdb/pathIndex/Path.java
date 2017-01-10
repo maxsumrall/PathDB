@@ -5,23 +5,22 @@
  * You may use, distribute and modify this code under the terms of the GPLv3 license.
  */
 
-package com.pathdb.pathDB;
+package com.pathdb.pathIndex;
 
 import java.util.List;
 import java.util.Objects;
 
-public class PathPrefix extends AbstractPath
+
+public class Path extends AbstractPath
 {
     public final int length;
-    public final List<Node> nodes;
-    public final int prefixLength;
+    public List<Node> nodes;
 
-
-    public PathPrefix( int pathLength, List<Node> nodes )
+    public Path( long pathId, List<Node> nodes )
     {
-        this.length = pathLength;
+        super( pathId );
+        this.length = nodes.size();
         this.nodes = nodes;
-        this.prefixLength = nodes.size();
     }
 
     @Override
@@ -35,8 +34,10 @@ public class PathPrefix extends AbstractPath
         {
             return false;
         }
-        PathPrefix that = (PathPrefix) o;
-        return length == that.length && Objects.equals( nodes, that.nodes );
+        Path that = (Path) o;
+        return  pathId == that.pathId &&
+                length == that.length &&
+                Objects.equals( nodes, that.nodes );
     }
 
     @Override
@@ -48,6 +49,7 @@ public class PathPrefix extends AbstractPath
     @Override
     public String toString()
     {
-        return "PathPrefix{" + "length=" + length + ", nodes=" + nodes + '}';
+        return "Path{" + "pathId=" + pathId + ", length=" + length + ", nodes=" + nodes + "}\n";
     }
 }
+

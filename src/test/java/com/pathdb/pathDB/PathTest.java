@@ -7,6 +7,8 @@
 
 package com.pathdb.pathDB;
 
+import com.pathdb.pathIndex.Node;
+import com.pathdb.pathIndex.Path;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -29,8 +31,8 @@ public class PathTest
     public void samePathsEqualEachOtherTest() throws Exception
     {
         // given
-        Path a = new Path( equalNodes( 4, 42 ) );
-        Path b = new Path( equalNodes( 4, 42 ) );
+        Path a = new Path( 42, equalNodes( 4, 42 ) );
+        Path b = new Path( 42, equalNodes( 4, 42 ) );
 
         // then
         assertEquals( a, a );
@@ -41,15 +43,15 @@ public class PathTest
     public void differentPathsAreNotEqualsTest() throws Exception
     {
         // given
-        Path a = new Path( equalNodes( 4, 42 ) );
-        Path b = new Path( equalNodes( 4, 24 ) );
-        Path c = new Path( equalNodes( 3, 42 ) );
+        Path a = new Path( 42, equalNodes( 4, 42 ) );
+        Path b = new Path( 42, equalNodes( 4, 24 ) );
+        Path c = new Path( 42, equalNodes( 3, 42 ) );
 
         List<Node> differentNodes = equalNodes( 3, 42 );
         differentNodes.remove( differentNodes.size() - 1 );
         differentNodes.add( new Node( 43 ) );
 
-        Path d = new Path( differentNodes );
+        Path d = new Path( 42, differentNodes );
 
         // then
         assertFalse( a.equals( b ) );
@@ -64,9 +66,9 @@ public class PathTest
     public void pathOrderingOnFirstNodeTest() throws Exception
     {
         // given
-        Path a = new Path( incrementingNodes( 4, 1 ) );
-        Path b = new Path( incrementingNodes( 4, 2 ) );
-        Path c = new Path( incrementingNodes( 4, 3 ) );
+        Path a = new Path( 42, incrementingNodes( 4, 1 ) );
+        Path b = new Path( 42, incrementingNodes( 4, 2 ) );
+        Path c = new Path( 42, incrementingNodes( 4, 3 ) );
 
         // then
         assertEquals( -1, a.compareTo( b ) );
@@ -92,9 +94,9 @@ public class PathTest
         nodesC.add( new Node( 4 ) );
 
         // given
-        Path a = new Path( nodesA );
-        Path b = new Path( nodesB );
-        Path c = new Path( nodesC );
+        Path a = new Path( 42, nodesA );
+        Path b = new Path( 42, nodesB );
+        Path c = new Path( 42, nodesC );
 
         // then
         assertEquals( -1, a.compareTo( b ) );
@@ -111,7 +113,7 @@ public class PathTest
     public void sequentialPathsComparisionTest() throws Exception
     {
         // given
-        List<Path> paths = generateSequentialPaths( 4, 10 );
+        List<Path> paths = generateSequentialPaths( 42, 4, 10 );
 
         //then
         assertTrue( pathsAreSorted( paths ) );
@@ -161,7 +163,7 @@ public class PathTest
         return nodes;
     }
 
-    public static Path simplePath( int length, Long value )
+    public static Path simplePath( long pathID, int length, Long value )
     {
         List<Node> nodes = new ArrayList<>( length );
 
@@ -170,7 +172,7 @@ public class PathTest
             nodes.add( new Node( value ) );
         }
 
-        return new Path( nodes );
+        return new Path( pathID, nodes );
     }
 
     public static Path randomPath( int length )
@@ -180,7 +182,7 @@ public class PathTest
         {
             nodes.add( new Node( random.nextLong() ) );
         }
-        return new Path( nodes );
+        return new Path( 42, nodes );
     }
 
     public static List<Path> generateRandomPaths( int length, int amount )
@@ -193,12 +195,12 @@ public class PathTest
         return paths;
     }
 
-    public static List<Path> generateSequentialPaths( int length, int amount )
+    public static List<Path> generateSequentialPaths( long pathId, int length, int amount )
     {
         List<Path> paths = new ArrayList<>( amount );
         for ( long i = 0; i < amount; i++ )
         {
-            paths.add( simplePath( length, i ) );
+            paths.add( simplePath( pathId, length, i ) );
         }
         return paths;
     }

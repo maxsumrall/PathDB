@@ -5,9 +5,13 @@
  * You may use, distribute and modify this code under the terms of the GPLv3 license.
  */
 
-package com.pathdb.storage;
+package com.pathdb.pathIndex;
 
-public interface Page
+import java.io.IOException;
+
+public interface PathIndex
 {
-    long getPageId();
+    Iterable<Path> getPaths( PathPrefix pathPrefix ) throws IOException;
+
+    void insert( Path path );
 }
