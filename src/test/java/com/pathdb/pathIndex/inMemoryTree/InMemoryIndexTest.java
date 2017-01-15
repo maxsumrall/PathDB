@@ -10,6 +10,7 @@ package com.pathdb.pathIndex.inMemoryTree;
 import com.pathdb.pathIndex.Node;
 import com.pathdb.pathIndex.Path;
 import com.pathdb.pathIndex.PathPrefix;
+import com.pathdb.statistics.InMemoryStatisticsStore;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -24,7 +25,7 @@ public class InMemoryIndexTest
     public void simpleInMemoryTest() throws Exception
     {
         // given
-        InMemoryIndex inMemoryIndex = new InMemoryIndex();
+        InMemoryIndex inMemoryIndex = new InMemoryIndex( new InMemoryStatisticsStore() );
         List<Node> nodes = new ArrayList<>();
         nodes.add( new Node( 1 ) );
         nodes.add( new Node( 2 ) );
@@ -105,7 +106,7 @@ public class InMemoryIndexTest
 
     public InMemoryIndex createTestDatabaseA()
     {
-        InMemoryIndex inMemoryIndex = new InMemoryIndex();
+        InMemoryIndex inMemoryIndex = new InMemoryIndex( new InMemoryStatisticsStore() );
         for ( int i = 0; i < 1000; i++ )
         {
             for ( int j = 0; j < 100; j++ )
@@ -122,7 +123,7 @@ public class InMemoryIndexTest
 
     public InMemoryIndex createTestDatabaseB()
     {
-        InMemoryIndex inMemoryIndex = new InMemoryIndex();
+        InMemoryIndex inMemoryIndex = new InMemoryIndex( new InMemoryStatisticsStore() );
         for ( int i = 0; i < 1000; i++ )
         {
             for ( int j = 0; j < 100; j++ )

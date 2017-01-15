@@ -13,6 +13,8 @@ import com.pathdb.pathIndex.Node;
 import com.pathdb.pathIndex.Path;
 import com.pathdb.pathIndex.PathIndex;
 import com.pathdb.pathIndex.PathPrefix;
+import com.pathdb.statistics.InMemoryStatisticsStore;
+import com.pathdb.statistics.StatisticsStoreReader;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -21,10 +23,12 @@ import java.util.TreeMap;
 
 class InMemoryIndex implements PathIndex
 {
+    private final InMemoryStatisticsStore statisticsStore;
     private TreeMap<AbstractPath,AbstractPath> treeMap;
 
-    InMemoryIndex()
+    InMemoryIndex( InMemoryStatisticsStore statisticsStore )
     {
+        this.statisticsStore = statisticsStore;
         treeMap = new TreeMap<>();
     }
 
@@ -39,6 +43,13 @@ class InMemoryIndex implements PathIndex
     public void insert( Path path )
     {
         treeMap.put( path, path );
+        statisticsStore.incrementCardinality( path.pathId, 1 );
+    }
+
+    @Override
+    public StatisticsStoreReader getStatisticsStore()
+    {
+        return statisticsStore;
     }
 
     private PathPrefix nextIncrementalPath( PathPrefix pathPrefix )

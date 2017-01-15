@@ -29,7 +29,6 @@ public class CSVImportTest
         assertEquals(createdPaths, importedPaths);
     }
 
-
     /**
      * creates a csv file with the specified number of lines (paths)
      *

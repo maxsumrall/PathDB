@@ -9,6 +9,7 @@ package com.pathdb.pathIndex.inMemoryTree;
 
 import com.pathdb.pathIndex.IndexFactory;
 import com.pathdb.pathIndex.PathIndex;
+import com.pathdb.statistics.InMemoryStatisticsStore;
 
 public class InMemoryIndexFactory implements IndexFactory
 {
@@ -17,7 +18,7 @@ public class InMemoryIndexFactory implements IndexFactory
     {
         if(index == null)
         {
-            index = new InMemoryIndex();
+            index = new InMemoryIndex( new InMemoryStatisticsStore() );
         }
         return index;
     }

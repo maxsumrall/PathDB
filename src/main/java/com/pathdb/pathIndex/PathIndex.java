@@ -7,6 +7,8 @@
 
 package com.pathdb.pathIndex;
 
+import com.pathdb.statistics.StatisticsStoreReader;
+
 import java.io.IOException;
 
 public interface PathIndex
@@ -14,4 +16,6 @@ public interface PathIndex
     Iterable<Path> getPaths( PathPrefix pathPrefix ) throws IOException;
 
     void insert( Path path );
+
+    StatisticsStoreReader getStatisticsStore();
 }
