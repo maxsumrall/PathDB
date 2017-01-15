@@ -1,3 +1,40 @@
+dist: pristine
+sudo: false
 language: java
 jdk:
   - oraclejdk8
+env:
+  global:
+    - secure: "Ah/cCQSybHYPWNPwQ5FSi7OlzDHSiAMAA2gF2A6fLBpyjd5fY1g4gROdwTRWpIu8/1DPq6gEwJTI75iodXAlntFsnW4juXt/nuvn/JLhqzktECG34GCpnyStFoiPAzBoLoKc0wN2mxPn7V73pb73IjQktM731n6YHDLvEz8ni5KDYDKjlmgflyRNYUbZT8nMZ2WZMwhmyjHdWpWgL3cTYsHR3vnLAdyZ7fGrjooQqql1JwV5JaQWDn/IAcBp7BDxw/9qn5r7Ir39wCXXAVGH/SOErPYL3SAIs+p/5UzbN3ViZ4vLlVQqxMYCGiOkJy7Xeqya4VMscn1ier9/z00cbpFvrH40FagO66nCaf1DsfAb9S+oqdzqq4E20G8XutYVOmouUcjp+b8JwVvlfdokFVvOOoDZNWUHF73hoEk7MxLtbn986He1MeXpScVRqK5hxDtxfsheKsm2H3ze8QGN+bZr8rzYQP+Vt31SapRV47ZfQvqkk1WRSMDDmjOaa0ajth2uyakKSAMcl2O9AhgwiMyaqftdgR0rLCZMcMYKflWlKaflZFxyvYwVcFyhgO85XWAqL6eM9xbDQBdJjQ8TTmemyCee61bdeu0gmNuawjX3ExVx/YGFX8xWbJRv2gdY/PuxHHh+io9PSO3jHIAm4FrmkcwgrqM1XgFJ6QYMijU="
+    - # ^^ OSSRH_JIRA_USERNAME
+    - secure: "rtHk/OytpULgvRdY3hCyQvyd+3JUxu2pcTusWqn0Prr9YFYeedEL0kMqL2FokJ6Ps2P3/rZP8gPywNtprh7lAIvI79BmqFB4SDIQey/jgNH8EqEyuNedPEROe63htmZT8DL520MOuRxL3fNprUtABelUCypQ1aWB2DRhthGYkILJmFgS4n62+A/RN/VHmKz5ILfQXnjuf8RKH1ZMih5afLcM4/dlmgxlYLhW6fMrNGHckTvwxN8xI9nr7662SZs9gNfU9nm9RBAkuUzsPbYCwkb4CmLs1ZwyZp0OInLnnfKHwGUFBc/238DKidWVfUW06An7stlmfcmwksc4piVsra44ZF5ckWNms9yFOE04dNy7Wk/GZO+EJolR7Z+BjWcrZ4DPMNKwKGYgAqoWnpaRnZ/gbl3Nq8Hi0esTrtdO0PatwUgP9Tq8orI6HVR9CF01DCgk0Rr6bHek/NU+u8dHh5hPuu+lcvETwyolbYqNFg76nJ2pvq+tkuWiv/bQD4xC2QYRh1zRbXMZ2/MQMm+TKiU5nUbIFqKhjpm+LtHIiq4ZEFvt+zEjEk+wpOH3ufAPCXX9qO3Mab62Uhh69KNd0fw/7uBozANu71FnWXG1HSM0QJN7gamPtpd6eAAU0fQW1Sc+gUFDPkgK+Y2hQMKbi0lQmd1wWPxc+wkhy9K5SoE="
+    - # ^^ OSSRH_JIRA_PASSWORD
+    - secure: "PHc9KTNp2QFQq+0HDAqHSRGYvKCsf8FV4QyFB8Ut4neBg850RSlI8dus7F2JbscAhyTFT447XpLj2gHNyOcdwgdHQRWsD1FlTfipgI/Q7Ayse8VyM+Xxuogp2ChXtj7eLSU65nSof8FnpL0OpM7OhBzcpWlhqCQmTcgFn8hvdkuAu+vxrlOG7BqUdwXKOsaqgx4xy3iEaLPMkLryHhjT/h4WWfxabyy8cxqOOTxXSjbaU5hhnxLdNW1/d+4dvMfvk7bjsWQM/LniBjq1FtyLxQiRl3C3/VtYUetE3wbAnuIlxRenax7LAfO1sl/41r/pQLFuYQLaD75RQ918JooB5JlQcX4RuOC15dPyyEb0U/N4f3hBqeK9+51Zy435bCuOoACs1cmpDbjQBLrIJFAXqiVmTaNsYKtKDTuOS3ipSdjNqWT0Cce+qlS8A7kRQ3kQUbyo18WRDpIxD3th6J/kyVz6Y0eeP0hOcFUdwT6ZgDZlmSk9khCYh+PGBfksBD+G9zQnsEc4hdJS5AObNYNlf833DZVfT+MDe4OtCX2fTl0nDMvKdeLgHJ4+2fh9eEseBYTaRQJTV7v1D6NGBLOCWpMoXpQwmCSXbc+UXSrlEJ257UQ8Wdm7XdkhAoBXb6IvEOQtIci3MfiT5DdittjBWOBq1nSCkVVTh9zSVIjM3zo="
+    - # ^^ GPG_KEY_NAME
+    - secure: "3eo0kEeBbZzOE8wfV6dBiQd9kp2WomUajveg2RHAm/i0na11LvAjWRjEyD8kljcui+6oUGgTo5mdIBzs0Hb8c9vWHS9+HG9vwwQ4Cs2ydce1zLGQPKnT2tA+GjbQI3sB4B7hHw4kzRUIOLGfYqr56MvI7MOvN6hr0MsJDvOKLUBRXuQhpnYhua5LwasANQz/7HIHmxXYaAICHKP2KBdrJ2RnZVlZoo6qQU+RGio+d+PEeGbltrrdSvu02958+WeuYOdwOuX4u10DCh194QACCd+2L7tZwI+p425PmT5DTAHtHBySWJg1qJ9I/F+5ye6RVm+IIOb5KbVEO/lnrKwX2hWngy5fLKKBtKozj7nbxDOQ63a8hfdMw417xpLS4aLNtviLmZS1SSBFZ+H1xEkMA6C7pVBLCxZsRnVKVtQ5zcLPnW81IZhpz10jFMF8wWzY1N4ELniyDdPgr5fuwl63NvfO0Eh7iZhuvCUmUNPOcM/4LV6vco7DSga7jEozu/pjPmsTROL72NFR1edxBojTbjyO9B/i2kvjO0xx6Jo6vOSzqaw+xrsJSG4Wznr5OvAeSynbO4ijM2dwxXe/F5oSWbDBvtFY88JNmF8c/ir4v9QXYSZEv2LOU0L1sAXq9fFem4JYROkWrAir6fvfOTdtLhmpIfNvggDuE1Fm0jNgjTo="
+    - # ^^ GPG_PASSPHRASE
+
+install:
+  - mvn --settings ${TRAVIS_BUILD_DIR}/.travis/settings.xml install -DskipTests=true -Dgpg.skip -Dmaven.javadoc.skip=true -B -V
+
+before_install:
+  - if [ ! -z "$GPG_SECRET_KEYS" ]; then echo $GPG_SECRET_KEYS | base64 --decode | gpg2 --allow-secret-key-import --import --default-key; fi
+  - if [ ! -z "$GPG_OWNERTRUST" ]; then echo $GPG_OWNERTRUST | base64 --decode | gpg2 --import-ownertrust; fi
+
+deploy:
+  -
+    provider: script
+    script: .travis/deploy.sh
+    skip_cleanup: true
+    on:
+      repo: maxsumrall/PathDB
+      branch: master
+      jdk: oraclejdk8
+  -
+    provider: script
+    script: .travis/deploy.sh
+    skip_cleanup: true
+    on:
+      repo: maxsumrall/PathDB
+      tags: true
+      jdk: oraclejdk8
