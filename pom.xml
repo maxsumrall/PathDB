@@ -19,6 +19,10 @@
             <url>https://maxsumrall.com</url>
         </developer>
     </developers>
+    <scm>
+        <url>https://github.com/maxsumrall/pathdb</url>
+        <connection>git@github.com:maxsumrall/PathDB.git</connection>
+    </scm>
     <licenses>
         <license>
             <name>GNU General Public License (GPL)</name>
