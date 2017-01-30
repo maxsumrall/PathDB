@@ -4,6 +4,7 @@ PathDB
 <!-- TODO: Current build is not ready yet for Travis, enable this batch again after refactoring is done -->
 [![Build Status](https://travis-ci.org/maxsumrall/PathDB.svg?branch=in-memory-tree)](https://travis-ci
 .org/maxsumrall/PathDB)
+[![Maven Central](https://img.shields.io/maven-central/v/com.pathdb/pathdb.svg?maxAge=3600)](http://search.maven.org/#search%7Cga%7C1%7Cg%3A%22com.pathdb%22%20AND%20a%3A%22pathdb%22)
 
 A data store for graph paths. Take a look at our [website](http://www.pathdb.com/).
 
