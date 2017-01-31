@@ -14,23 +14,17 @@ import static java.util.Collections.emptyList;
 
 public class PathPrefix extends AbstractPath
 {
-    public final int length;
-    public final List<Node> nodes;
     final int prefixLength;
 
     public PathPrefix( long pathId, int length )
     {
-        super(pathId);
-        this.length = length;
-        this.nodes = emptyList();
+        super( pathId, length, emptyList() );
         this.prefixLength = 0;
     }
 
     public PathPrefix( long pathId, int length, List<Node> nodes )
     {
-        super( pathId );
-        this.length = length;
-        this.nodes = nodes;
+        super( pathId, length, nodes );
         this.prefixLength = nodes.size();
     }
 
@@ -46,7 +40,7 @@ public class PathPrefix extends AbstractPath
             return false;
         }
         PathPrefix that = (PathPrefix) o;
-        return pathId == that.pathId && length == that.length && Objects.equals( nodes, that.nodes );
+        return pathId == that.pathId && length == that.length && Objects.equals( super.nodes, that.nodes );
     }
 
     @Override
@@ -59,5 +53,22 @@ public class PathPrefix extends AbstractPath
     public String toString()
     {
         return "PathPrefix{" + "pathId=" + pathId + ", length=" + length + ", nodes=" + nodes + "}\n";
+    }
+
+    public boolean validPrefix( Path path )
+    {
+        if(pathId != path.pathId)
+        {
+            return false;
+        }
+
+        for ( int i = 0; i < nodes.size(); i++ )
+        {
+            if ( !(nodes.get( i ).getId() == (path.nodes.get( i ).getId())) )
+            {
+                return false;
+            }
+        }
+        return true;
     }
 }

@@ -7,16 +7,22 @@
 
 package com.pathdb.pathIndex;
 
+import java.util.List;
+
 /**
  * Exists for abstracting this comparision logic between path prefixes and paths.
  */
 public class AbstractPath implements Comparable<AbstractPath>
 {
     public final long pathId;
+    public final int length;
+    public final List<Node> nodes;
 
-    AbstractPath( long pathId )
+    AbstractPath( long pathId, int length, List<Node> nodes)
     {
         this.pathId = pathId;
+        this.length = length;
+        this.nodes = nodes;
     }
 
     @Override

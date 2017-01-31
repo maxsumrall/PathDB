@@ -53,6 +53,17 @@
             <artifactId>opencsv</artifactId>
             <version>3.8</version>
         </dependency>
+        <dependency>
+            <groupId>org.lmdbjava</groupId>
+            <artifactId>lmdbjava</artifactId>
+            <version>0.0.5</version>
+        </dependency>
+        <dependency>
+            <groupId>com.jakewharton.byteunits</groupId>
+            <artifactId>byteunits</artifactId>
+            <version>0.9.1</version>
+        </dependency>
+
 
         <!-- TESTING -->
         <dependency>

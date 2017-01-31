@@ -14,17 +14,12 @@ import com.pathdb.statistics.InMemoryStatisticsStore;
 public class InMemoryIndexFactory implements IndexFactory
 {
     private PathIndex index;
-    public PathIndex getInMemoryIndex()
+    public PathIndex getIndex()
     {
         if(index == null)
         {
             index = new InMemoryIndex( new InMemoryStatisticsStore() );
         }
         return index;
-    }
-
-    public PathIndex getPersistedDiskBasedIndex()
-    {
-        throw new UnsupportedOperationException( "The disk backed index is not available." );
     }
 }
