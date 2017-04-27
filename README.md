@@ -2,8 +2,7 @@ PathDB
 =====
 
 <!-- TODO: Current build is not ready yet for Travis, enable this batch again after refactoring is done -->
-[![Build Status](https://travis-ci.org/maxsumrall/PathDB.svg?branch=in-memory-tree)](https://travis-ci
-.org/maxsumrall/PathDB)
+[![Build Status](https://travis-ci.org/maxsumrall/PathDB.svg?branch=master)](https://travis-ci.org/maxsumrall/PathDB)
 [![Maven Central](https://img.shields.io/maven-central/v/com.pathdb/pathdb.svg?maxAge=3600)](http://search.maven.org/#search%7Cga%7C1%7Cg%3A%22com.pathdb%22%20AND%20a%3A%22pathdb%22)
 
 A data store for graph paths. Take a look at our [website](http://www.pathdb.com/).
@@ -12,11 +11,11 @@ A data store for graph paths. Take a look at our [website](http://www.pathdb.com
 
 PathDB, a data store for path shaped data. Use PathDB to super-charge your path-oriented graph queries. Built by a Graph Database expert, PathDB is an easy way to store and query your data. Primarliy used adjacent to fully-featured database as a graph-specific index.
 
-###A simple way to store and query your data
+### A simple way to store and query your data
 
 The power behind PathDB is the form your data gets stored. Connected data is stored with their connections. By knowing you will query the data, paths of connections are expanded on to improve query time. And by how PathDB works, you can choose the balance between query speed and storage space. With the cost of disk space rapidly declining, this cost-analysis become more in favor of this type of data storage technique.
 
-###Based on extensive research
+### Based on extensive research
 
 PathDB is the result of a significant amount of research of graph data and graph structured indexing data structures. Based on the research, using PathDB can improve the speed of path queries by 1000x! To find out how PathDB works on a deeper level, dive into the research yourself.
 
@@ -24,7 +23,7 @@ PathDB is the result of a significant amount of research of graph data and graph
 
 2. *Investigations on path indexing for graph databases.*, Max Sumrall, George H. L. Fletcher, Alexandra Poulovassilis et al, Proc. PELGA 2016, in press, EuroPar 2016, Grenoble, France. [PDF](http://eprints.bbk.ac.uk/16329/7/16329.pdf)
 
-###People
+### People
 
 PathDB is the work of Max Sumrall. [[Github]](https://github.com/maxsumrall) [[LinkedIn]](http://www.linkedin.com/in/maxsumrall)
 
