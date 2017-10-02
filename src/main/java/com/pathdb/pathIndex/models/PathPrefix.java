@@ -12,7 +12,7 @@ import org.immutables.value.Value;
 @Value.Immutable
 public abstract class PathPrefix implements PathInterface
 {
-    public int getPrefixLength(){
+    int getPrefixLength(){
         return getNodes().size();
     }
 

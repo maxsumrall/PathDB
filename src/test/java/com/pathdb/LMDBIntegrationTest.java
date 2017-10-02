@@ -1,32 +1,11 @@
 /**
- * Copyright (C) 2015-2017 - All rights reserved. This file is part of the pathdb project which is
- * released under the GPLv3 license. See file LICENSE.txt or go to
- * http://www.gnu.org/licenses/gpl.txt for full license details. You may use, distribute and modify
- * this code under the terms of the GPLv3 license.
+ * Copyright (C) 2015-2017 - All rights reserved.
+ * This file is part of the pathdb project which is released under the GPLv3 license.
+ * See file LICENSE.txt or go to http://www.gnu.org/licenses/gpl.txt for full license details.
+ * You may use, distribute and modify this code under the terms of the GPLv3 license.
  */
+
 package com.pathdb;
-
-import com.pathdb.pathIndex.PathSerializer;
-import com.pathdb.pathIndex.models.ImmutablePath;
-import com.pathdb.pathIndex.models.Node;
-import com.pathdb.pathIndex.models.Path;
-import com.pathdb.pathIndex.persisted.LMDBIndexFactory;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-import org.lmdbjava.Cursor;
-import org.lmdbjava.Dbi;
-import org.lmdbjava.Env;
-import org.lmdbjava.GetOp;
-import org.lmdbjava.Txn;
-
-import java.io.File;
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.List;
 
 import static com.jakewharton.byteunits.BinaryByteUnit.MEBIBYTES;
 import static com.pathdb.pathIndex.PathSerializer.serialize;
@@ -39,6 +18,26 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.lmdbjava.DbiFlags.MDB_CREATE;
 import static org.lmdbjava.Env.create;
+
+import com.pathdb.pathIndex.PathSerializer;
+import com.pathdb.pathIndex.models.ImmutablePath;
+import com.pathdb.pathIndex.models.Node;
+import com.pathdb.pathIndex.models.Path;
+import java.io.File;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.List;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
+import org.lmdbjava.Cursor;
+import org.lmdbjava.Dbi;
+import org.lmdbjava.Env;
+import org.lmdbjava.GetOp;
+import org.lmdbjava.Txn;
 
 public class LMDBIntegrationTest {
     private static final String DB_NAME = LMDBIntegrationTest.class.getName();
@@ -67,13 +66,13 @@ public class LMDBIntegrationTest {
         List<Node> nodesA = new ArrayList<>();
         nodesA.add(new Node(1));
         nodesA.add(new Node(2));
-        Path pathA = ImmutablePath.builder().pathId(42).addAllNodes(nodesA).build();
+        Path pathA = ImmutablePath.of(42, nodesA);
         ByteBuffer keyA = serialize(pathA);
 
         List<Node> nodesB = new ArrayList<>();
         nodesB.add(new Node(1));
         nodesB.add(new Node(3));
-        Path pathB = ImmutablePath.builder().pathId(42).addAllNodes(nodesB).build();
+        Path pathB = ImmutablePath.of(42, nodesB);
         ByteBuffer keyB = serialize(pathB);
 
         db.put(keyA, serialize(pathA));

@@ -7,79 +7,53 @@
 
 package com.pathdb.pathIndex.models;
 
-public final class PathComparator
-{
-    public static int comparePathPrefixToPath( PathPrefix a, Path b )
-    {
-        if ( a.getPathId() != b.getPathId() )
-        {
+public final class PathComparator {
+    public static int comparePathPrefixToPath(PathPrefix a, Path b) {
+        if (a.getPathId() != b.getPathId()) {
             return a.getPathId() > b.getPathId() ? 1 : -1;
         }
-        if ( a.getLength() != b.getLength() )
-        {
-            return a.getLength() - b.getLength();
-        }
-        for ( int i = 0; i < a.getPrefixLength(); i++ )
-        {
-            if ( a.getNodes().get( i ).getId() - b.getNodes().get( i ).getId() != 0 )
-            {
-                return Long.compare( a.getNodes().get( i ).getId(), b.getNodes().get( i ).getId() );
+        for (int i = 0; i < a.getPrefixLength(); i++) {
+            if (a.getNodes().get(i).getId() - b.getNodes().get(i).getId() != 0) {
+                return Long.compare(a.getNodes().get(i).getId(), b.getNodes().get(i).getId());
             }
         }
-        if ( a.getPrefixLength() != b.getLength() )
-        {
+        if (a.getPrefixLength() != b.getLength()) {
             return a.getPrefixLength() - b.getLength();
         }
         return 0;
     }
 
-    public static int comparePathPrefixToPathPrefix( PathPrefix a, PathPrefix b )
-    {
-        if ( a == b )
-        {
+    public static int comparePathPrefixToPathPrefix(PathPrefix a, PathPrefix b) {
+        if (a == b) {
             return 0;
         }
-        if ( a.getPathId() != b.getPathId() )
-        {
+        if (a.getPathId() != b.getPathId()) {
             return a.getPathId() > b.getPathId() ? 1 : -1;
         }
-        if ( a.getLength() != b.getLength() )
-        {
+        if (a.getPrefixLength() != b.getPrefixLength()) {
             return a.getLength() - b.getLength();
         }
-        if ( a.getPrefixLength() != b.getPrefixLength() )
-        {
-            return a.getLength() - b.getLength();
-        }
-        for ( int i = 0; i < a.getPrefixLength(); i++ )
-        {
-            if ( a.getNodes().get( i ).getId() - b.getNodes().get( i ).getId() != 0 )
-            {
-                return Long.compare( a.getNodes().get( i ).getId(), b.getNodes().get( i ).getId() );
+        for (int i = 0; i < a.getPrefixLength(); i++) {
+            if (a.getNodes().get(i).getId() - b.getNodes().get(i).getId() != 0) {
+                return Long.compare(a.getNodes().get(i).getId(), b.getNodes().get(i).getId());
             }
         }
         return 0;
     }
 
-    public static int comparePathToPath( Path a, Path b )
-    {
-        if ( a == b )
-        {
+    public static int comparePathToPath(Path a, Path b) {
+        if (a == b) {
             return 0;
         }
-        if ( a.getPathId() != b.getPathId() )
-        {
+        if (a.getPathId() != b.getPathId()) {
             return a.getPathId() > b.getPathId() ? 1 : -1;
         }
-        if ( a.getLength() != b.getLength() )
-        {
+        if (a.getLength() != b.getLength()) {
             return a.getLength() - b.getLength();
         }
-        for ( int i = 0; i < a.getLength(); i++ )
-        {
-            if ( a.getNodes().get( i ).getId() - b.getNodes().get( i ).getId() != 0 )
-            {
-                return Long.compare( a.getNodes().get( i ).getId(), b.getNodes().get( i ).getId() );
+        for (int i = 0; i < a.getLength(); i++) {
+            if (a.getNodes().get(i).getId() - b.getNodes().get(i).getId() != 0) {
+                return Long.compare(a.getNodes().get(i).getId(), b.getNodes().get(i).getId());
             }
         }
         return 0;

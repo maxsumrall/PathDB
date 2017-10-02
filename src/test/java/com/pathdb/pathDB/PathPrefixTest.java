@@ -36,9 +36,9 @@ public class PathPrefixTest
     {
         // given
         PathPrefix a =
-                ImmutablePathPrefix.builder().pathId( 42 ).length( 6 ).addAllNodes( equalNodes( 4, 42 ) ).build();
+                ImmutablePathPrefix.of( 42, equalNodes( 4, 42 ) );
         PathPrefix b =
-                ImmutablePathPrefix.builder().pathId( 42 ).length( 6 ).addAllNodes( equalNodes( 4, 42 ) ).build();
+                ImmutablePathPrefix.builder().pathId( 42 ).addAllNodes( equalNodes( 4, 42 ) ).build();
 
         // then
         assertEquals( a, a );
@@ -50,17 +50,17 @@ public class PathPrefixTest
     {
         // given
         PathPrefix a =
-                ImmutablePathPrefix.builder().pathId( 42 ).length( 6 ).addAllNodes( equalNodes( 4, 42 ) ).build();
+                ImmutablePathPrefix.builder().pathId( 42 ).addAllNodes( equalNodes( 4, 42 ) ).build();
         PathPrefix b =
-                ImmutablePathPrefix.builder().pathId( 42 ).length( 6 ).addAllNodes( equalNodes( 4, 24 ) ).build();
+                ImmutablePathPrefix.builder().pathId( 42 ).addAllNodes( equalNodes( 4, 24 ) ).build();
         PathPrefix c =
-                ImmutablePathPrefix.builder().pathId( 42 ).length( 6 ).addAllNodes( equalNodes( 3, 42 ) ).build();
+                ImmutablePathPrefix.builder().pathId( 42 ).addAllNodes( equalNodes( 3, 42 ) ).build();
 
         List<Node> differentNodes = equalNodes( 3, 42 );
         differentNodes.remove( differentNodes.size() - 1 );
         differentNodes.add( new Node( 43 ) );
 
-        PathPrefix d = ImmutablePathPrefix.builder().pathId( 42 ).length( 6 ).addAllNodes( differentNodes ).build();
+        PathPrefix d = ImmutablePathPrefix.builder().pathId( 42 ).addAllNodes( differentNodes ).build();
 
         // then
         assertFalse( a.equals( b ) );
@@ -76,11 +76,11 @@ public class PathPrefixTest
     {
         // given
         PathPrefix a =
-                ImmutablePathPrefix.builder().pathId( 42 ).length( 6 ).addAllNodes( incrementingNodes( 4, 1 ) ).build();
+                ImmutablePathPrefix.builder().pathId( 42 ).addAllNodes( incrementingNodes( 4, 1 ) ).build();
         PathPrefix b =
-                ImmutablePathPrefix.builder().pathId( 42 ).length( 6 ).addAllNodes( incrementingNodes( 4, 2 ) ).build();
+                ImmutablePathPrefix.builder().pathId( 42 ).addAllNodes( incrementingNodes( 4, 2 ) ).build();
         PathPrefix c =
-                ImmutablePathPrefix.builder().pathId( 42 ).length( 6 ).addAllNodes( incrementingNodes( 4, 3 ) ).build();
+                ImmutablePathPrefix.builder().pathId( 42 ).addAllNodes( incrementingNodes( 4, 3 ) ).build();
 
         // then
         assertEquals( -1, a.compareTo( b ) );
@@ -106,9 +106,9 @@ public class PathPrefixTest
         nodesC.add( new Node( 4 ) );
 
         // given
-        PathPrefix a = ImmutablePathPrefix.builder().pathId( 42 ).length( 6 ).addAllNodes( nodesA ).build();
-        PathPrefix b = ImmutablePathPrefix.builder().pathId( 42 ).length( 6 ).addAllNodes( nodesB ).build();
-        PathPrefix c = ImmutablePathPrefix.builder().pathId( 42 ).length( 6 ).addAllNodes( nodesC ).build();
+        PathPrefix a = ImmutablePathPrefix.builder().pathId( 42 ).addAllNodes( nodesA ).build();
+        PathPrefix b = ImmutablePathPrefix.builder().pathId( 42 ).addAllNodes( nodesB ).build();
+        PathPrefix c = ImmutablePathPrefix.builder().pathId( 42 ).addAllNodes( nodesC ).build();
 
         // then
         assertEquals( -1, a.compareTo( b ) );
@@ -177,7 +177,7 @@ public class PathPrefixTest
         List<Node> nodes = IntStream.range( 0, numberOfNodes ).mapToObj( i -> new Node( value ) )
                 .collect( Collectors.toCollection( () -> new ArrayList<>( numberOfNodes + 1 ) ) );
 
-        return ImmutablePathPrefix.builder().pathId( pathId ).addAllNodes( nodes ).length( actualLength ).build();
+        return ImmutablePathPrefix.builder().pathId( pathId ).addAllNodes( nodes ).build();
     }
 
     public static PathPrefix randomPathPrefix( int prefixLength, int length )
@@ -187,7 +187,7 @@ public class PathPrefixTest
         {
             nodes.add( new Node( random.nextLong() ) );
         }
-        return ImmutablePathPrefix.builder().pathId( 42 ).length( prefixLength ).addAllNodes( nodes ).build();
+        return ImmutablePathPrefix.builder().pathId( 42 ).addAllNodes( nodes ).build();
     }
 
 

@@ -7,7 +7,6 @@
 
 package com.pathdb.pathIndex.inMemoryTree;
 
-
 import com.pathdb.pathIndex.PathIndex;
 import com.pathdb.pathIndex.models.ImmutablePathPrefix;
 import com.pathdb.pathIndex.models.Node;
@@ -23,53 +22,52 @@ import java.util.List;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
 
-class InMemoryIndex implements PathIndex
-{
+class InMemoryIndex implements PathIndex {
     private final InMemoryStatisticsStore statisticsStore;
-    private TreeMap<PathInterface,PathInterface> treeMap;
+    private TreeMap<PathInterface, PathInterface> treeMap;
 
-    InMemoryIndex( InMemoryStatisticsStore statisticsStore )
-    {
+    InMemoryIndex(InMemoryStatisticsStore statisticsStore) {
         this.statisticsStore = statisticsStore;
         treeMap = new TreeMap<>();
     }
 
     @Override
-    public Iterable<Path> getPaths( PathPrefix pathPrefix ) throws IOException
-    {
-        return treeMap.subMap( pathPrefix, nextIncrementalPath( pathPrefix ) ).values().stream()
-                .map( p -> (Path) p )::iterator;
+    public Iterable<Path> getPaths(PathPrefix pathPrefix) throws IOException {
+        return treeMap.subMap(pathPrefix, nextIncrementalPath(pathPrefix))
+                        .values()
+                        .stream()
+                        .map(p -> (Path) p)
+                ::iterator;
     }
 
     @Override
-    public void insert( Path path )
-    {
-        treeMap.put( path, path );
-        statisticsStore.incrementCardinality( path.getPathId(), 1 );
+    public void insert(Path path) {
+        treeMap.put(path, path);
+        statisticsStore.incrementCardinality(path.getPathId(), 1);
     }
 
     @Override
-    public StatisticsStoreReader getStatisticsStore()
-    {
+    public StatisticsStoreReader getStatisticsStore() {
         return statisticsStore;
     }
 
-    private PathPrefix nextIncrementalPath( PathPrefix pathPrefix )
-    {
+    private PathPrefix nextIncrementalPath(PathPrefix pathPrefix) {
         long pathId = pathPrefix.getPathId();
-        int pathLength = pathPrefix.getLength();
-        List<Node> nodes = pathPrefix.getNodes().stream().map( node -> new Node( node.getId() ) )
-                .collect( Collectors.toCollection( () -> new ArrayList<>( pathPrefix.getNodes().size() ) ) );
+        List<Node> nodes =
+                pathPrefix
+                        .getNodes()
+                        .stream()
+                        .map(node -> new Node(node.getId()))
+                        .collect(
+                                Collectors.toCollection(
+                                        () -> new ArrayList<>(pathPrefix.getNodes().size())));
 
-        if ( pathPrefix.getNodes().size() == 0 )
-        {
-            return ImmutablePathPrefix.builder().addAllNodes( nodes ).pathId( pathId + 1 ).length( pathLength ).build();
+        if (pathPrefix.getNodes().size() == 0) {
+            return ImmutablePathPrefix.of(pathId + 1, nodes);
+        } else {
+            Node remove = nodes.remove(nodes.size() - 1);
+            nodes.add(new Node(remove.getId() + 1));
         }
-        else
-        {
-            Node remove = nodes.remove( nodes.size() - 1 );
-            nodes.add( new Node( remove.getId() + 1 ) );
-        }
-        return ImmutablePathPrefix.builder().addAllNodes( nodes ).pathId( pathId ).length( pathLength ).build();
+        return ImmutablePathPrefix.of(pathId, nodes);
     }
 }

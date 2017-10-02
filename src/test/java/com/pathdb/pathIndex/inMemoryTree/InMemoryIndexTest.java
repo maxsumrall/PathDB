@@ -20,134 +20,130 @@ import java.util.List;
 import static java.util.Collections.emptyList;
 import static org.junit.Assert.assertEquals;
 
-public class InMemoryIndexTest
-{
+public class InMemoryIndexTest {
     @Test
-    public void simpleInMemoryTest() throws Exception
-    {
+    public void simpleInMemoryTest() throws Exception {
         // given
-        InMemoryIndex inMemoryIndex = new InMemoryIndex( new InMemoryStatisticsStore() );
+        InMemoryIndex inMemoryIndex = new InMemoryIndex(new InMemoryStatisticsStore());
         List<Node> nodes = new ArrayList<>();
-        nodes.add( new Node( 1 ) );
-        nodes.add( new Node( 2 ) );
-        nodes.add( new Node( 3 ) );
-        Path path = ImmutablePath.builder().pathId( 42 ).addAllNodes( nodes ).build();
+        nodes.add(new Node(1));
+        nodes.add(new Node(2));
+        nodes.add(new Node(3));
+        Path path = ImmutablePath.builder().pathId(42).addAllNodes(nodes).build();
 
         // when
-        inMemoryIndex.insert( path );
+        inMemoryIndex.insert(path);
 
         // then
-        Iterable<Path> paths = inMemoryIndex.getPaths( ImmutablePathPrefix.builder().pathId( 42 ).length( 3 )
-                .addAllNodes( emptyList()
-        ).build() );
+        Iterable<Path> paths =
+                inMemoryIndex.getPaths(
+                        ImmutablePathPrefix.builder().pathId(42).addAllNodes(emptyList()).build());
         Path next = paths.iterator().next();
 
-        assertEquals( path, next );
+        assertEquals(path, next);
     }
 
     @Test
-    public void returnsAllPathsOfSameId() throws Exception
-    {
+    public void returnsAllPathsOfSameId() throws Exception {
         // given
         InMemoryIndex index = createTestDatabaseA();
 
         // when
-        Iterable<Path> pathsId0 = index.getPaths( ImmutablePathPrefix.builder().pathId( 0 ).length( 3 )
-                .addAllNodes( emptyList()
-                ).build() );
-        Iterable<Path> pathsId42 = index.getPaths( ImmutablePathPrefix.builder().pathId( 0 ).length( 3 )
-                .addAllNodes( emptyList()
-                ).build() );
-        Iterable<Path> pathsId56 = index.getPaths( ImmutablePathPrefix.builder().pathId( 0 ).length( 3 )
-                .addAllNodes( emptyList()
-                ).build() );
-        Iterable<Path> pathsId99 = index.getPaths( ImmutablePathPrefix.builder().pathId( 0 ).length( 3 )
-                .addAllNodes( emptyList()
-                ).build() );
+        Iterable<Path> pathsId0 =
+                index.getPaths(
+                        ImmutablePathPrefix.builder().pathId(0).addAllNodes(emptyList()).build());
+
+        Iterable<Path> pathsId42 =
+                index.getPaths(
+                        ImmutablePathPrefix.builder().pathId(0).addAllNodes(emptyList()).build());
+
+        Iterable<Path> pathsId56 =
+                index.getPaths(
+                        ImmutablePathPrefix.builder().pathId(0).addAllNodes(emptyList()).build());
+
+        Iterable<Path> pathsId99 =
+                index.getPaths(
+                        ImmutablePathPrefix.builder().pathId(0).addAllNodes(emptyList()).build());
 
         // then
         ArrayList<Path> results = new ArrayList<>();
-        pathsId0.forEach( results::add );
-        assertEquals( 100, results.size() );
+        pathsId0.forEach(results::add);
+        assertEquals(100, results.size());
 
         results.clear();
-        pathsId42.forEach( results::add );
-        assertEquals( 100, results.size() );
+        pathsId42.forEach(results::add);
+        assertEquals(100, results.size());
 
         results.clear();
-        pathsId56.forEach( results::add );
-        assertEquals( 100, results.size() );
+        pathsId56.forEach(results::add);
+        assertEquals(100, results.size());
 
         results.clear();
-        pathsId99.forEach( results::add );
-        assertEquals( 100, results.size() );
+        pathsId99.forEach(results::add);
+        assertEquals(100, results.size());
     }
 
     @Test
-    public void returnsAllPathsOfSamePathPrefix() throws Exception
-    {
+    public void returnsAllPathsOfSamePathPrefix() throws Exception {
         // given
         InMemoryIndex index = createTestDatabaseB();
-        List<Node> nodes = new ArrayList<>( 1 );
-        nodes.add( new Node( 7 ) );
+        List<Node> nodes = new ArrayList<>(1);
+        nodes.add(new Node(7));
 
         // when
-        Iterable<Path> pathsId0 = index.getPaths(
-                ImmutablePathPrefix.builder().pathId( 0 ).length( 3 ).addAllNodes( nodes ).build() );
-        Iterable<Path> pathsId42 = index.getPaths(
-                ImmutablePathPrefix.builder().pathId( 0 ).length( 3 ).addAllNodes( nodes ).build() );
-        Iterable<Path> pathsId56 = index.getPaths(
-                ImmutablePathPrefix.builder().pathId( 0 ).length( 3 ).addAllNodes( nodes ).build() );
-        Iterable<Path> pathsId99 = index.getPaths(
-                ImmutablePathPrefix.builder().pathId( 0 ).length( 3 ).addAllNodes( nodes ).build() );
+        Iterable<Path> pathsId0 =
+                index.getPaths(ImmutablePathPrefix.builder().pathId(0).addAllNodes(nodes).build());
+
+        Iterable<Path> pathsId42 =
+                index.getPaths(ImmutablePathPrefix.builder().pathId(0).addAllNodes(nodes).build());
+
+        Iterable<Path> pathsId56 =
+                index.getPaths(ImmutablePathPrefix.builder().pathId(0).addAllNodes(nodes).build());
+
+        Iterable<Path> pathsId99 =
+                index.getPaths(ImmutablePathPrefix.builder().pathId(0).addAllNodes(nodes).build());
 
         // then
         ArrayList<Path> results = new ArrayList<>();
-        pathsId0.forEach( results::add );
-        assertEquals( 10, results.size() );
+        pathsId0.forEach(results::add);
+        assertEquals(10, results.size());
 
         results.clear();
-        pathsId42.forEach( results::add );
-        assertEquals( 10, results.size() );
+        pathsId42.forEach(results::add);
+        assertEquals(10, results.size());
 
         results.clear();
-        pathsId56.forEach( results::add );
-        assertEquals( 10, results.size() );
+        pathsId56.forEach(results::add);
+        assertEquals(10, results.size());
 
         results.clear();
-        pathsId99.forEach( results::add );
-        assertEquals( 10, results.size() );
+        pathsId99.forEach(results::add);
+        assertEquals(10, results.size());
     }
 
-    public InMemoryIndex createTestDatabaseA()
-    {
-        InMemoryIndex inMemoryIndex = new InMemoryIndex( new InMemoryStatisticsStore() );
-        for ( int i = 0; i < 1000; i++ )
-        {
-            for ( int j = 0; j < 100; j++ )
-            {
+    public InMemoryIndex createTestDatabaseA() {
+        InMemoryIndex inMemoryIndex = new InMemoryIndex(new InMemoryStatisticsStore());
+        for (int i = 0; i < 1000; i++) {
+            for (int j = 0; j < 100; j++) {
                 List<Node> nodes = new ArrayList<>();
-                nodes.add( new Node( j ) );
-                nodes.add( new Node( j ) );
-                nodes.add( new Node( j ) );
-                inMemoryIndex.insert( ImmutablePath.builder().pathId( i ).addAllNodes( nodes ).build() );
+                nodes.add(new Node(j));
+                nodes.add(new Node(j));
+                nodes.add(new Node(j));
+                inMemoryIndex.insert(ImmutablePath.builder().pathId(i).addAllNodes(nodes).build());
             }
         }
         return inMemoryIndex;
     }
 
-    public InMemoryIndex createTestDatabaseB()
-    {
-        InMemoryIndex inMemoryIndex = new InMemoryIndex( new InMemoryStatisticsStore() );
-        for ( int i = 0; i < 1000; i++ )
-        {
-            for ( int j = 0; j < 100; j++ )
-            {
+    public InMemoryIndex createTestDatabaseB() {
+        InMemoryIndex inMemoryIndex = new InMemoryIndex(new InMemoryStatisticsStore());
+        for (int i = 0; i < 1000; i++) {
+            for (int j = 0; j < 100; j++) {
                 List<Node> nodes = new ArrayList<>();
-                nodes.add( new Node( j % 10 ) );
-                nodes.add( new Node( j ) );
-                nodes.add( new Node( j ) );
-                inMemoryIndex.insert( ImmutablePath.builder().pathId( i ).addAllNodes( nodes ).build() );
+                nodes.add(new Node(j % 10));
+                nodes.add(new Node(j));
+                nodes.add(new Node(j));
+                inMemoryIndex.insert(ImmutablePath.builder().pathId(i).addAllNodes(nodes).build());
             }
         }
         return inMemoryIndex;

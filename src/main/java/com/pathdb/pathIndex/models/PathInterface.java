@@ -8,6 +8,7 @@
 package com.pathdb.pathIndex.models;
 
 import java.util.List;
+import org.immutables.value.Value;
 
 import static com.pathdb.pathIndex.models.PathComparator.comparePathPrefixToPath;
 import static com.pathdb.pathIndex.models.PathComparator.comparePathPrefixToPathPrefix;
@@ -15,11 +16,15 @@ import static com.pathdb.pathIndex.models.PathComparator.comparePathToPath;
 
 public interface PathInterface extends Comparable<PathInterface>
 {
+    @Value.Parameter
     long getPathId();
 
+    @Value.Parameter
     List<Node> getNodes();
 
-    int getLength();
+    default int getLength(){
+        return getNodes().size();
+    }
 
     default int compareTo( PathInterface o )
     {

@@ -16,8 +16,4 @@ import org.immutables.value.Value;
 @Value.Immutable
 public abstract class Path implements PathInterface, Serializable
 {
-    @Override
-    public int getLength() {
-        return getNodes().size();
-    }
 }
