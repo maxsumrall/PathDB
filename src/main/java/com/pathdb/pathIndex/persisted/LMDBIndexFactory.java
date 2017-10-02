@@ -51,7 +51,7 @@ public class LMDBIndexFactory
 
     public LMDB build() throws FileSystemException
     {
-        env = create().setMapSize( MEBIBYTES.toBytes( 42 ) ).setMaxDbs( 1 ).open( dbDir );
+        env = create().setMapSize( unit.toBytes( val ) ).setMaxDbs( 1 ).open( dbDir );
         db = env.openDbi( "pathdb.db", MDB_CREATE );
 
         return new LMDB( env, db, new PersistedStatisticsStore() );
