@@ -7,9 +7,10 @@
 
 package com.pathdb.pathIndex.inMemoryTree;
 
-import com.pathdb.pathIndex.Node;
-import com.pathdb.pathIndex.Path;
-import com.pathdb.pathIndex.PathPrefix;
+import com.pathdb.pathIndex.models.ImmutablePath;
+import com.pathdb.pathIndex.models.ImmutablePathPrefix;
+import com.pathdb.pathIndex.models.Node;
+import com.pathdb.pathIndex.models.Path;
 import com.pathdb.statistics.InMemoryStatisticsStore;
 import org.junit.Test;
 
@@ -30,13 +31,15 @@ public class InMemoryIndexTest
         nodes.add( new Node( 1 ) );
         nodes.add( new Node( 2 ) );
         nodes.add( new Node( 3 ) );
-        Path path = new Path( 42, nodes );
+        Path path = ImmutablePath.builder().pathId( 42 ).addAllNodes( nodes ).build();
 
         // when
         inMemoryIndex.insert( path );
 
         // then
-        Iterable<Path> paths = inMemoryIndex.getPaths( new PathPrefix( 42, 3, emptyList() ) );
+        Iterable<Path> paths = inMemoryIndex.getPaths( ImmutablePathPrefix.builder().pathId( 42 ).length( 3 )
+                .addAllNodes( emptyList()
+        ).build() );
         Path next = paths.iterator().next();
 
         assertEquals( path, next );
@@ -49,10 +52,18 @@ public class InMemoryIndexTest
         InMemoryIndex index = createTestDatabaseA();
 
         // when
-        Iterable<Path> pathsId0 = index.getPaths( new PathPrefix( 0, 3 ) );
-        Iterable<Path> pathsId42 = index.getPaths( new PathPrefix( 0, 3 ) );
-        Iterable<Path> pathsId56 = index.getPaths( new PathPrefix( 0, 3 ) );
-        Iterable<Path> pathsId99 = index.getPaths( new PathPrefix( 0, 3 ) );
+        Iterable<Path> pathsId0 = index.getPaths( ImmutablePathPrefix.builder().pathId( 0 ).length( 3 )
+                .addAllNodes( emptyList()
+                ).build() );
+        Iterable<Path> pathsId42 = index.getPaths( ImmutablePathPrefix.builder().pathId( 0 ).length( 3 )
+                .addAllNodes( emptyList()
+                ).build() );
+        Iterable<Path> pathsId56 = index.getPaths( ImmutablePathPrefix.builder().pathId( 0 ).length( 3 )
+                .addAllNodes( emptyList()
+                ).build() );
+        Iterable<Path> pathsId99 = index.getPaths( ImmutablePathPrefix.builder().pathId( 0 ).length( 3 )
+                .addAllNodes( emptyList()
+                ).build() );
 
         // then
         ArrayList<Path> results = new ArrayList<>();
@@ -81,10 +92,14 @@ public class InMemoryIndexTest
         nodes.add( new Node( 7 ) );
 
         // when
-        Iterable<Path> pathsId0 = index.getPaths( new PathPrefix( 0, 3, nodes ) );
-        Iterable<Path> pathsId42 = index.getPaths( new PathPrefix( 0, 3, nodes ) );
-        Iterable<Path> pathsId56 = index.getPaths( new PathPrefix( 0, 3, nodes ) );
-        Iterable<Path> pathsId99 = index.getPaths( new PathPrefix( 0, 3, nodes ) );
+        Iterable<Path> pathsId0 = index.getPaths(
+                ImmutablePathPrefix.builder().pathId( 0 ).length( 3 ).addAllNodes( nodes ).build() );
+        Iterable<Path> pathsId42 = index.getPaths(
+                ImmutablePathPrefix.builder().pathId( 0 ).length( 3 ).addAllNodes( nodes ).build() );
+        Iterable<Path> pathsId56 = index.getPaths(
+                ImmutablePathPrefix.builder().pathId( 0 ).length( 3 ).addAllNodes( nodes ).build() );
+        Iterable<Path> pathsId99 = index.getPaths(
+                ImmutablePathPrefix.builder().pathId( 0 ).length( 3 ).addAllNodes( nodes ).build() );
 
         // then
         ArrayList<Path> results = new ArrayList<>();
@@ -115,7 +130,7 @@ public class InMemoryIndexTest
                 nodes.add( new Node( j ) );
                 nodes.add( new Node( j ) );
                 nodes.add( new Node( j ) );
-                inMemoryIndex.insert( new Path( i, nodes ) );
+                inMemoryIndex.insert( ImmutablePath.builder().pathId( i ).addAllNodes( nodes ).build() );
             }
         }
         return inMemoryIndex;
@@ -132,7 +147,7 @@ public class InMemoryIndexTest
                 nodes.add( new Node( j % 10 ) );
                 nodes.add( new Node( j ) );
                 nodes.add( new Node( j ) );
-                inMemoryIndex.insert( new Path( i, nodes ) );
+                inMemoryIndex.insert( ImmutablePath.builder().pathId( i ).addAllNodes( nodes ).build() );
             }
         }
         return inMemoryIndex;

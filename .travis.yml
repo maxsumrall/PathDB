@@ -1,8 +1,9 @@
-dist: pristine
+dist: trusty
 sudo: true
 language: java
 jdk:
   - oraclejdk8
+
 env:
   global:
     - secure: "PHc9KTNp2QFQq+0HDAqHSRGYvKCsf8FV4QyFB8Ut4neBg850RSlI8dus7F2JbscAhyTFT447XpLj2gHNyOcdwgdHQRWsD1FlTfipgI/Q7Ayse8VyM+Xxuogp2ChXtj7eLSU65nSof8FnpL0OpM7OhBzcpWlhqCQmTcgFn8hvdkuAu+vxrlOG7BqUdwXKOsaqgx4xy3iEaLPMkLryHhjT/h4WWfxabyy8cxqOOTxXSjbaU5hhnxLdNW1/d+4dvMfvk7bjsWQM/LniBjq1FtyLxQiRl3C3/VtYUetE3wbAnuIlxRenax7LAfO1sl/41r/pQLFuYQLaD75RQ918JooB5JlQcX4RuOC15dPyyEb0U/N4f3hBqeK9+51Zy435bCuOoACs1cmpDbjQBLrIJFAXqiVmTaNsYKtKDTuOS3ipSdjNqWT0Cce+qlS8A7kRQ3kQUbyo18WRDpIxD3th6J/kyVz6Y0eeP0hOcFUdwT6ZgDZlmSk9khCYh+PGBfksBD+G9zQnsEc4hdJS5AObNYNlf833DZVfT+MDe4OtCX2fTl0nDMvKdeLgHJ4+2fh9eEseBYTaRQJTV7v1D6NGBLOCWpMoXpQwmCSXbc+UXSrlEJ257UQ8Wdm7XdkhAoBXb6IvEOQtIci3MfiT5DdittjBWOBq1nSCkVVTh9zSVIjM3zo="
@@ -10,13 +11,14 @@ env:
     - secure: "3eo0kEeBbZzOE8wfV6dBiQd9kp2WomUajveg2RHAm/i0na11LvAjWRjEyD8kljcui+6oUGgTo5mdIBzs0Hb8c9vWHS9+HG9vwwQ4Cs2ydce1zLGQPKnT2tA+GjbQI3sB4B7hHw4kzRUIOLGfYqr56MvI7MOvN6hr0MsJDvOKLUBRXuQhpnYhua5LwasANQz/7HIHmxXYaAICHKP2KBdrJ2RnZVlZoo6qQU+RGio+d+PEeGbltrrdSvu02958+WeuYOdwOuX4u10DCh194QACCd+2L7tZwI+p425PmT5DTAHtHBySWJg1qJ9I/F+5ye6RVm+IIOb5KbVEO/lnrKwX2hWngy5fLKKBtKozj7nbxDOQ63a8hfdMw417xpLS4aLNtviLmZS1SSBFZ+H1xEkMA6C7pVBLCxZsRnVKVtQ5zcLPnW81IZhpz10jFMF8wWzY1N4ELniyDdPgr5fuwl63NvfO0Eh7iZhuvCUmUNPOcM/4LV6vco7DSga7jEozu/pjPmsTROL72NFR1edxBojTbjyO9B/i2kvjO0xx6Jo6vOSzqaw+xrsJSG4Wznr5OvAeSynbO4ijM2dwxXe/F5oSWbDBvtFY88JNmF8c/ir4v9QXYSZEv2LOU0L1sAXq9fFem4JYROkWrAir6fvfOTdtLhmpIfNvggDuE1Fm0jNgjTo="
     - # ^^ GPG_PASSPHRASE
 
-install:
-  - mvn --settings ${TRAVIS_BUILD_DIR}/.travis/settings.xml install -DskipTests=true -Dgpg.skip -Dmaven.javadoc.skip=true -B -V
+#install:
+#  - mvn --settings ${TRAVIS_BUILD_DIR}/.travis/settings.xml install -DskipTests=true -Dgpg.skip -Dmaven.javadoc.skip=true -B -V
 
 before_install:
   - sudo apt-get install gnupg2
   - if [ ! -z "$GPG_SECRET_KEYS" ]; then echo $GPG_SECRET_KEYS | base64 --decode | gpg  --import; fi
   - if [ ! -z "$GPG_OWNERTRUST" ]; then echo $GPG_OWNERTRUST | base64 --decode | gpg --import-ownertrust; fi
+
 
 deploy:
   -

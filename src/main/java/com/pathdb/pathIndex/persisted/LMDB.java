@@ -7,10 +7,10 @@
 
 package com.pathdb.pathIndex.persisted;
 
-import com.pathdb.pathIndex.Path;
 import com.pathdb.pathIndex.PathIndex;
-import com.pathdb.pathIndex.PathPrefix;
 import com.pathdb.pathIndex.PathSerializer;
+import com.pathdb.pathIndex.models.Path;
+import com.pathdb.pathIndex.models.PathPrefix;
 import com.pathdb.statistics.PersistedStatisticsStore;
 import com.pathdb.statistics.StatisticsStoreReader;
 import org.lmdbjava.Cursor;
@@ -29,11 +29,11 @@ public class LMDB implements PathIndex
     private final Dbi<ByteBuffer> db;
     private final PersistedStatisticsStore statisticsStore;
 
-    public LMDB( Env<ByteBuffer> env, Dbi<ByteBuffer> db, PersistedStatisticsStore statistictsStore )
+    public LMDB( Env<ByteBuffer> env, Dbi<ByteBuffer> db, PersistedStatisticsStore statisticsStore )
     {
         this.env = env;
         this.db = db;
-        this.statisticsStore = statistictsStore;
+        this.statisticsStore = statisticsStore;
     }
 
     @Override
@@ -69,13 +69,13 @@ public class LMDB implements PathIndex
     {
         ByteBuffer buffer = PathSerializer.serialize( path );
         db.put( buffer, buffer );
-        statisticsStore.incrementCardinality( path.pathId, 1 );
+        statisticsStore.incrementCardinality( path.getPathId(), 1 );
     }
 
     @Override
     public StatisticsStoreReader getStatisticsStore()
     {
-        return null;
+        return statisticsStore;
     }
 
     public void close()

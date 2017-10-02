@@ -7,33 +7,25 @@
 
 package com.pathdb.pathIndex;
 
+import com.pathdb.pathIndex.models.ImmutablePath;
+import com.pathdb.pathIndex.models.Node;
+import com.pathdb.pathIndex.models.Path;
+import com.pathdb.pathIndex.models.PathInterface;
+
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public class PathSerializer
 {
-    public static ByteBuffer serialize( Path path )
+    public static ByteBuffer serialize( PathInterface path )
     {
-        int nodes = path.length * Long.BYTES;
+        int nodes = path.getLength() * Long.BYTES;
         int pathId = Long.BYTES;
         ByteBuffer buffer = ByteBuffer.allocateDirect( nodes + pathId );
-        buffer.putLong( path.pathId );
-        for ( Node node : path.nodes )
-        {
-            buffer.putLong( node.getId() );
-        }
-        buffer.flip();
-        return buffer;
-    }
-
-    public static ByteBuffer serialize( AbstractPath path )
-    {
-        int nodes = path.length * Long.BYTES;
-        int pathId = Long.BYTES;
-        ByteBuffer buffer = ByteBuffer.allocateDirect( nodes + pathId );
-        buffer.putLong( path.pathId );
-        for ( Node node : path.nodes )
+        buffer.putLong( path.getPathId() );
+        for ( Node node : path.getNodes() )
         {
             buffer.putLong( node.getId() );
         }
@@ -45,12 +37,9 @@ public class PathSerializer
     {
         long pathId = buffer.getLong();
         int size = buffer.remaining() / Long.BYTES;
-        List<Node> nodes = new ArrayList<>( size );
-        for ( int i = 0; i < size; i++ )
-        {
-            nodes.add( new Node( buffer.getLong() ) );
-        }
-        return new Path( pathId, nodes );
-
+        return ImmutablePath.builder().addAllNodes(
+                IntStream.range( 0, size ).mapToObj( i -> new Node( buffer.getLong() ) )
+                        .collect( Collectors.toCollection( () -> new ArrayList<>( size ) ) ) )
+                .pathId( pathId ).build();
     }
 }

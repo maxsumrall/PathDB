@@ -8,9 +8,9 @@
 package com.pathdb.importing;
 
 import com.opencsv.CSVReader;
-import com.pathdb.pathIndex.Node;
-import com.pathdb.pathIndex.Path;
 import com.pathdb.pathIndex.PathIndex;
+import com.pathdb.pathIndex.models.ImmutablePath;
+import com.pathdb.pathIndex.models.Node;
 
 import java.io.File;
 import java.io.FileReader;
@@ -54,8 +54,7 @@ public class CSVImport
                 nodes.add( new Node( Long.parseLong( line[i] ) ) );
             }
 
-            Path path = new Path( pathId, nodes );
-            index.insert( path );
+            index.insert( ImmutablePath.builder().addAllNodes( nodes ).pathId( pathId ).build() );
             importedPaths++;
         }
         return importedPaths;

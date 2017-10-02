@@ -42,12 +42,6 @@
             <artifactId>neo4j</artifactId>
             <version>3.0.6</version>
         </dependency>
-        <!-- Neo4J IO-->
-        <dependency>
-            <groupId>org.neo4j</groupId>
-            <artifactId>neo4j-io</artifactId>
-            <version>3.0.6</version>
-        </dependency>
         <dependency>
             <groupId>com.opencsv</groupId>
             <artifactId>opencsv</artifactId>
@@ -56,14 +50,24 @@
         <dependency>
             <groupId>org.lmdbjava</groupId>
             <artifactId>lmdbjava</artifactId>
-            <version>0.0.5</version>
+            <version>0.6.0</version>
         </dependency>
         <dependency>
             <groupId>com.jakewharton.byteunits</groupId>
             <artifactId>byteunits</artifactId>
             <version>0.9.1</version>
         </dependency>
-
+        <dependency>
+            <groupId>org.immutables</groupId>
+            <artifactId>value</artifactId>
+            <version>2.5.5</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.agrona</groupId>
+            <artifactId>agrona</artifactId>
+            <version>0.9.7</version>
+        </dependency>
 
         <!-- TESTING -->
         <dependency>
@@ -100,6 +104,7 @@
                 <configuration>
                     <source>1.8</source>
                     <target>1.8</target>
+                    <useIncrementalCompilation>false</useIncrementalCompilation>
                 </configuration>
             </plugin>
             <plugin>
@@ -123,6 +128,24 @@
                         <goals>
                             <goal>jar-no-fork</goal>
                         </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>3.0.0</version>
+                <executions>
+                    <execution>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>add-source</goal>
+                        </goals>
+                        <configuration>
+                            <sources>
+                                <source>${project.build.directory}/generated-sources</source>
+                            </sources>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>

@@ -7,8 +7,9 @@
 
 package com.pathdb.pathDB;
 
-import com.pathdb.pathIndex.Node;
-import com.pathdb.pathIndex.Path;
+import com.pathdb.pathIndex.models.ImmutablePath;
+import com.pathdb.pathIndex.models.Node;
+import com.pathdb.pathIndex.models.Path;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -31,8 +32,8 @@ public class PathTest
     public void samePathsEqualEachOtherTest() throws Exception
     {
         // given
-        Path a = new Path( 42, equalNodes( 4, 42 ) );
-        Path b = new Path( 42, equalNodes( 4, 42 ) );
+        Path a = ImmutablePath.builder().pathId( 42 ).addAllNodes( equalNodes( 4, 42 ) ).build();
+        Path b = ImmutablePath.builder().pathId( 42 ).addAllNodes( equalNodes( 4, 42 ) ).build();
 
         // then
         assertEquals( a, a );
@@ -43,15 +44,15 @@ public class PathTest
     public void differentPathsAreNotEqualsTest() throws Exception
     {
         // given
-        Path a = new Path( 42, equalNodes( 4, 42 ) );
-        Path b = new Path( 42, equalNodes( 4, 24 ) );
-        Path c = new Path( 42, equalNodes( 3, 42 ) );
+        Path a = ImmutablePath.builder().pathId( 42 ).addAllNodes( equalNodes( 4, 42 ) ).build();
+        Path b = ImmutablePath.builder().pathId( 42 ).addAllNodes( equalNodes( 4, 24 ) ).build();
+        Path c = ImmutablePath.builder().pathId( 42 ).addAllNodes( equalNodes( 3, 42 ) ).build();
 
         List<Node> differentNodes = equalNodes( 3, 42 );
         differentNodes.remove( differentNodes.size() - 1 );
         differentNodes.add( new Node( 43 ) );
 
-        Path d = new Path( 42, differentNodes );
+        Path d = ImmutablePath.builder().pathId( 42 ).addAllNodes( differentNodes ).build();
 
         // then
         assertFalse( a.equals( b ) );
@@ -66,9 +67,9 @@ public class PathTest
     public void pathOrderingOnFirstNodeTest() throws Exception
     {
         // given
-        Path a = new Path( 42, incrementingNodes( 4, 1 ) );
-        Path b = new Path( 42, incrementingNodes( 4, 2 ) );
-        Path c = new Path( 42, incrementingNodes( 4, 3 ) );
+        Path a = ImmutablePath.builder().pathId( 42 ).addAllNodes( incrementingNodes( 4, 1 ) ).build();
+        Path b = ImmutablePath.builder().pathId( 42 ).addAllNodes( incrementingNodes( 4, 2 ) ).build();
+        Path c = ImmutablePath.builder().pathId( 42 ).addAllNodes( incrementingNodes( 4, 3 ) ).build();
 
         // then
         assertEquals( -1, a.compareTo( b ) );
@@ -94,9 +95,9 @@ public class PathTest
         nodesC.add( new Node( 4 ) );
 
         // given
-        Path a = new Path( 42, nodesA );
-        Path b = new Path( 42, nodesB );
-        Path c = new Path( 42, nodesC );
+        Path a = ImmutablePath.builder().pathId( 42 ).addAllNodes( nodesA ).build();
+        Path b = ImmutablePath.builder().pathId( 42 ).addAllNodes( nodesB ).build();
+        Path c = ImmutablePath.builder().pathId( 42 ).addAllNodes( nodesC ).build();
 
         // then
         assertEquals( -1, a.compareTo( b ) );
@@ -172,7 +173,7 @@ public class PathTest
             nodes.add( new Node( value ) );
         }
 
-        return new Path( pathID, nodes );
+        return ImmutablePath.builder().pathId( pathID ).addAllNodes( nodes ).build();
     }
 
     public static Path randomPath( int length )
@@ -182,7 +183,7 @@ public class PathTest
         {
             nodes.add( new Node( random.nextLong() ) );
         }
-        return new Path( 42, nodes );
+        return ImmutablePath.builder().pathId( 42 ).addAllNodes( nodes ).build();
     }
 
     public static List<Path> generateRandomPaths( int length, int amount )

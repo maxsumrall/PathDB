@@ -7,6 +7,8 @@
 
 package com.pathdb.pathIndex;
 
+import com.pathdb.pathIndex.models.Path;
+import com.pathdb.pathIndex.models.PathPrefix;
 import com.pathdb.statistics.StatisticsStoreReader;
 
 import java.io.IOException;

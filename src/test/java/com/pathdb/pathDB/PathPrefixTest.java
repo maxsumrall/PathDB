@@ -7,14 +7,17 @@
 
 package com.pathdb.pathDB;
 
-import com.pathdb.pathIndex.Node;
-import com.pathdb.pathIndex.Path;
-import com.pathdb.pathIndex.PathPrefix;
+import com.pathdb.pathIndex.models.ImmutablePathPrefix;
+import com.pathdb.pathIndex.models.Node;
+import com.pathdb.pathIndex.models.Path;
+import com.pathdb.pathIndex.models.PathPrefix;
 import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static com.pathdb.pathDB.PathTest.equalNodes;
 import static com.pathdb.pathDB.PathTest.incrementingNodes;
@@ -32,8 +35,10 @@ public class PathPrefixTest
     public void samePathPrefixPrefixesEqualEachOtherTest() throws Exception
     {
         // given
-        PathPrefix a = new PathPrefix( 42, 6, equalNodes( 4, 42 ) );
-        PathPrefix b = new PathPrefix( 42, 6, equalNodes( 4, 42 ) );
+        PathPrefix a =
+                ImmutablePathPrefix.builder().pathId( 42 ).length( 6 ).addAllNodes( equalNodes( 4, 42 ) ).build();
+        PathPrefix b =
+                ImmutablePathPrefix.builder().pathId( 42 ).length( 6 ).addAllNodes( equalNodes( 4, 42 ) ).build();
 
         // then
         assertEquals( a, a );
@@ -44,15 +49,18 @@ public class PathPrefixTest
     public void differentPathPrefixPrefixesAreNotEqualsTest() throws Exception
     {
         // given
-        PathPrefix a = new PathPrefix( 42, 6, equalNodes( 4, 42 ) );
-        PathPrefix b = new PathPrefix( 42, 6, equalNodes( 4, 24 ) );
-        PathPrefix c = new PathPrefix( 42, 6, equalNodes( 3, 42 ) );
+        PathPrefix a =
+                ImmutablePathPrefix.builder().pathId( 42 ).length( 6 ).addAllNodes( equalNodes( 4, 42 ) ).build();
+        PathPrefix b =
+                ImmutablePathPrefix.builder().pathId( 42 ).length( 6 ).addAllNodes( equalNodes( 4, 24 ) ).build();
+        PathPrefix c =
+                ImmutablePathPrefix.builder().pathId( 42 ).length( 6 ).addAllNodes( equalNodes( 3, 42 ) ).build();
 
         List<Node> differentNodes = equalNodes( 3, 42 );
         differentNodes.remove( differentNodes.size() - 1 );
         differentNodes.add( new Node( 43 ) );
 
-        PathPrefix d = new PathPrefix( 42, 6, differentNodes );
+        PathPrefix d = ImmutablePathPrefix.builder().pathId( 42 ).length( 6 ).addAllNodes( differentNodes ).build();
 
         // then
         assertFalse( a.equals( b ) );
@@ -67,9 +75,12 @@ public class PathPrefixTest
     public void pathPrefixOrderingOnFirstNodeTest() throws Exception
     {
         // given
-        PathPrefix a = new PathPrefix( 42, 6, incrementingNodes( 4, 1 ) );
-        PathPrefix b = new PathPrefix( 42, 6, incrementingNodes( 4, 2 ) );
-        PathPrefix c = new PathPrefix( 42, 6, incrementingNodes( 4, 3 ) );
+        PathPrefix a =
+                ImmutablePathPrefix.builder().pathId( 42 ).length( 6 ).addAllNodes( incrementingNodes( 4, 1 ) ).build();
+        PathPrefix b =
+                ImmutablePathPrefix.builder().pathId( 42 ).length( 6 ).addAllNodes( incrementingNodes( 4, 2 ) ).build();
+        PathPrefix c =
+                ImmutablePathPrefix.builder().pathId( 42 ).length( 6 ).addAllNodes( incrementingNodes( 4, 3 ) ).build();
 
         // then
         assertEquals( -1, a.compareTo( b ) );
@@ -95,9 +106,9 @@ public class PathPrefixTest
         nodesC.add( new Node( 4 ) );
 
         // given
-        PathPrefix a = new PathPrefix( 42, 6, nodesA );
-        PathPrefix b = new PathPrefix( 42, 6, nodesB );
-        PathPrefix c = new PathPrefix( 42, 6, nodesC );
+        PathPrefix a = ImmutablePathPrefix.builder().pathId( 42 ).length( 6 ).addAllNodes( nodesA ).build();
+        PathPrefix b = ImmutablePathPrefix.builder().pathId( 42 ).length( 6 ).addAllNodes( nodesB ).build();
+        PathPrefix c = ImmutablePathPrefix.builder().pathId( 42 ).length( 6 ).addAllNodes( nodesC ).build();
 
         // then
         assertEquals( -1, a.compareTo( b ) );
@@ -163,14 +174,10 @@ public class PathPrefixTest
 
     public static PathPrefix simplePathPrefix( long pathId, int actualLength, int numberOfNodes, Long value )
     {
-        List<Node> nodes = new ArrayList<>( numberOfNodes + 1 );
+        List<Node> nodes = IntStream.range( 0, numberOfNodes ).mapToObj( i -> new Node( value ) )
+                .collect( Collectors.toCollection( () -> new ArrayList<>( numberOfNodes + 1 ) ) );
 
-        for ( int i = 0; i < numberOfNodes; i++ )
-        {
-            nodes.add( new Node( value ) );
-        }
-
-        return new PathPrefix( pathId, actualLength, nodes );
+        return ImmutablePathPrefix.builder().pathId( pathId ).addAllNodes( nodes ).length( actualLength ).build();
     }
 
     public static PathPrefix randomPathPrefix( int prefixLength, int length )
@@ -180,7 +187,7 @@ public class PathPrefixTest
         {
             nodes.add( new Node( random.nextLong() ) );
         }
-        return new PathPrefix( 42, prefixLength, nodes );
+        return ImmutablePathPrefix.builder().pathId( 42 ).length( prefixLength ).addAllNodes( nodes ).build();
     }
 
 
