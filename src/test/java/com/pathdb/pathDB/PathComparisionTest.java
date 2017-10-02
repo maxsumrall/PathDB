@@ -7,8 +7,8 @@
 
 package com.pathdb.pathDB;
 
-import com.pathdb.pathIndex.Path;
-import com.pathdb.pathIndex.PathPrefix;
+import com.pathdb.pathIndex.models.Path;
+import com.pathdb.pathIndex.models.PathPrefix;
 import org.junit.Test;
 
 import static com.pathdb.pathDB.PathPrefixTest.simplePathPrefix;
@@ -18,7 +18,7 @@ import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.lessThan;
 import static org.junit.Assert.assertThat;
 
-public class AbstractPathComparisionTest
+public class PathComparisionTest
 {
 
     @Test

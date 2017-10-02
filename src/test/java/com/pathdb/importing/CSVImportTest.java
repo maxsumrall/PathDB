@@ -28,7 +28,7 @@ public class CSVImportTest
         File testCsvFile = createTestCsvFile( createdPaths );
 
         // when
-        PathIndex index = new InMemoryIndexFactory().getInMemoryIndex();
+        PathIndex index = new InMemoryIndexFactory().getIndex();
         CSVImport importer = new CSVImport( index );
         long importedPaths = importer.doImport( testCsvFile );
 

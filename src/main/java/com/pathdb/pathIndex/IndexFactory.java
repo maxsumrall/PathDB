@@ -9,7 +9,5 @@ package com.pathdb.pathIndex;
 
 public interface IndexFactory
 {
-    PathIndex getInMemoryIndex();
-
-    PathIndex getPersistedDiskBasedIndex();
+    PathIndex getIndex();
 }

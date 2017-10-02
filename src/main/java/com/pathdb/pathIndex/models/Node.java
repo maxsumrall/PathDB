@@ -5,22 +5,17 @@
  * You may use, distribute and modify this code under the terms of the GPLv3 license.
  */
 
-package com.pathdb.pathIndex;
+package com.pathdb.pathIndex.models;
 
-import java.util.List;
 import java.util.Objects;
 
-
-public class Path extends AbstractPath
+public class Node
 {
-    public final int length;
-    public List<Node> nodes;
+    private final long id;
 
-    public Path( long pathId, List<Node> nodes )
+    public Node( long id )
     {
-        super( pathId );
-        this.length = nodes.size();
-        this.nodes = nodes;
+        this.id = id;
     }
 
     @Override
@@ -34,22 +29,24 @@ public class Path extends AbstractPath
         {
             return false;
         }
-        Path that = (Path) o;
-        return  pathId == that.pathId &&
-                length == that.length &&
-                Objects.equals( nodes, that.nodes );
+        Node node = (Node) o;
+        return Objects.equals( id, node.id );
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash( length, nodes );
+        return Objects.hash( id );
     }
 
     @Override
     public String toString()
     {
-        return "Path{" + "pathId=" + pathId + ", length=" + length + ", nodes=" + nodes + "}\n";
+        return "Node{" + "id=" + id + '}';
+    }
+
+    public long getId()
+    {
+        return id;
     }
 }
-

@@ -8,11 +8,12 @@
 package com.pathdb.pathIndex.inMemoryTree;
 
 
-import com.pathdb.pathIndex.AbstractPath;
-import com.pathdb.pathIndex.Node;
-import com.pathdb.pathIndex.Path;
 import com.pathdb.pathIndex.PathIndex;
-import com.pathdb.pathIndex.PathPrefix;
+import com.pathdb.pathIndex.models.ImmutablePathPrefix;
+import com.pathdb.pathIndex.models.Node;
+import com.pathdb.pathIndex.models.Path;
+import com.pathdb.pathIndex.models.PathInterface;
+import com.pathdb.pathIndex.models.PathPrefix;
 import com.pathdb.statistics.InMemoryStatisticsStore;
 import com.pathdb.statistics.StatisticsStoreReader;
 
@@ -20,11 +21,12 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.TreeMap;
+import java.util.stream.Collectors;
 
 class InMemoryIndex implements PathIndex
 {
     private final InMemoryStatisticsStore statisticsStore;
-    private TreeMap<AbstractPath,AbstractPath> treeMap;
+    private TreeMap<PathInterface,PathInterface> treeMap;
 
     InMemoryIndex( InMemoryStatisticsStore statisticsStore )
     {
@@ -43,7 +45,7 @@ class InMemoryIndex implements PathIndex
     public void insert( Path path )
     {
         treeMap.put( path, path );
-        statisticsStore.incrementCardinality( path.pathId, 1 );
+        statisticsStore.incrementCardinality( path.getPathId(), 1 );
     }
 
     @Override
@@ -54,23 +56,20 @@ class InMemoryIndex implements PathIndex
 
     private PathPrefix nextIncrementalPath( PathPrefix pathPrefix )
     {
-        long pathId = pathPrefix.pathId;
-        int pathLength = pathPrefix.length;
-        List<Node> nodes = new ArrayList<>( pathPrefix.nodes.size() );
-        for ( Node node : pathPrefix.nodes )
-        {
-            nodes.add( new Node( node.getId() ) );
-        }
+        long pathId = pathPrefix.getPathId();
+        int pathLength = pathPrefix.getLength();
+        List<Node> nodes = pathPrefix.getNodes().stream().map( node -> new Node( node.getId() ) )
+                .collect( Collectors.toCollection( () -> new ArrayList<>( pathPrefix.getNodes().size() ) ) );
 
-        if ( pathPrefix.nodes.size() == 0 )
+        if ( pathPrefix.getNodes().size() == 0 )
         {
-            return new PathPrefix( pathId + 1, pathLength, nodes );
+            return ImmutablePathPrefix.builder().addAllNodes( nodes ).pathId( pathId + 1 ).length( pathLength ).build();
         }
         else
         {
             Node remove = nodes.remove( nodes.size() - 1 );
             nodes.add( new Node( remove.getId() + 1 ) );
         }
-        return new PathPrefix( pathId, pathLength, nodes );
+        return ImmutablePathPrefix.builder().addAllNodes( nodes ).pathId( pathId ).length( pathLength ).build();
     }
 }
