@@ -7,16 +7,15 @@
 
 package com.pathdb.importing;
 
-import au.com.bytecode.opencsv.CSVWriter;
+import static org.junit.Assert.assertEquals;
+
+import com.opencsv.CSVWriter;
 import com.pathdb.pathIndex.PathIndex;
 import com.pathdb.pathIndex.inMemoryTree.InMemoryIndexFactory;
-import org.junit.Test;
-
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-
-import static org.junit.Assert.assertEquals;
+import org.junit.Test;
 
 public class CSVImportTest
 {

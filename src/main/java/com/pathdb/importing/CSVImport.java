@@ -25,7 +25,8 @@ public class CSVImport
 {
     private final PathIndex index;
 
-    public CSVImport( PathIndex index )
+    public
+    CSVImport( PathIndex index )
     {
         this.index = index;
     }

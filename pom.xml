@@ -4,7 +4,7 @@
 
     <groupId>com.pathdb</groupId>
     <artifactId>pathdb</artifactId>
-    <version>0.1.0-SNAPSHOT</version>
+    <version>0.1.2-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <name>PathDB</name>
@@ -36,12 +36,6 @@
 
     <!-- DEPENDENCIES -->
     <dependencies>
-        <!-- Neo4J-->
-        <dependency>
-            <groupId>org.neo4j</groupId>
-            <artifactId>neo4j</artifactId>
-            <version>3.0.6</version>
-        </dependency>
         <dependency>
             <groupId>com.opencsv</groupId>
             <artifactId>opencsv</artifactId>
