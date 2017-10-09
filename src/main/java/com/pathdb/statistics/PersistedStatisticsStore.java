@@ -13,7 +13,7 @@ import java.util.concurrent.ConcurrentHashMap;
 //todo persist this, probably in lmdb also
 public class PersistedStatisticsStore implements StatisticsStoreReader, StatisticsStoreWriter
 {
-    ConcurrentHashMap<Long,Long> store;
+    private ConcurrentHashMap<Long,Long> store;
 
     public PersistedStatisticsStore()
     {

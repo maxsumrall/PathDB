@@ -12,6 +12,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.Assert.assertEquals;
 
+import com.pathdb.pathIndex.PathIndex;
 import com.pathdb.pathIndex.models.ImmutablePath;
 import com.pathdb.pathIndex.models.ImmutablePathPrefix;
 import com.pathdb.pathIndex.models.Node;
@@ -29,13 +30,13 @@ public class LMDBIndexFactoryTest {
 
     @Test
     public void createLMDBTest() throws Exception {
-        LMDB build =
+        PathIndex build =
                 new LMDBIndexFactory(tmp.newFolder("testDir")).withMaxDBSize(42, MEBIBYTES).build();
     }
 
     @Test
     public void testInsertionOrderAndRetrievalOrder() throws IOException {
-        LMDB db =
+        PathIndex db =
                 new LMDBIndexFactory(tmp.newFolder("testDir")).withMaxDBSize(40, MEBIBYTES).build();
         for (int i = 0; i < 10; i++) {
             for (int j = 0; j < 10; j++)
@@ -70,7 +71,7 @@ public class LMDBIndexFactoryTest {
 
     @Test
     public void openInsertCloseOpenRead() throws Exception {
-        LMDB db =
+        PathIndex db =
                 new LMDBIndexFactory(tmp.newFolder("testDir")).withMaxDBSize(42, MEBIBYTES).build();
 
         Path pathA =
